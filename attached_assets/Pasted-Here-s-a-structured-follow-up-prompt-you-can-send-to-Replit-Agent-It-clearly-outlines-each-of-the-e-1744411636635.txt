@@ -1,0 +1,132 @@
+Here’s a structured follow-up prompt you can send to Replit Agent. It clearly outlines each of the errors you’re encountering with context and suggested resolutions, ensuring the agent can systematically fix them without ambiguity.
+
+⸻
+
+Follow-up Replit Agent Prompt: Fix Errors in Recurrer Build
+
+Please review and fix the following issues in the current Recurrer build. Each issue is listed with the file path, error description, and a suggested fix. Ensure all changes maintain the existing code structure and follow the current Tailwind + React + Supabase project conventions.
+
+⸻
+
+Error 1: (Attached - assumed as external visual or crash)
+	•	Please investigate and handle any attached runtime or server error.
+	•	If not shown explicitly, check for unhandled exceptions, API errors, or null references in core app components.
+
+⸻
+
+Error 2 & 5: Select.Item Must Have a Non-Empty Value Prop
+	•	Error Message:
+[plugin:runtime-error-plugin] A <Select.Item /> must have a value prop that is not an empty string.
+	•	File: Anywhere <Select.Item /> is used
+	•	Fix:
+	•	Ensure all <Select.Item /> elements have a valid, non-empty value prop.
+	•	Example:
+
+<Select.Item value="growth">Growth</Select.Item>
+<Select.Item value="starter">Starter</Select.Item>
+
+
+	•	Also Recommended:
+	•	If a placeholder option is needed, use:
+
+<Select.Item value="placeholder" disabled>Select a type</Select.Item>
+
+
+
+⸻
+
+Error 3 & 7: Badge is Not Defined
+	•	Error Message:
+Badge is not defined at client/src/pages/reports.tsx
+	•	Line: 442
+	•	Fix:
+	•	Confirm the Badge component is either:
+	•	Defined in the file, or
+	•	Imported from the correct location
+	•	Add the import at the top of reports.tsx:
+
+import { Badge } from '@/components/ui/badge';
+
+
+
+⸻
+
+Error 4: “+ New Task” Button Not Working on Dashboard
+	•	File: client/src/pages/Dashboard.tsx
+	•	Fix:
+	•	Check the onClick handler for the button.
+	•	Ensure it properly triggers the task creation modal or route.
+	•	Validate the modal state is set correctly:
+
+const [showTaskModal, setShowTaskModal] = useState(false);
+
+
+
+⸻
+
+Error 6: “Edit” and “New Playbook” Not Functional
+	•	File: client/src/pages/Playbooks.tsx and related components
+	•	Issue:
+	•	Clicking either button doesn’t open modal or workflow builder.
+	•	No new playbook or task is created.
+	•	Fix:
+	•	Check button onClick handlers.
+	•	Ensure routing to /playbooks/workflow works using useLocation() or navigate() from Wouter or React Router.
+	•	If using modal, ensure modal state is toggled correctly.
+	•	Validate PlaybookWorkflow.tsx is mounted and displays builder UI.
+
+⸻
+
+Error 8: React is Not Defined
+	•	File: client/src/pages/admin.tsx
+	•	Line: 128
+	•	Fix:
+	•	Import React explicitly at the top of the file:
+
+import React from 'react';
+
+
+
+⸻
+
+Error 9: Notifications Badge Not Clickable
+	•	Fix:
+	•	Inspect the notifications icon/button wrapper.
+	•	Ensure it’s using a valid onClick or routing logic.
+	•	If using a Badge, ensure it’s not blocking the parent element.
+
+⸻
+
+Error 10: Contact & New Task Buttons on Customer 360 Not Clickable
+	•	File: client/src/pages/CustomerDetail.tsx
+	•	Fix:
+	•	Check for overlapping elements or unbound click handlers.
+	•	Use Chrome DevTools to inspect z-index, pointer-events, and CSS issues.
+	•	Ensure onClick={() => ...} handlers are correctly passed and functioning.
+
+⸻
+
+Error 11: Pie Chart on Home Screen Not Loading
+	•	Likely Cause:
+	•	Chart component not properly initialized or missing data.
+	•	Chart library (e.g., Chart.js, ApexCharts) might not be imported or instantiated.
+	•	Fix:
+	•	Confirm the component is using a valid chart type.
+	•	Ensure proper import, like:
+
+import { Pie } from 'react-chartjs-2';
+
+
+	•	Verify that chart data and options are passed correctly and not undefined.
+
+⸻
+
+Final Instructions
+	•	Please fix all above errors in place.
+	•	Ensure all components behave as expected across Desktop and Mobile views.
+	•	After applying changes, restart the application and verify:
+	•	No console/runtime errors
+	•	All listed interactions (task creation, playbook flow, buttons) work smoothly
+	•	All visual components render properly (including charts and badges)
+
+Let me know once done or if any part requires further input.

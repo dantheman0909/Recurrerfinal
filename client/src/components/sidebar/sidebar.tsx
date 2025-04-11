@@ -54,32 +54,34 @@ export default function Sidebar({ open, setOpen }: SidebarProps) {
           const Icon = item.icon;
           
           return (
-            <Link key={item.name} href={item.href}>
-              <a
-                className={cn(
-                  "group flex items-center px-3 py-2 text-sm font-medium rounded-md",
-                  isActive
-                    ? "bg-gradient-to-br from-[#1E99A0] via-[#0D9298] to-[#16797E] text-white"
-                    : "text-gray-600 hover:bg-gray-100"
-                )}
-              >
-                <Icon 
+            <div key={item.name}>
+              <Link href={item.href}>
+                <div
                   className={cn(
-                    "h-5 w-5 mr-3",
-                    item.name === "Red Zone" && !isActive ? "text-red-500" : ""
-                  )} 
-                />
-                {item.name}
-                {item.badgeCount && (
-                  <Badge variant="outline" className={cn(
-                    "ml-auto py-0.5 px-2 text-xs rounded-full",
-                    isActive ? "bg-red-500 text-white border-red-400" : "bg-red-100 text-red-500 border-red-200"
-                  )}>
-                    {item.badgeCount}
-                  </Badge>
-                )}
-              </a>
-            </Link>
+                    "group flex items-center px-3 py-2 text-sm font-medium rounded-md cursor-pointer",
+                    isActive
+                      ? "bg-gradient-to-br from-[#1E99A0] via-[#0D9298] to-[#16797E] text-white"
+                      : "text-gray-600 hover:bg-gray-100"
+                  )}
+                >
+                  <Icon 
+                    className={cn(
+                      "h-5 w-5 mr-3",
+                      item.name === "Red Zone" && !isActive ? "text-red-500" : ""
+                    )} 
+                  />
+                  {item.name}
+                  {item.badgeCount && (
+                    <Badge variant="outline" className={cn(
+                      "ml-auto py-0.5 px-2 text-xs rounded-full",
+                      isActive ? "bg-red-500 text-white border-red-400" : "bg-red-100 text-red-500 border-red-200"
+                    )}>
+                      {item.badgeCount}
+                    </Badge>
+                  )}
+                </div>
+              </Link>
+            </div>
           );
         })}
       </nav>

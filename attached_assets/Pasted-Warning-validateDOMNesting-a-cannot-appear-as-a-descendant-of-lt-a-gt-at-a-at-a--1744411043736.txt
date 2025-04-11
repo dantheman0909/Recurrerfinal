@@ -1,0 +1,29 @@
+Warning: validateDOMNesting(...): <a> cannot appear as a descendant of &lt;a&gt;.
+    at a
+    at a
+    at https://3be2e99d-2bd0-40a7-b6b9-6f2361ce292e-00-o20dwztf8tam.kirk.replit.dev/@fs/home/runner/workspace/node_modules/.vite/deps/wouter.js?v=2902e7fd:337:18
+    at nav
+    at div
+    at div
+    at div
+    at Sidebar (https://3be2e99d-2bd0-40a7-b6b9-6f2361ce292e-00-o20dwztf8tam.kirk.replit.dev/src/components/sidebar/sidebar.tsx:35:35)
+    at div
+    at AppLayout (https://3be2e99d-2bd0-40a7-b6b9-6f2361ce292e-00-o20dwztf8tam.kirk.replit.dev/src/components/layouts/app-layout.tsx:22:37)
+    at App
+    at QueryClientProvider (https://3be2e99d-2bd0-40a7-b6b9-6f2361ce292e-00-o20dwztf8tam.kirk.replit.dev/@fs/home/runner/workspace/node_modules/.vite/deps/@tanstack_react-query.js?v=2902e7fd:2805:3)
+at a
+at a
+at https://3be2e99d-2bd0-40a7-b6b9-6f2361ce292e-00-o20dwztf8tam.kirk.replit.dev/@fs/home/runner/workspace/node_modules/.vite/deps/wouter.js?v=2902e7fd:337:18
+at nav
+at div
+at div
+at div
+at Sidebar (https://3be2e99d-2bd0-40a7-b6b9-6f2361ce292e-00-o20dwztf8tam.kirk.replit.dev/src/components/sidebar/sidebar.tsx:35:35)
+at div
+at AppLayout (https://3be2e99d-2bd0-40a7-b6b9-6f2361ce292e-00-o20dwztf8tam.kirk.replit.dev/src/components/layouts/app-layout.tsx:22:37)
+at App
+at QueryClientProvider (https://3be2e99d-2bd0-40a7-b6b9-6f2361ce292e-00-o20dwztf8tam.kirk.replit.dev/@fs/home/runner/workspace/node_modules/.vite/deps/@tanstack_react-query.js?v=2902e7fd:2805:3)
+at t.value (https://3be2e99d-2bd0-40a7-b6b9-6f2361ce292e-00-o20dwztf8tam.kirk.replit.dev/__replco/static/devtools/eruda/3.2.3/eruda.js:2:17465)
+at new t (https://3be2e99d-2bd0-40a7-b6b9-6f2361ce292e-00-o20dwztf8tam.kirk.replit.dev/__replco/static/devtools/eruda/3.2.3/eruda.js:2:12630)
+at t.value (https://3be2e99d-2bd0-40a7-b6b9-6f2361ce292e-00-o20dwztf8tam.kirk.replit.dev/__replco/static/devtools/eruda/3.2.3/eruda.js:2:32766)
+at https://3be2e99d-2bd0-40a7-b6b9-6f2361ce292e-00-o20dwztf8tam.kirk.replit.dev/__replco/static/devtools/eruda/3.2.3/eruda.js:2:34400
