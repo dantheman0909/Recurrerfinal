@@ -68,32 +68,34 @@ function RedZoneItem({ alert, customer }: RedZoneItemProps) {
 
   return (
     <li>
-      <Link href={`/customers/${alert.customer_id}`} className="block hover:bg-gray-50">
-        <div className="px-4 py-4 sm:px-6">
-          <div className="flex items-center justify-between">
-            <p className="text-sm font-medium text-gray-900 truncate">
-              {customer}
-            </p>
-            <div className="ml-2 flex-shrink-0 flex">
-              <Badge className={cn("px-2 text-xs leading-5 font-semibold rounded-full", getSeverityStyles(alert.severity))}>
-                {severityLabel}
-              </Badge>
+      <div className="block hover:bg-gray-50">
+        <Link href={`/customers/${alert.customer_id || ''}`}>
+          <div className="px-4 py-4 sm:px-6">
+            <div className="flex items-center justify-between">
+              <p className="text-sm font-medium text-gray-900 truncate">
+                {customer}
+              </p>
+              <div className="ml-2 flex-shrink-0 flex">
+                <Badge className={cn("px-2 text-xs leading-5 font-semibold rounded-full", getSeverityStyles(alert.severity || ''))}>
+                  {severityLabel}
+                </Badge>
+              </div>
+            </div>
+            <div className="mt-2 sm:flex sm:justify-between">
+              <div className="sm:flex items-center">
+                <p className="text-sm text-red-600">
+                  {alert.reason}
+                </p>
+              </div>
+              <div className="mt-2 flex items-center text-sm text-gray-500 sm:mt-0">
+                <p className="bg-red-50 px-2 py-1 rounded text-xs text-red-600 font-medium">
+                  {alert.severity === 'critical' ? 'Revenue dropped 34%' : 'NPS score: 4.2/10'}
+                </p>
+              </div>
             </div>
           </div>
-          <div className="mt-2 sm:flex sm:justify-between">
-            <div className="sm:flex items-center">
-              <p className="text-sm text-red-600">
-                {alert.reason}
-              </p>
-            </div>
-            <div className="mt-2 flex items-center text-sm text-gray-500 sm:mt-0">
-              <p className="bg-red-50 px-2 py-1 rounded text-xs text-red-600 font-medium">
-                {alert.severity === 'critical' ? 'Revenue dropped 34%' : 'NPS score: 4.2/10'}
-              </p>
-            </div>
-          </div>
-        </div>
-      </Link>
+        </Link>
+      </div>
     </li>
   );
 }

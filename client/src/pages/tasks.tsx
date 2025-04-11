@@ -18,7 +18,8 @@ import {
   Plus, 
   Search, 
   User, 
-  Calendar 
+  Calendar,
+  Building
 } from "lucide-react";
 import { Task } from "@shared/schema";
 import { TaskStatus } from "@shared/types";
@@ -67,7 +68,9 @@ export default function Tasks() {
     return matchesSearch && matchesStatus && matchesAssignee;
   });
   
-  const getStatusBadgeStyles = (status: TaskStatus) => {
+  const getStatusBadgeStyles = (status: TaskStatus | null | undefined) => {
+    if (!status) return "bg-gray-100 text-gray-800";
+    
     switch (status) {
       case 'pending':
         return "bg-yellow-100 text-yellow-800";
@@ -264,7 +267,7 @@ export default function Tasks() {
                               </p>
                               <div className="ml-2 flex-shrink-0 flex">
                                 <Badge className={cn("px-2 text-xs leading-5 font-semibold rounded-full", getStatusBadgeStyles(task.status))}>
-                                  {task.status.replace('_', ' ')}
+                                  {task.status?.replace('_', ' ') || 'Unknown'}
                                 </Badge>
                               </div>
                             </div>
@@ -356,7 +359,7 @@ interface KanbanColumnProps {
   tasks: Task[];
   userMap: Record<number, any>;
   customerMap: Record<number, any>;
-  getStatusBadgeStyles: (status: TaskStatus) => string;
+  getStatusBadgeStyles: (status: TaskStatus | null | undefined) => string;
 }
 
 function KanbanColumn({ title, icon, tasks, userMap, customerMap, getStatusBadgeStyles }: KanbanColumnProps) {
