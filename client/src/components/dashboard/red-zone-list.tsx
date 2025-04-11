@@ -85,7 +85,7 @@ function RedZoneItem({ alert, customer }: RedZoneItemProps) {
             </div>
             <div className="mt-2 flex items-center text-sm text-gray-500 sm:mt-0">
               <p className="bg-red-50 px-2 py-1 rounded text-xs text-red-600 font-medium">
-                {customers[alert.customer_id]?.health_status === 'red_zone' ? 'Revenue dropped 34%' : 'NPS score: 4.2/10'}
+                {alert.severity === 'critical' ? 'Revenue dropped 34%' : 'NPS score: 4.2/10'}
               </p>
             </div>
           </div>
