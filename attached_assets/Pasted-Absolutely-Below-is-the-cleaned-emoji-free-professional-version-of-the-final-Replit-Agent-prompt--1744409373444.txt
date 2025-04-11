@@ -1,0 +1,175 @@
+Absolutely. Below is the cleaned, emoji-free, professional version of the final Replit Agent prompt with all your recent changes, UI refinements, and expectations incorporated. It’s structured specifically for Replit Agent to parse and execute efficiently.
+
+⸻
+
+Replit Agent Prompt — Recurrer: Customer Success OS
+
+Build a full-stack application named Recurrer – Customer Success OS using the technologies and structure defined below. The platform is designed for customer success teams to manage onboarding, retention, health metrics, and internal workflows with deep data integrations and automation.
+
+Tech Stack
+	•	Frontend: React (with Vite), TailwindCSS
+	•	Backend: Node.js with Express
+	•	Database: Supabase (PostgreSQL)
+	•	External DB Sync: MySQL (with field mapping and query builder)
+	•	Auth: Supabase Google OAuth
+	•	Integrations:
+	•	Gmail & Google Calendar (OAuth scopes)
+	•	Chargebee (Read-only API access)
+	•	Fallback Modes:
+	•	Google Sheets or CSV import if MySQL connection fails
+	•	Mock data when no credentials or DBs are connected
+
+Project Structure
+
+/frontend                  → React + Tailwind frontend
+/backend                   → Express backend
+/backend/routes            → API route handlers
+/shared/schema.ts          → Supabase + MySQL field mapping schema
+/shared/types.ts           → Shared data models
+/server/db.ts              → PostgreSQL + MySQL DB logic
+/server/storage.ts         → MemStorage and DatabaseStorage implementations
+/client/src/pages          → Page-level components (Dashboard, Reports, Admin, etc.)
+/client/src/components     → UI components (Charts, Forms, Tables, etc.)
+/client/src/lib            → Supabase clients and utilities
+theme.json                 → Tailwind theme configuration
+.env / .env.example        → Environment variable templates
+
+UI Design Guidelines
+	•	Font: Manrope across all components
+	•	Charts: gradient-filled (no solid color fills)
+	•	Teal gradient scale: #1E99A0 → #0D9298 → #16797E
+	•	Layout: minimalist, ultra-modern
+	•	White/light backgrounds, rounded corners, soft shadows
+	•	High-contrast text
+	•	Responsive for mobile and tablet views
+	•	Popups and input fields: no heavy color overlays, subtle styling
+	•	Animations: smooth transitions and hover effects across components
+
+Authentication
+	•	Use Supabase for Google OAuth
+	•	Frontend uses VITE_SUPABASE_URL, VITE_SUPABASE_KEY
+	•	Backend uses SUPABASE_SERVICE_ROLE_KEY
+	•	Fallback: If credentials are missing, operate in mock mode with in-memory data
+
+Frontend Views and Features
+	1.	Dashboard
+	•	Shows open tasks, campaign gaps, renewal alerts, red zone count
+	•	Includes bar, donut, and area charts (gradient-filled)
+	•	Filters by timeframes: weekly, monthly, quarterly, yearly
+	2.	Customer 360
+	•	Begins with customer list view
+	•	Navigation to individual customer pages on click
+	•	Displays ARR, MRR, churn, review meetings, campaign stats
+	•	External links to HubSpot, Chargebee, Intercom, etc.
+	3.	Task Management
+	•	Create tasks manually or from playbooks
+	•	Due date options:
+	•	Fixed date
+	•	X days from task creation or trigger event
+	•	Recurrence options: daily, weekly, bi-weekly, monthly
+	•	Historical comments and status changes stored in Supabase
+	•	Admin view and individual views vary based on role
+	4.	Playbooks
+	•	Workflow builder to define:
+	•	Trigger logic (time, renewal date, POD type, etc.)
+	•	Task templates
+	•	Recurrence rules
+	•	UI for visual workflow creation
+	•	Task due date logic: fixed or relative
+	•	Option to preview and simulate before activation
+	5.	Reports
+	•	Metrics tracked:
+	•	Onboarding completion (21/30 days by account type)
+	•	Task category completion rates
+	•	Campaign sent stats (first 60 days, then monthly)
+	•	NPS per quarter, renewal rates, NRR per month
+	•	Data tagging percentage, add-on revenue per location
+	•	Referrals, testimonials, and case study submissions
+	6.	Red Zone Alerts
+	•	Visual alerts with red icon and reasons shown
+	•	Triggers include:
+	•	Delayed onboarding
+	•	No QR/loyalty setup
+	•	No campaign sent within 60 days
+	•	No monthly campaigns after onboarding
+	•	No review meetings
+	•	Low NPS
+	•	Low data tagging
+	•	Revenue drop
+	•	Alerts auto-resolve when criteria improve
+	7.	Admin Panel
+	•	Upload CSV with customer data
+	•	Each record is given a unique ID
+	•	Updates existing records if same ID is uploaded
+	•	MySQL Configuration
+	•	Form to input connection parameters
+	•	Post-connection, user can input query
+	•	Query results previewed
+	•	Field mapping UI between MySQL fields and platform schema
+	•	If a field doesn’t exist, admin can create it on Recurrer
+	•	Google Sheet or CSV import option for usage data if MySQL fails
+	•	Chargebee API connection for read-only financial enrichment
+	•	User management (create, update, delete, password reset)
+	•	Feature flags and role-based permissions
+
+Supabase Tables (via schema.sql)
+	•	profiles, tasks, task_comments, playbooks, playbook_tasks
+	•	calendar_events, email_threads, integration_tokens
+	•	red_zone_accounts, data_snapshots, mysql_config
+	•	mysql_field_mappings, report_metrics, referrals
+	•	testimonials, case_studies, user_activity_logs
+	•	RLS policies enforced using get_user_role(auth.uid())
+
+Backend API Endpoints
+	•	POST /sync → Sync data from MySQL to Supabase
+	•	GET /redzone → Get red zone accounts with reasons
+	•	POST /tasks → Create or update tasks
+	•	POST /auth/validate → Auth validation and profile setup
+	•	GET /reports/... → Return reports for different metrics
+	•	POST /admin/mysql-config → Save MySQL connection
+	•	POST /admin/mysql-query → Run query from admin input
+	•	POST /admin/mysql-map-fields → Map MySQL fields to internal schema
+	•	POST /admin/import-csv → Upload base data via CSV
+	•	GET /admin/users / PATCH /admin/user-role / POST /admin/reset-password
+
+Mock Data Behavior
+	•	If Supabase or MySQL is not connected:
+	•	Use mocked customer, task, and reporting data
+	•	Allow full navigation and interactions in demo mode
+	•	Mock mode toggled automatically
+
+Run Instructions (Replit)
+
+# Install backend dependencies
+cd backend
+npm install
+
+# Install frontend dependencies
+cd ../frontend
+npm install
+
+# Backend: run Express server
+node backend/index.js
+
+# Frontend: start Vite dev server
+npm run dev
+
+# Optional unified runner (in project root)
+npm run start
+
+Expected Outputs
+	•	Fully responsive, clean UI accessible via Replit preview
+	•	Role-based access for Admin, TL, and CSM
+	•	End-to-end flow: CSV upload → DB config → task execution → reporting
+	•	Charts with gradient visuals
+	•	All major features work in mock mode if database access is not yet set up
+	•	Admins can configure data connections, import datasets, and map fields
+	•	Usage and engagement tracked across all modules
+
+Language Preferences
+	•	Replit Agent interaction: English
+	•	Application interface: English
+
+⸻
+
+This is the final, optimized Replit Agent prompt for your Customer Success OS — Recurrer. Let me know if you’d like this saved as a .txt, Markdown, or embedded directly into a project setup file.
