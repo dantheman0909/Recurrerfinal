@@ -194,7 +194,7 @@ export default function RedZone() {
                 </div>
               </SelectTrigger>
               <SelectContent>
-                <SelectItem value="">All Severities</SelectItem>
+                <SelectItem value="all-severities">All Severities</SelectItem>
                 <SelectItem value="critical">Critical</SelectItem>
                 <SelectItem value="high_risk">High Risk</SelectItem>
                 <SelectItem value="attention_needed">Attention Needed</SelectItem>

@@ -211,7 +211,7 @@ export default function Tasks() {
                 </div>
               </SelectTrigger>
               <SelectContent>
-                <SelectItem value="">All Statuses</SelectItem>
+                <SelectItem value="all-statuses">All Statuses</SelectItem>
                 <SelectItem value="pending">Pending</SelectItem>
                 <SelectItem value="in_progress">In Progress</SelectItem>
                 <SelectItem value="completed">Completed</SelectItem>
@@ -227,7 +227,7 @@ export default function Tasks() {
                 </div>
               </SelectTrigger>
               <SelectContent>
-                <SelectItem value="">All Assignees</SelectItem>
+                <SelectItem value="all-assignees">All Assignees</SelectItem>
                 {users?.map((user: any) => (
                   <SelectItem key={user.id} value={user.id.toString()}>
                     {user.name}

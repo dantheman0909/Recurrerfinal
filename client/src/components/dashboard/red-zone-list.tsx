@@ -3,6 +3,7 @@ import { AlertTriangle } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { cn } from "@/lib/utils";
 import { RedZoneAlert, Customer } from "@shared/schema";
+import { Link } from "wouter";
 
 interface RedZoneListProps {
   alerts: RedZoneAlert[];
@@ -25,14 +26,14 @@ export function RedZoneList({ alerts, customers }: RedZoneListProps) {
           <RedZoneItem 
             key={alert.id} 
             alert={alert} 
-            customer={customers[alert.customer_id]?.name || 'Unknown Customer'} 
+            customer={customers && alert.customer_id && customers[alert.customer_id] ? customers[alert.customer_id].name : 'Unknown Customer'} 
           />
         ))}
       </ul>
       <CardFooter className="bg-gray-50 px-4 py-3 text-center">
-        <a href="/red-zone" className="text-sm font-medium text-teal-600 hover:text-teal-500">
-          View all red zone accounts
-        </a>
+        <div className="text-sm font-medium text-teal-600 hover:text-teal-500">
+          <Link href="/red-zone">View all red zone accounts</Link>
+        </div>
       </CardFooter>
     </Card>
   );
@@ -57,15 +58,17 @@ function RedZoneItem({ alert, customer }: RedZoneItemProps) {
     }
   };
 
-  const severityLabel = {
+  const severityMap = {
     'critical': 'Critical',
     'high_risk': 'High Risk',
     'attention_needed': 'Attention Needed'
-  }[alert.severity] || alert.severity;
+  };
+  
+  const severityLabel = alert.severity && severityMap[alert.severity as keyof typeof severityMap] || 'Unknown';
 
   return (
     <li>
-      <a href={`/customers/${alert.customer_id}`} className="block hover:bg-gray-50">
+      <Link href={`/customers/${alert.customer_id}`} className="block hover:bg-gray-50">
         <div className="px-4 py-4 sm:px-6">
           <div className="flex items-center justify-between">
             <p className="text-sm font-medium text-gray-900 truncate">
@@ -90,7 +93,7 @@ function RedZoneItem({ alert, customer }: RedZoneItemProps) {
             </div>
           </div>
         </div>
-      </a>
+      </Link>
     </li>
   );
 }
