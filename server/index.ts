@@ -11,7 +11,8 @@ import {
   getInvoicesForSubscription,
   getMySQLCompanies,
   getMySQLCompany,
-  getCustomerExternalData
+  getCustomerExternalData,
+  importMySQLDataToCustomer
 } from "./external-data";
 
 const app = express();
@@ -53,6 +54,9 @@ app.use((req, res, next) => {
 app.get('/api/chargebee/subscriptions', getChargebeeSubscriptions);
 app.get('/api/chargebee/subscriptions/:id', getChargebeeSubscription);
 app.get('/api/chargebee/customers', getChargebeeCustomers);
+
+// Customer external data integration routes
+app.post('/api/customers/import-mysql-data', importMySQLDataToCustomer);
 app.get('/api/chargebee/customers/:id', getChargebeeCustomer);
 app.get('/api/chargebee/invoices', getChargebeeInvoices);
 app.get('/api/chargebee/invoices/:id', getChargebeeInvoice);
