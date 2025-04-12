@@ -718,14 +718,14 @@ export default function PlaybookWorkflow() {
                           <FormLabel>Template Message</FormLabel>
                           <FormControl>
                             <Textarea 
-                              placeholder="Enter template message with variables like {{customer_name}}" 
+                              placeholder="Enter template message with variables like &#123;&#123;customer_name&#125;&#125;" 
                               {...field} 
                               value={field.value || ""}
                               className="resize-none h-24"
                             />
                           </FormControl>
                           <FormDescription>
-                            You can use variables like {{customer_name}}, {{renewal_date}}, {{csm_name}}
+                            You can use variables like &#123;&#123;customer_name&#125;&#125;, &#123;&#123;renewal_date&#125;&#125;, &#123;&#123;csm_name&#125;&#125;
                           </FormDescription>
                           <FormMessage />
                         </FormItem>
