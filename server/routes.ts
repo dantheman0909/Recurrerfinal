@@ -273,17 +273,17 @@ export async function registerRoutes(app: Express): Promise<Server> {
       for (const task of workflowData.tasks) {
         // Convert task data to match DB schema
         const playbookTaskData = {
-          playbook_id: playbook.id,
           title: task.title,
           description: task.description || null,
           due_type: task.due_type,
-          due_offset: task.due_type === 'relative' ? task.due_offset : null,
-          fixed_date: task.due_type === 'fixed' ? task.fixed_date : null,
+          due_offset: task.due_type === 'relative' ? (task.due_offset || 0) : null,
+          fixed_date: task.due_type === 'fixed' ? (task.fixed_date || null) : null,
           recurrence: task.recurrence,
           assignment_role: task.assignment_role,
           required_fields: task.required_fields || [],
           template_message: task.template_message || null,
-          position: task.position
+          position: task.position,
+          created_at: new Date()
         };
         
         const createdTask = await storage.createPlaybookTask(playbook.id, playbookTaskData);
@@ -317,11 +317,14 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const taskSchema = z.object({
         title: z.string(),
         description: z.string().nullable().optional(),
-        due_days: z.number().nullable().optional(),
-        due_date: z.string().nullable().optional(),
-        recurring: z.boolean().nullable().optional(),
-        recurrence_pattern: z.string().nullable().optional(),
-        order: z.number()
+        due_type: z.enum(['fixed', 'relative']).default('relative'),
+        due_offset: z.number().nullable().optional(),
+        fixed_date: z.string().nullable().optional(),
+        recurrence: z.enum(['none', 'daily', 'weekly', 'monthly', 'bi-weekly']).default('none'),
+        assignment_role: z.enum(['csm', 'team_lead', 'admin']).default('csm'),
+        required_fields: z.array(z.string()).optional(),
+        template_message: z.string().nullable().optional(),
+        position: z.number()
       });
       
       // Convert undefined to null for database compatibility
@@ -329,12 +332,27 @@ export async function registerRoutes(app: Express): Promise<Server> {
       
       // Convert undefined values to null
       if (taskData.description === undefined) taskData.description = null;
-      if (taskData.due_days === undefined) taskData.due_days = null;
-      if (taskData.due_date === undefined) taskData.due_date = null;
-      if (taskData.recurring === undefined) taskData.recurring = null;
-      if (taskData.recurrence_pattern === undefined) taskData.recurrence_pattern = null;
+      if (taskData.due_offset === undefined) taskData.due_offset = null;
+      if (taskData.fixed_date === undefined) taskData.fixed_date = null;
+      if (taskData.template_message === undefined) taskData.template_message = null;
+      if (taskData.required_fields === undefined) taskData.required_fields = [];
       
-      const task = await storage.createPlaybookTask(playbookId, taskData);
+      // Add created_at date and handle undefined values
+      const fullTaskData = {
+        title: taskData.title,
+        description: taskData.description || null,
+        due_type: taskData.due_type,
+        due_offset: taskData.due_offset || null,
+        fixed_date: taskData.fixed_date || null,
+        recurrence: taskData.recurrence,
+        assignment_role: taskData.assignment_role,
+        required_fields: taskData.required_fields || [],
+        template_message: taskData.template_message || null,
+        position: taskData.position,
+        created_at: new Date()
+      };
+      
+      const task = await storage.createPlaybookTask(playbookId, fullTaskData);
       res.status(201).json(task);
     } catch (error) {
       res.status(400).json({ message: 'Invalid playbook task data', error });
