@@ -74,10 +74,11 @@ export interface FieldMapping {
 }
 
 export type PlaybookTriggerType = 
-  | 'time_after_onboarding' 
-  | 'days_before_renewal' 
-  | 'account_health_change' 
-  | 'manual';
+  | 'manual'
+  | 'new_customer' 
+  | 'usage_drop' 
+  | 'renewal_approaching'
+  | 'custom_event';
 
 export interface PlaybookTriggerConfig {
   days?: number;
