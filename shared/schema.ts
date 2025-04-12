@@ -8,6 +8,10 @@ export const userRoleEnum = pgEnum('user_role', ['admin', 'team_lead', 'csm']);
 export const taskStatusEnum = pgEnum('task_status', ['pending', 'in_progress', 'completed', 'overdue']);
 export const accountHealthEnum = pgEnum('account_health', ['healthy', 'at_risk', 'red_zone']);
 export const alertSeverityEnum = pgEnum('alert_severity', ['critical', 'high_risk', 'attention_needed']);
+export const playbookTriggerEnum = pgEnum('playbook_trigger', ['manual', 'new_customer', 'usage_drop', 'renewal_approaching', 'custom_event']);
+export const dueDateTypeEnum = pgEnum('due_date_type', ['fixed', 'relative']);
+export const recurrenceTypeEnum = pgEnum('recurrence_type', ['none', 'daily', 'weekly', 'monthly', 'bi-weekly']);
+export const accountTypeEnum = pgEnum('account_type', ['starter', 'growth', 'key']);
 
 // Users & Profiles
 export const users = pgTable("users", {
@@ -97,8 +101,10 @@ export const playbooks = pgTable("playbooks", {
   id: serial("id").primaryKey(),
   name: text("name").notNull(),
   description: text("description"),
-  trigger_type: text("trigger_type").notNull(),
-  trigger_config: jsonb("trigger_config"),
+  trigger_type: playbookTriggerEnum("trigger_type").notNull().default('manual'),
+  target_segments: text("target_segments").array(), // Array of account types ['starter', 'growth', 'key']
+  filters: jsonb("filters"), // For POD, Location Count, ARR, Plan Type filters
+  active: boolean("active").default(true),
   created_by: integer("created_by").references(() => users.id),
   created_at: timestamp("created_at").defaultNow(),
 });
@@ -109,11 +115,27 @@ export const playbookTasks = pgTable("playbook_tasks", {
   playbook_id: integer("playbook_id").notNull().references(() => playbooks.id),
   title: text("title").notNull(),
   description: text("description"),
-  due_days: integer("due_days"),
-  due_date: timestamp("due_date"),
-  recurring: boolean("recurring").default(false),
-  recurrence_pattern: text("recurrence_pattern"),
-  order: integer("order").notNull(),
+  due_type: dueDateTypeEnum("due_type").notNull().default('relative'),
+  due_offset: integer("due_offset").default(0), // Days from trigger for relative
+  fixed_date: timestamp("fixed_date"), // For fixed date tasks
+  recurrence: recurrenceTypeEnum("recurrence").default('none'),
+  assignment_role: userRoleEnum("assignment_role").default('csm'),
+  required_fields: text("required_fields").array(), // ['comment', 'recording_link', 'attachment']
+  template_message: text("template_message"),
+  position: integer("position").notNull(), // For ordering tasks
+  created_at: timestamp("created_at").defaultNow(),
+});
+
+// Playbook Runs
+export const playbookRuns = pgTable("playbook_runs", {
+  id: serial("id").primaryKey(),
+  playbook_id: integer("playbook_id").notNull().references(() => playbooks.id),
+  customer_id: integer("customer_id").notNull().references(() => customers.id),
+  status: text("status").notNull().default('active'), // active, completed, cancelled
+  triggered_by: integer("triggered_by").references(() => users.id),
+  trigger_event: text("trigger_event"),
+  started_at: timestamp("started_at").defaultNow(),
+  completed_at: timestamp("completed_at"),
 });
 
 // Red Zone Alerts
@@ -186,10 +208,17 @@ export const tasksRelations = relations(tasks, ({ one }) => ({
 export const playbooksRelations = relations(playbooks, ({ one, many }) => ({
   createdBy: one(users, { fields: [playbooks.created_by], references: [users.id] }),
   tasks: many(playbookTasks),
+  runs: many(playbookRuns),
 }));
 
 export const playbookTasksRelations = relations(playbookTasks, ({ one }) => ({
   playbook: one(playbooks, { fields: [playbookTasks.playbook_id], references: [playbooks.id] }),
+}));
+
+export const playbookRunsRelations = relations(playbookRuns, ({ one }) => ({
+  playbook: one(playbooks, { fields: [playbookRuns.playbook_id], references: [playbooks.id] }),
+  customer: one(customers, { fields: [playbookRuns.customer_id], references: [customers.id] }),
+  triggeredBy: one(users, { fields: [playbookRuns.triggered_by], references: [users.id] }),
 }));
 
 export const redZoneAlertsRelations = relations(redZoneAlerts, ({ one }) => ({
@@ -205,6 +234,8 @@ export const insertUserSchema = createInsertSchema(users).omit({ id: true, creat
 export const insertCustomerSchema = createInsertSchema(customers).omit({ id: true, created_at: true });
 export const insertTaskSchema = createInsertSchema(tasks).omit({ id: true, created_at: true });
 export const insertPlaybookSchema = createInsertSchema(playbooks).omit({ id: true, created_at: true });
+export const insertPlaybookTaskSchema = createInsertSchema(playbookTasks).omit({ id: true, created_at: true });
+export const insertPlaybookRunSchema = createInsertSchema(playbookRuns).omit({ id: true, started_at: true, completed_at: true });
 export const insertRedZoneAlertSchema = createInsertSchema(redZoneAlerts).omit({ id: true, created_at: true, resolved_at: true });
 
 // Types
@@ -223,6 +254,10 @@ export type Playbook = typeof playbooks.$inferSelect;
 export type InsertPlaybook = z.infer<typeof insertPlaybookSchema>;
 
 export type PlaybookTask = typeof playbookTasks.$inferSelect;
+export type InsertPlaybookTask = z.infer<typeof insertPlaybookTaskSchema>;
+
+export type PlaybookRun = typeof playbookRuns.$inferSelect;
+export type InsertPlaybookRun = z.infer<typeof insertPlaybookRunSchema>;
 
 export type RedZoneAlert = typeof redZoneAlerts.$inferSelect;
 export type InsertRedZoneAlert = z.infer<typeof insertRedZoneAlertSchema>;
