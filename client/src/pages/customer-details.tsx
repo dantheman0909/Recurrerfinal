@@ -386,9 +386,29 @@ export default function CustomerDetails() {
                                   <SelectValue placeholder="Select team member" />
                                 </SelectTrigger>
                                 <SelectContent>
-                                  {users?.map((user: any) => (
+                                  {users?.filter((user: any) => {
+                                    // Get the current user from the users array
+                                    const currentUser = users.find((u: any) => u.email === 'admin@recurrer.com');
+                                    
+                                    if (!currentUser) return true; // If can't determine current user, show all
+                                    
+                                    // Admin sees all users
+                                    if (currentUser.role === 'admin') return true;
+                                    
+                                    // Team Lead sees themselves and their CSMs
+                                    if (currentUser.role === 'team_lead') {
+                                      return user.id === currentUser.id || user.team_lead_id === currentUser.id;
+                                    }
+                                    
+                                    // CSM sees themselves and their team lead
+                                    if (currentUser.role === 'csm') {
+                                      return user.id === currentUser.id || user.id === currentUser.team_lead_id;
+                                    }
+                                    
+                                    return true;
+                                  }).map((user: any) => (
                                     <SelectItem key={user.id} value={user.id.toString()}>
-                                      {user.name}
+                                      {user.name} {user.role === 'team_lead' ? '(TL)' : user.role === 'admin' ? '(Admin)' : ''}
                                     </SelectItem>
                                   ))}
                                 </SelectContent>

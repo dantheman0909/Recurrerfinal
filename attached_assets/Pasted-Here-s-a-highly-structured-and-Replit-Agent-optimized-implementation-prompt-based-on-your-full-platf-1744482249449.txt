@@ -1,0 +1,172 @@
+Here’s a highly structured and Replit Agent–optimized implementation prompt based on your full platform architecture and the detailed explanation of what a Playbook module should entail. This prompt ensures Replit understands not just what to build, but how to integrate, automate, and scale the module within the existing Recurrer codebase and data infrastructure.
+
+⸻
+
+Replit Agent Prompt: Build Production-Ready Playbook Module for Recurrer
+
+Implement a production-ready Playbook module inside the existing Recurrer – Customer Success OS platform. This module must align with the existing architecture (React + Vite, Express backend, Supabase DB, Tailwind UI) and integrate deeply with the customers, tasks, user roles, and automation systems already in place.
+
+⸻
+
+Module Name: Playbooks
+
+Purpose
+
+To enable scalable, automated, and trackable customer success workflows through predefined sequences of tasks and actions triggered by customer events, health scores, lifecycle stages, or manual input from CSMs.
+
+⸻
+
+Core Functionality Requirements
+
+1. Playbook Definition and Creation UI
+	•	UI Component: PlaybookWorkflowBuilder.tsx
+	•	Fields:
+	•	Playbook Title (string)
+	•	Description (textarea)
+	•	Trigger Type:
+	•	Event-Based (e.g. onboarding, renewal window)
+	•	Metric-Based (e.g. <75% usage)
+	•	Manual (CSM-triggered)
+	•	Target Account Types (checkboxes: Starter, Growth, Key)
+	•	Filters: POD, location count, ARR, plan type, etc.
+	•	Tasks: Define multiple sequenced steps with:
+	•	Task title
+	•	Description
+	•	Due date: fixed OR X days from trigger
+	•	Recurrence: none, daily, weekly, monthly
+	•	Assignment role: CSM / TL / Admin
+	•	Completion rules (mandatory comment, recording link, etc.)
+	•	Save logic should persist the structure to playbooks and playbook_tasks tables.
+
+⸻
+
+2. Playbook Triggering System
+	•	Backend processor must:
+	•	Evaluate each playbook for eligible customer records
+	•	Auto-generate tasks when trigger conditions match
+	•	Trigger types supported:
+	•	New Customer Added (e.g. onboarding)
+	•	Renewal within X days
+	•	Usage metric falls below threshold
+	•	Manual activation via UI
+	•	Store triggered playbook runs in playbook_runs table
+	•	Fields: customer_id, playbook_id, run_date, triggered_by (system/manual), tasks_generated
+
+⸻
+
+3. Task Assignment and Execution
+	•	Generated tasks are inserted into the tasks table with:
+	•	Link to playbook_task_id
+	•	Auto-assigned CSM or TL based on customer metadata
+	•	Custom due date per logic
+	•	Display these tasks on Dashboard and Task Management views
+	•	CSM must mark completion and leave required feedback per task rules
+
+⸻
+
+4. Templates and Communication Scripts
+	•	Add field on each playbook task: template_message
+	•	Support markdown or HTML input for:
+	•	Email
+	•	WhatsApp/SMS copy
+	•	Auto-fill customer data using handlebars-style variables:
+{{customer_name}}, {{renewal_date}}, {{csm_name}}
+	•	Add preview feature in the UI
+
+⸻
+
+5. Monitoring and Reporting
+	•	Add section under /reports:
+	•	Playbook Runs: Number of customers run per playbook
+	•	Task Completion Rate per playbook
+	•	Success indicators: NPS improvement, renewal %, etc.
+	•	Track playbook effectiveness over time via chart visualizations
+
+⸻
+
+6. Admin Controls
+	•	Role: Admin
+	•	Manage:
+	•	Playbook creation/editing
+	•	Deactivate playbooks
+	•	View audit logs of all playbook runs
+	•	Export full playbook + task template in CSV format
+
+⸻
+
+Database Schema (Supabase)
+
+Create or update the following tables:
+
+-- Playbook definitions
+playbooks (
+  id UUID PRIMARY KEY,
+  title TEXT,
+  description TEXT,
+  trigger_type TEXT,
+  active BOOLEAN DEFAULT TRUE,
+  created_by UUID,
+  created_at TIMESTAMP
+)
+
+-- Tasks linked to playbook
+playbook_tasks (
+  id UUID PRIMARY KEY,
+  playbook_id UUID REFERENCES playbooks(id),
+  title TEXT,
+  description TEXT,
+  due_type TEXT, -- fixed | relative
+  due_offset INTEGER, -- if relative
+  recurrence TEXT,
+  assignment_role TEXT, -- CSM, TL, etc.
+  template_message TEXT,
+  required_fields TEXT[], -- e.g., ["comment", "recording"]
+  created_at TIMESTAMP
+)
+
+-- Log of each playbook run per customer
+playbook_runs (
+  id UUID PRIMARY KEY,
+  playbook_id UUID,
+  customer_id UUID,
+  run_type TEXT, -- manual | auto
+  triggered_by UUID,
+  triggered_at TIMESTAMP,
+  task_count INTEGER
+)
+
+
+
+⸻
+
+Integration Points
+	•	Dashboard: Summary widget of active playbooks and upcoming tasks
+	•	Customer 360 View: Show playbooks assigned to customer with current progress
+	•	Admin Panel: Full management view for playbooks, tasks, triggers, run logs
+	•	Task Module: Generated tasks must follow same structure & validations (due dates, recurrence, required fields)
+
+⸻
+
+UI/UX Requirements
+	•	Match existing Recurrer visual style (Manrope font, white/light background, teal accents)
+	•	Drag-and-drop or reorder support for task sequences
+	•	Tag playbook-generated tasks with a badge
+	•	“Start Playbook Manually” button on Customer 360
+
+⸻
+
+Advanced Features (Optional v2)
+	•	A/B test playbook variants
+	•	Auto-disable playbooks if run success rate drops
+	•	Version history per playbook
+
+⸻
+
+Final Delivery Expectations
+	•	Fully functional Playbook module integrated into frontend, backend, and DB
+	•	Tasks created and assigned per logic
+	•	Manual and automatic triggers operational
+	•	Admins can manage, edit, and analyze playbooks
+	•	Dashboard reflects all playbook-driven activity
+
+Let me know if anything requires clarification before implementation begins.

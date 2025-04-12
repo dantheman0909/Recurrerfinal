@@ -74,7 +74,7 @@ export default function Playbooks() {
       const response = await apiRequest('/api/playbooks', 'POST', playbookData);
       
       // After creating the playbook, automatically create an initial task
-      if (response && response.id) {
+      if (response && 'id' in response) {
         try {
           // Add a default task to the playbook
           await apiRequest(`/api/playbooks/${response.id}/tasks`, 'POST', {
@@ -93,7 +93,7 @@ export default function Playbooks() {
     onSuccess: (data) => {
       // Invalidate both playbooks and the specific playbook's tasks
       queryClient.invalidateQueries({ queryKey: ['/api/playbooks'] });
-      if (data && data.id) {
+      if (data && typeof data === "object" && "id" in data) {
         queryClient.invalidateQueries({ queryKey: [`/api/playbooks/${data.id}/tasks`] });
       }
       
@@ -139,7 +139,7 @@ export default function Playbooks() {
     onSuccess: (data) => {
       // Invalidate both playbooks and the specific playbook's tasks
       queryClient.invalidateQueries({ queryKey: ['/api/playbooks'] });
-      if (data && data.id) {
+      if (data && typeof data === "object" && "id" in data) {
         queryClient.invalidateQueries({ queryKey: [`/api/playbooks/${data.id}/tasks`] });
       }
       
@@ -195,7 +195,11 @@ export default function Playbooks() {
     let healthStatus;
     if (playbook.trigger_config) {
       try {
-        const config = JSON.parse(playbook.trigger_config as string);
+        // Handle both string and already parsed object formats
+        const config = typeof playbook.trigger_config === 'string' 
+          ? JSON.parse(playbook.trigger_config)
+          : playbook.trigger_config;
+          
         days = config.days;
         healthStatus = config.healthStatus;
       } catch (e) {
