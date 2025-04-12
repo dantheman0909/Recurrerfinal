@@ -757,24 +757,7 @@ function DataImportTab({ setActiveTab }: { setActiveTab: (tab: string) => void }
     });
   };
   
-  const downloadSampleCSV = () => {
-    // Sample CSV data
-    const csvContent = 
-`company_id,company_name,industry,contact_name,contact_email,contact_phone,active_stores,growth_subscription_count,loyalty_active_store_count,loyalty_type,revenue_1_year,onboarded_at
-REC001,Acme Technologies,Software,John Smith,john@acmetech.com,+91-9876543210,5,3,4,Points,5000000,2023-01-15
-REC002,Global Foods,Food & Beverage,Maria Garcia,maria@globalfoods.com,+91-9876543211,12,8,10,Cashback,12000000,2023-02-20
-REC003,Urban Retail,Retail,David Kumar,david@urbanretail.com,+91-9876543212,3,2,2,Stamps,3500000,2023-03-10`;
-    
-    // Create a Blob and download link
-    const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
-    const url = URL.createObjectURL(blob);
-    const link = document.createElement('a');
-    link.href = url;
-    link.setAttribute('download', 'sample_customer_data.csv');
-    document.body.appendChild(link);
-    link.click();
-    document.body.removeChild(link);
-  };
+  // Sample CSV download links now use direct anchor tags with the download attribute
   
   return (
     <div className="grid grid-cols-1 gap-6">
@@ -798,13 +781,14 @@ REC003,Urban Retail,Retail,David Kumar,david@urbanretail.com,+91-9876543212,3,2,
                 <Database className="h-4 w-4 mr-2" />
                 Go to Database Config
               </Button>
-              <Button 
-                onClick={downloadSampleCSV}
-                variant="outline"
+              <a 
+                href="/sample/customer-import-sample.csv"
+                download
+                className="inline-flex items-center px-3 py-2 text-sm font-medium rounded-md bg-white text-gray-700 border border-gray-300 hover:bg-gray-50 hover:text-gray-900"
               >
                 <FileText className="h-4 w-4 mr-2" />
                 Download Sample CSV
-              </Button>
+              </a>
             </div>
           </CardContent>
         </Card>
@@ -822,14 +806,14 @@ REC003,Urban Retail,Retail,David Kumar,david@urbanretail.com,+91-9876543212,3,2,
             <div className="grid gap-4">
               <div className="flex justify-between items-center">
                 <Label htmlFor="csv-file">Select CSV File</Label>
-                <Button 
-                  variant="link" 
-                  className="h-auto p-0 text-xs"
-                  onClick={downloadSampleCSV}
+                <a 
+                  href="/sample/customer-import-sample.csv"
+                  download
+                  className="inline-flex items-center text-xs text-blue-600 hover:text-blue-800"
                 >
                   <FileText className="h-3 w-3 mr-1" />
                   Download Sample CSV
-                </Button>
+                </a>
               </div>
               
               <Input 

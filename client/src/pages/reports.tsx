@@ -158,7 +158,7 @@ export default function Reports() {
               />
               <MetricCard
                 title="Add-on Revenue"
-                value="$245K"
+                value={formatINR(245000)}
                 change={+22}
                 description="Per location average"
               />
