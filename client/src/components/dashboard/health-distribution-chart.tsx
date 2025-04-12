@@ -3,15 +3,18 @@ import { cn } from "@/lib/utils";
 
 interface HealthDistributionChartProps {
   data: {
+    healthy: number;
+    atRisk: number;
+    redZone: number;
+  } | {
     status: string[];
     counts: number[];
   };
 }
 
 export function HealthDistributionChart({ data }: HealthDistributionChartProps) {
-  // If data is undefined or doesn't have the expected structure, use defaults
-  if (!data || !data.status || !data.counts) {
-    // Default values for rendering
+  // If data is undefined, use defaults
+  if (!data) {
     return (
       <Card>
         <CardContent className="p-5">
@@ -25,22 +28,46 @@ export function HealthDistributionChart({ data }: HealthDistributionChartProps) 
       </Card>
     );
   }
+  
+  // Check which data format we have and extract the percentages
+  let healthyPercentage = 0;
+  let atRiskPercentage = 0;
+  let redZonePercentage = 0;
+  
+  if ('healthy' in data && 'atRisk' in data && 'redZone' in data) {
+    // New API format with direct percentage values
+    healthyPercentage = data.healthy;
+    atRiskPercentage = data.atRisk;
+    redZonePercentage = data.redZone;
+  } else if ('status' in data && 'counts' in data && Array.isArray(data.status) && Array.isArray(data.counts)) {
+    // Old format with arrays
+    // Process the data arrays to find the values
+    const getStatusPercentage = (statusName: string): number => {
+      const index = data.status.findIndex(status => 
+        status.toLowerCase() === statusName.toLowerCase()
+      );
+      return index >= 0 ? data.counts[index] : 0;
+    };
 
-  // Process the data arrays to find the values
-  const getStatusPercentage = (statusName: string): number => {
-    const index = data.status.findIndex(status => 
-      status.toLowerCase() === statusName.toLowerCase()
+    // Extract values for each status type
+    healthyPercentage = getStatusPercentage('healthy');
+    atRiskPercentage = getStatusPercentage('at risk');
+    redZonePercentage = getStatusPercentage('red zone');
+  } else {
+    // Invalid data format
+    return (
+      <Card>
+        <CardContent className="p-5">
+          <h3 className="text-lg leading-6 font-medium text-gray-900">
+            Customer Health Distribution
+          </h3>
+          <div className="mt-2 flex items-center text-sm text-gray-500">
+            <p>Invalid data format</p>
+          </div>
+        </CardContent>
+      </Card>
     );
-    return index >= 0 ? data.counts[index] : 0;
-  };
-
-  // Extract values for each status type
-  const healthyPercentage = getStatusPercentage('healthy');
-  const atRiskPercentage = getStatusPercentage('at risk');
-  const redZonePercentage = getStatusPercentage('red zone');
-
-  // Calculate the total for the donut chart
-  const total = data.counts.reduce((sum, count) => sum + count, 0);
+  }
   
   return (
     <Card>

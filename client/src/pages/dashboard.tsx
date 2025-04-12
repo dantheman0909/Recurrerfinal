@@ -38,8 +38,9 @@ interface DashboardData {
     values: number[];
   };
   healthDistribution: {
-    status: string[];
-    counts: number[];
+    healthy: number;
+    atRisk: number;
+    redZone: number;
   };
 }
 
