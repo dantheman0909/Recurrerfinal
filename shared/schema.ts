@@ -16,12 +16,14 @@ export const users = pgTable("users", {
   name: text("name").notNull(),
   avatar_url: text("avatar_url"),
   role: userRoleEnum("role").notNull().default('csm'),
+  team_lead_id: integer("team_lead_id").references(() => users.id), // ID of the team lead for CSMs
   created_at: timestamp("created_at").defaultNow(),
 });
 
 // Customers
 export const customers = pgTable("customers", {
   id: serial("id").primaryKey(),
+  recurrer_id: text("recurrer_id").unique(), // UUID for consistent identification
   name: text("name").notNull(),
   industry: text("industry"),
   logo_url: text("logo_url"),
@@ -32,11 +34,37 @@ export const customers = pgTable("customers", {
   renewal_date: timestamp("renewal_date"),
   mrr: integer("mrr"),
   arr: integer("arr"),
+  currency_code: text("currency_code").default('INR'),
   health_status: accountHealthEnum("health_status").default('healthy'),
   created_at: timestamp("created_at").defaultNow(),
+  assigned_csm: integer("assigned_csm").references(() => users.id),
+  // External IDs
   chargebee_customer_id: text("chargebee_customer_id"),
   chargebee_subscription_id: text("chargebee_subscription_id"),
   mysql_company_id: text("mysql_company_id"),
+  // MySQL company fields
+  active_stores: integer("active_stores"),
+  growth_subscription_count: integer("growth_subscription_count"),
+  loyalty_active_store_count: integer("loyalty_active_store_count"),
+  loyalty_inactive_store_count: integer("loyalty_inactive_store_count"),
+  loyalty_active_channels: text("loyalty_active_channels"),
+  loyalty_channel_credits: integer("loyalty_channel_credits"),
+  negative_feedback_alert_inactive: integer("negative_feedback_alert_inactive"),
+  less_than_300_bills: integer("less_than_300_bills"),
+  active_auto_campaigns_count: integer("active_auto_campaigns_count"),
+  unique_customers_captured: integer("unique_customers_captured"),
+  revenue_1_year: integer("revenue_1_year"),
+  customers_with_min_one_visit: integer("customers_with_min_one_visit"),
+  customers_with_min_two_visit: integer("customers_with_min_two_visit"),
+  customers_without_min_visits: integer("customers_without_min_visits"),
+  percentage_of_inactive_customers: integer("percentage_of_inactive_customers"),
+  negative_feedbacks_count: integer("negative_feedbacks_count"),
+  campaigns_sent_last_90_days: integer("campaigns_sent_last_90_days"),
+  bills_received_last_30_days: integer("bills_received_last_30_days"),
+  customers_acquired_last_30_days: integer("customers_acquired_last_30_days"),
+  loyalty_type: text("loyalty_type"),
+  loyalty_reward: text("loyalty_reward"),
+  updated_from_mysql_at: timestamp("updated_from_mysql_at"),
 });
 
 // Tasks
@@ -132,13 +160,17 @@ export const mysqlFieldMappings = pgTable("mysql_field_mappings", {
 });
 
 // Relations
-export const usersRelations = relations(users, ({ many }) => ({
+export const usersRelations = relations(users, ({ one, many }) => ({
+  teamLead: one(users, { fields: [users.team_lead_id], references: [users.id], relationName: "csm_team_lead" }),
+  csmMembers: many(users, { relationName: "csm_team_lead" }),
   assignedTasks: many(tasks, { relationName: "assigned_tasks" }),
   createdTasks: many(tasks, { relationName: "created_tasks" }),
   createdPlaybooks: many(playbooks),
+  assignedCustomers: many(customers, { relationName: "assigned_customers" }),
 }));
 
-export const customersRelations = relations(customers, ({ many }) => ({
+export const customersRelations = relations(customers, ({ one, many }) => ({
+  assignedCsm: one(users, { fields: [customers.assigned_csm], references: [users.id], relationName: "assigned_customers" }),
   tasks: many(tasks),
   redZoneAlerts: many(redZoneAlerts),
   metrics: many(customerMetrics),
