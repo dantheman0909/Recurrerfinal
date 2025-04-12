@@ -365,20 +365,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
   
-  // ----- External Data Routes -----
-  
-  // Chargebee Routes
-  app.get('/api/chargebee/subscriptions', getChargebeeSubscriptions);
-  app.get('/api/chargebee/subscriptions/:id', getChargebeeSubscription);
-  app.get('/api/chargebee/customers', getChargebeeCustomers);
-  app.get('/api/chargebee/customers/:id', getChargebeeCustomer);
-  app.get('/api/chargebee/invoices', getChargebeeInvoices);
-  app.get('/api/chargebee/invoices/:id', getChargebeeInvoice);
-  app.get('/api/chargebee/subscriptions/:id/invoices', getInvoicesForSubscription);
-  
-  // MySQL Routes
-  app.get('/api/mysql/companies', getMySQLCompanies);
-  app.get('/api/mysql/companies/:id', getMySQLCompany);
+  // Note: External data routes are now registered directly in server/index.ts
 
   const httpServer = createServer(app);
   return httpServer;

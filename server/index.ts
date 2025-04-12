@@ -1,6 +1,17 @@
 import express, { type Request, Response, NextFunction } from "express";
 import { registerRoutes } from "./routes";
 import { setupVite, serveStatic, log } from "./vite";
+import {
+  getChargebeeSubscriptions,
+  getChargebeeSubscription,
+  getChargebeeCustomers,
+  getChargebeeCustomer,
+  getChargebeeInvoices,
+  getChargebeeInvoice,
+  getInvoicesForSubscription,
+  getMySQLCompanies,
+  getMySQLCompany
+} from "./external-data";
 
 const app = express();
 app.use(express.json());
@@ -35,6 +46,18 @@ app.use((req, res, next) => {
 
   next();
 });
+
+// Setup direct API routes first to avoid interference from catch-all vite middleware
+// External data API routes
+app.get('/api/chargebee/subscriptions', getChargebeeSubscriptions);
+app.get('/api/chargebee/subscriptions/:id', getChargebeeSubscription);
+app.get('/api/chargebee/customers', getChargebeeCustomers);
+app.get('/api/chargebee/customers/:id', getChargebeeCustomer);
+app.get('/api/chargebee/invoices', getChargebeeInvoices);
+app.get('/api/chargebee/invoices/:id', getChargebeeInvoice);
+app.get('/api/chargebee/subscriptions/:id/invoices', getInvoicesForSubscription);
+app.get('/api/mysql/companies', getMySQLCompanies);
+app.get('/api/mysql/companies/:id', getMySQLCompany);
 
 (async () => {
   const server = await registerRoutes(app);
