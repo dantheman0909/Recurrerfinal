@@ -1,10 +1,11 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { 
   CheckSquare, 
   Clock, 
   AlertTriangle, 
-  MessageSquare 
+  MessageSquare,
+  TrendingUp
 } from "lucide-react";
 import { StatsCard } from "@/components/dashboard/stats-card";
 import { MonthlyMetricsChart } from "@/components/dashboard/monthly-metrics-chart";
@@ -12,7 +13,9 @@ import { HealthDistributionChart } from "@/components/dashboard/health-distribut
 import { TaskList } from "@/components/dashboard/task-list";
 import { RedZoneList } from "@/components/dashboard/red-zone-list";
 import { Button } from "@/components/ui/button";
+import { Card, CardContent } from "@/components/ui/card";
 import { MetricTimeframe } from "@shared/types";
+import { formatCurrency } from "@/lib/utils";
 
 export default function Dashboard() {
   const [timeframe, setTimeframe] = useState<MetricTimeframe>("monthly");
@@ -148,10 +151,60 @@ export default function Dashboard() {
         </div>
       </div>
 
+      {/* Revenue Overview */}
+      <div className="mt-8 px-4 sm:px-6 lg:px-8">
+        <Card>
+          <CardContent className="p-6">
+            <div className="flex items-center justify-between mb-4">
+              <h3 className="text-lg font-medium text-gray-900 flex items-center">
+                <TrendingUp className="h-5 w-5 mr-2 text-teal-600" />
+                Revenue Overview ({timeframe})
+              </h3>
+              <div className="text-sm text-gray-500">
+                {timeframe === "weekly" ? "Last 7 days" : 
+                 timeframe === "monthly" ? "Last 30 days" : 
+                 timeframe === "quarterly" ? "Last 90 days" : "Last 12 months"}
+              </div>
+            </div>
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 mb-6">
+              <div className="bg-gray-50 rounded-lg p-4 text-center">
+                <p className="text-sm text-gray-500">Total MRR</p>
+                <p className="text-2xl font-semibold">{formatCurrency(dashboardData?.mrrTotal || 0)}</p>
+                <div className="mt-1 flex items-center justify-center text-sm">
+                  <span className={dashboardData?.mrrChange >= 0 ? "text-green-600" : "text-red-600"}>
+                    {dashboardData?.mrrChange >= 0 ? "+" : ""}{dashboardData?.mrrChange}%
+                  </span>
+                </div>
+              </div>
+              <div className="bg-gray-50 rounded-lg p-4 text-center">
+                <p className="text-sm text-gray-500">Total ARR</p>
+                <p className="text-2xl font-semibold">{formatCurrency(dashboardData?.arrTotal || 0)}</p>
+                <div className="mt-1 flex items-center justify-center text-sm">
+                  <span className={dashboardData?.arrChange >= 0 ? "text-green-600" : "text-red-600"}>
+                    {dashboardData?.arrChange >= 0 ? "+" : ""}{dashboardData?.arrChange}%
+                  </span>
+                </div>
+              </div>
+              <div className="bg-gray-50 rounded-lg p-4 text-center">
+                <p className="text-sm text-gray-500">Avg. Revenue Per Customer</p>
+                <p className="text-2xl font-semibold">{formatCurrency(dashboardData?.revenuePerCustomer || 0)}</p>
+              </div>
+              <div className="bg-gray-50 rounded-lg p-4 text-center">
+                <p className="text-sm text-gray-500">Growth Rate</p>
+                <p className="text-2xl font-semibold">{dashboardData?.growthRate || 0}%</p>
+              </div>
+            </div>
+          </CardContent>
+        </Card>
+      </div>
+
       {/* Chart Section */}
       <div className="mt-8 px-4 sm:px-6 lg:px-8">
         <div className="grid grid-cols-1 gap-5 lg:grid-cols-2">
-          <MonthlyMetricsChart data={dashboardData?.monthlyMetrics} />
+          <MonthlyMetricsChart 
+            data={dashboardData?.monthlyMetrics} 
+            timeframe={timeframe}
+          />
           <HealthDistributionChart data={dashboardData?.healthDistribution} />
         </div>
       </div>

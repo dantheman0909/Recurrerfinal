@@ -19,6 +19,7 @@ interface GradientChartProps {
   gradientFrom?: string;
   gradientTo?: string;
   strokeColor?: string;
+  valueFormatter?: (value: number) => string;
 }
 
 export function GradientChart({ 
@@ -29,7 +30,8 @@ export function GradientChart({
   showAxis = true,
   gradientFrom = "#1E99A0",
   gradientTo = "rgba(13, 146, 152, 0)",
-  strokeColor = "#0D9298"
+  strokeColor = "#0D9298",
+  valueFormatter
 }: GradientChartProps) {
   return (
     <div className={cn("w-full", className)}>
@@ -63,6 +65,7 @@ export function GradientChart({
               border: "none"
             }}
             itemStyle={{ color: "#1E99A0" }}
+            formatter={(value: number) => valueFormatter ? valueFormatter(value) : value}
           />
           <Area 
             type="monotone" 

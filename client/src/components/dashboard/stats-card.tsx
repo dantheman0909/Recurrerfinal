@@ -1,6 +1,6 @@
 import { Card, CardContent, CardFooter } from "@/components/ui/card";
 import { ArrowDown, ArrowUp } from "lucide-react";
-import { cn } from "@/lib/utils";
+import { cn, formatCurrency } from "@/lib/utils";
 
 interface StatsCardProps {
   title: string;
@@ -10,6 +10,7 @@ interface StatsCardProps {
   footerLink?: string;
   footerText?: string;
   iconBgColor?: string;
+  isCurrency?: boolean;
 }
 
 export function StatsCard({
@@ -19,7 +20,8 @@ export function StatsCard({
   changePercent,
   footerLink,
   footerText = "View all",
-  iconBgColor = "bg-teal-100"
+  iconBgColor = "bg-teal-100",
+  isCurrency = false
 }: StatsCardProps) {
   const isPositiveChange = changePercent && changePercent > 0;
   const isNegativeChange = changePercent && changePercent < 0;
@@ -37,7 +39,7 @@ export function StatsCard({
             </dt>
             <dd className="flex items-baseline">
               <div className="text-2xl font-semibold text-gray-900">
-                {value}
+                {isCurrency ? formatCurrency(value) : value}
               </div>
               {changePercent && (
                 <div 
