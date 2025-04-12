@@ -10,6 +10,17 @@ import {
   insertPlaybookSchema,
   insertRedZoneAlertSchema
 } from "@shared/schema";
+import {
+  getChargebeeSubscriptions,
+  getChargebeeSubscription,
+  getChargebeeCustomers,
+  getChargebeeCustomer,
+  getChargebeeInvoices,
+  getChargebeeInvoice,
+  getInvoicesForSubscription,
+  getMySQLCompanies,
+  getMySQLCompany
+} from "./external-data";
 
 export async function registerRoutes(app: Express): Promise<Server> {
   // API Routes - All prefixed with /api
