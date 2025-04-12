@@ -51,6 +51,10 @@ export default function CustomerDetails() {
     queryKey: ['/api/users'],
   });
   
+  const { data: externalData } = useQuery({
+    queryKey: [`/api/customers/${id}/external-data`],
+  });
+  
   // Format users data for lookups
   const userMap = users?.reduce((acc: any, user: any) => {
     acc[user.id] = user;
@@ -374,6 +378,7 @@ export default function CustomerDetails() {
                 <div className="mt-6">
                   <h4 className="text-sm font-medium text-gray-500 mb-2">External Systems</h4>
                   <div className="space-y-2">
+                    {/* HubSpot */}
                     <Button variant="outline" className="w-full justify-start" asChild>
                       <a href="https://app.hubspot.com" target="_blank" rel="noopener noreferrer">
                         <svg className="w-4 h-4 mr-2" viewBox="0 0 24 24" fill="#ff7a59">
@@ -382,14 +387,72 @@ export default function CustomerDetails() {
                         View in HubSpot
                       </a>
                     </Button>
-                    <Button variant="outline" className="w-full justify-start" asChild>
-                      <a href="https://app.chargebee.com" target="_blank" rel="noopener noreferrer">
-                        <svg className="w-4 h-4 mr-2" viewBox="0 0 24 24" fill="#FF7846">
-                          <path d="M19.998 6.293L15.04 2H4v20h16V6.293zM12 16.5c-2.48 0-4.5-2.02-4.5-4.5S9.52 7.5 12 7.5s4.5 2.02 4.5 4.5-2.02 4.5-4.5 4.5z"/>
-                        </svg>
-                        View in Chargebee
-                      </a>
-                    </Button>
+
+                    {/* Chargebee */}
+                    {(customer.chargebee_customer_id || externalData?.chargebee?.customer) && (
+                      <div>
+                        <Button variant="outline" className="w-full justify-start mb-1" asChild>
+                          <a 
+                            href={customer.chargebee_customer_id ? 
+                              `https://app.chargebee.com/customers/${customer.chargebee_customer_id}` : 
+                              "https://app.chargebee.com"} 
+                            target="_blank" 
+                            rel="noopener noreferrer"
+                          >
+                            <svg className="w-4 h-4 mr-2" viewBox="0 0 24 24" fill="#FF7846">
+                              <path d="M19.998 6.293L15.04 2H4v20h16V6.293zM12 16.5c-2.48 0-4.5-2.02-4.5-4.5S9.52 7.5 12 7.5s4.5 2.02 4.5 4.5-2.02 4.5-4.5 4.5z"/>
+                            </svg>
+                            View in Chargebee
+                          </a>
+                        </Button>
+                        
+                        {externalData?.chargebee?.error ? (
+                          <p className="text-xs text-red-500 ml-2">
+                            Error fetching Chargebee data
+                          </p>
+                        ) : externalData?.chargebee?.customer && (
+                          <div className="text-xs text-gray-500 border rounded p-2 mb-2">
+                            <p><span className="font-medium">Customer ID:</span> {customer.chargebee_customer_id}</p>
+                            {customer.chargebee_subscription_id && (
+                              <p><span className="font-medium">Subscription:</span> {customer.chargebee_subscription_id}</p>
+                            )}
+                            {externalData?.chargebee?.subscription && (
+                              <p><span className="font-medium">Plan:</span> {externalData.chargebee.subscription.plan_id}</p>
+                            )}
+                          </div>
+                        )}
+                      </div>
+                    )}
+
+                    {/* MySQL Data */}
+                    {(customer.mysql_company_id || externalData?.mysql?.company) && (
+                      <div>
+                        <Button variant="outline" className="w-full justify-start mb-1">
+                          <svg className="w-4 h-4 mr-2" viewBox="0 0 24 24" fill="#00758F">
+                            <path d="M16.405 5.501c-.115 0-.193.014-.274.033v.013h.014c.054.104.146.18.214.273.054.107.1.214.154.32l.014-.015c.094-.066.14-.172.14-.333-.04-.047-.046-.094-.08-.14-.04-.067-.126-.1-.18-.153zM5.77 18.695h-.927a50.854 50.854 0 00-.27-4.41h-.008l-1.41 4.41H2.45l-1.4-4.41h-.01a72.892 72.892 0 00-.195 4.41H0c.055-1.966.192-3.81.41-5.53h1.15l1.335 4.064h.008l1.347-4.064h1.095c.242 2.015.384 3.86.428 5.53zm4.017-4.08c-.378 2.045-.876 3.533-1.492 4.46-.482.716-1.01 1.073-1.583 1.073-.153 0-.34-.046-.566-.138v-.494c.11.017.24.026.386.026.268 0 .483-.075.647-.222.197-.18.295-.382.295-.605 0-.155-.077-.47-.23-.944L6.23 14.615h.91l.727 2.36c.164.536.233.91.205 1.123.4-1.064.786-2.24 1.142-3.483h.88zm10.987 4.08h-1.046c0-.057 0-.15.007-.28.002-.118.007-.305.01-.562.002-.268.005-.6.005-.998l0-1.884c0-.723-.077-1.223-.232-1.502-.15-.282-.4-.423-.752-.423-.35 0-.67.162-.974.487L17.784 18.695h-.9v-4.845-.534-.806h.9v.652c.488-.55.994-.824 1.51-.824.383 0 .722.13 1.02.386.295.26.494.61.596 1.057.103.455.155 1.16.155 2.134zm-3.224-.924h-.01c-.053-.298-.127-.536-.233-.703-.126-.248-.375-.372-.744-.372-.127 0-.254.022-.38.076v.33h.01c.322-.102.584-.263.585-.333 0-.07-.263-.106-.372-.106l-.012.002c-.11.02-.23.06-.358.094v.306c.31-.17.535-.515.535-.78 0-.191-.09-.362-.28-.512-.19-.15-.47-.225-.84-.225-.246 0-.45.048-.616.142-.17.095-.31.235-.41.413-.103.178-.155.394-.155.648l.001.034c.004.334.145.646.482.764l.01-.013c.136-.057.256-.113.33-.194l.002.025v.24h-.026c-.395-.03-.692-.283-.69-.646h-.006c0-.228.082-.418.25-.575.155-.152.406-.228.753-.228.344 0 .621.1.82.3.2.2.301.468.301.806v.55c0 .365.13.67.39.914l.016-.056c.12-.37.23-.66.23-.796l.001-.013-.018-.034c-.098.05-.18.08-.26.098l-.17-.036v-.064c.123-.13.252-.126.483-.34v-.066c-.067-.073-.225-.147-.39-.196v-.026c.138-.08.245-.176.32-.286v-.01c.08-.136.185-.313.318-.53v-.019c0-.002 0-.6.002-.184.01-.536.036-1.145-.1-1.486-.146-.347-.42-.58-.83-.7L14.724 13c-.41.016-.796.227-1.095.598h-.01c-.288.37-.453.748-.518 1.137h-.01c-.3.365.004.75.122 1.09zm8.412-.274h-.014c-.07 0-.403.057-.707.156l-.01-.01c.095-.16.293-.306.617-.306.077 0 .165.01.27.03v.13h-.155zm-3.202-4.61c-.276.004-.524.21-.664.472l-.022-.007c.146-.462.458-.703.934-.703.352 0 .609.117.768.35.163.228.243.604.243 1.125 0 0-.05 0-.15.007a3.487 3.487 0 00-.498.115v-.003c-.127.03-.25.064-.37.097v-.035c.49-.214.87-.463.87-.75 0-.178-.085-.318-.254-.417-.17-.1-.427-.15-.77-.15zm6.903 4.63c-.364 0-.673-.11-.925-.332-.255-.222-.382-.516-.382-.883 0-.25.06-.476.182-.678.12-.204.3-.366.536-.487.235-.122.597-.243 1.087-.368l.007.01v.158c-.34.175-.582.32-.726.435-.266.212-.398.476-.398.79 0 .23.08.415.241.553.16.138.376.208.65.208.307 0 .553-.08.738-.242.185-.16.31-.442.372-.838l.018-.02c.076.55.086 1.014-.025 1.387-.112.372-.345.638-.7.794-.354.158-.744.226-1.165.206zM5.08 13.406c-1.403 0-2.107.885-2.107 2.65 0 .665.117 1.2.35 1.61.235.407.605.61 1.115.61.273 0 .57-.057.883-.17v-.534c-.276.1-.524.153-.747.153-.475 0-.804-.228-.988-.684-.125-.307-.187-.728-.187-1.265h2.076c.033-.494-.014-.895-.14-1.204-.124-.31-.337-.54-.64-.686-.147-.07-.32-.116-.52-.136-.105-.012-.212-.018-.317-.018z" />
+                          </svg>
+                          MySQL Company Data
+                        </Button>
+                        
+                        {externalData?.mysql?.error ? (
+                          <p className="text-xs text-red-500 ml-2">
+                            Error fetching MySQL data
+                          </p>
+                        ) : externalData?.mysql?.company && (
+                          <div className="text-xs text-gray-500 border rounded p-2 mb-2">
+                            <p><span className="font-medium">Company ID:</span> {customer.mysql_company_id}</p>
+                            {externalData.mysql.company?.company_name && (
+                              <p><span className="font-medium">Name:</span> {externalData.mysql.company.company_name}</p>
+                            )}
+                            {externalData.mysql.company?.active_stores && (
+                              <p><span className="font-medium">Active Stores:</span> {externalData.mysql.company.active_stores}</p>
+                            )}
+                          </div>
+                        )}
+                      </div>
+                    )}
+
+                    {/* Intercom */}
                     <Button variant="outline" className="w-full justify-start" asChild>
                       <a href="https://app.intercom.com" target="_blank" rel="noopener noreferrer">
                         <svg className="w-4 h-4 mr-2" viewBox="0 0 24 24" fill="#1F8DED">
