@@ -288,7 +288,83 @@ export default function CustomerDetails() {
                   <CardHeader className="pb-2">
                     <div className="flex justify-between items-center">
                       <CardTitle>Tasks</CardTitle>
-                      <Button size="sm">Create Task</Button>
+                      <Dialog>
+                        <DialogTrigger asChild>
+                          <Button size="sm">Create Task</Button>
+                        </DialogTrigger>
+                        <DialogContent>
+                          <DialogHeader>
+                            <DialogTitle>Create Task for {customer.name}</DialogTitle>
+                          </DialogHeader>
+                          <div className="grid gap-4 py-4">
+                            <div className="grid gap-2">
+                              <Label htmlFor="task-title">Task Title</Label>
+                              <Input 
+                                id="task-title" 
+                                placeholder="Enter task title" 
+                                value={newTaskTitle}
+                                onChange={(e) => setNewTaskTitle(e.target.value)}
+                              />
+                            </div>
+                            <div className="grid gap-2">
+                              <Label htmlFor="task-description">Description</Label>
+                              <Textarea 
+                                id="task-description" 
+                                placeholder="Enter task description"
+                                value={newTaskDescription}
+                                onChange={(e) => setNewTaskDescription(e.target.value)}
+                              />
+                            </div>
+                            <div className="grid gap-2">
+                              <Label htmlFor="task-assignee">Assign To</Label>
+                              <Select 
+                                value={newTaskAssignee}
+                                onValueChange={setNewTaskAssignee}
+                              >
+                                <SelectTrigger id="task-assignee">
+                                  <SelectValue placeholder="Select team member" />
+                                </SelectTrigger>
+                                <SelectContent>
+                                  {users?.map((user: any) => (
+                                    <SelectItem key={user.id} value={user.id.toString()}>
+                                      {user.name}
+                                    </SelectItem>
+                                  ))}
+                                </SelectContent>
+                              </Select>
+                            </div>
+                            <div className="grid gap-2">
+                              <Label htmlFor="task-due-date">Due Date</Label>
+                              <Input 
+                                id="task-due-date" 
+                                type="date" 
+                                value={newTaskDueDate}
+                                onChange={(e) => setNewTaskDueDate(e.target.value)}
+                              />
+                            </div>
+                            <div className="flex justify-end mt-4">
+                              <Button 
+                                variant="outline" 
+                                className="mr-2"
+                                onClick={() => {
+                                  setNewTaskTitle('');
+                                  setNewTaskDescription('');
+                                  setNewTaskAssignee('');
+                                  setNewTaskDueDate('');
+                                }}
+                              >
+                                Cancel
+                              </Button>
+                              <Button 
+                                onClick={handleCreateTask}
+                                disabled={isCreatingTask || !newTaskTitle}
+                              >
+                                {isCreatingTask ? 'Creating...' : 'Create Task'}
+                              </Button>
+                            </div>
+                          </div>
+                        </DialogContent>
+                      </Dialog>
                     </div>
                   </CardHeader>
                   <CardContent>
