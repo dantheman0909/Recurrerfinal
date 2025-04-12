@@ -121,7 +121,7 @@ const defaultTask: PlaybookTaskFormValues = {
 export default function PlaybookWorkflow() {
   const [currentStep, setCurrentStep] = useState<number>(0);
   const queryClient = useQueryClient();
-  const navigate = useNavigate();
+  const [, setLocation] = useLocation();
   const { toast } = useToast();
 
   // Get user roles for assignment options
@@ -198,7 +198,7 @@ export default function PlaybookWorkflow() {
         title: "Success",
         description: "Playbook created successfully",
       });
-      navigate("/playbooks");
+      setLocation("/playbooks");
     },
     onError: (error) => {
       toast({
@@ -898,7 +898,7 @@ export default function PlaybookWorkflow() {
     <div className="container py-6 max-w-4xl">
       <div className="flex items-center justify-between mb-6">
         <h1 className="text-2xl font-semibold text-gray-900">Create New Playbook</h1>
-        <Button variant="outline" onClick={() => navigate("/playbooks")}>Cancel</Button>
+        <Button variant="outline" onClick={() => setLocation("/playbooks")}>Cancel</Button>
       </div>
 
       <div className="mb-8">
