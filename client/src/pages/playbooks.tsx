@@ -626,11 +626,11 @@ function PlaybookCard({ playbook, onEdit }: PlaybookCardProps) {
   
   const getTriggerLabel = (triggerType: PlaybookTriggerType) => {
     switch (triggerType) {
-      case 'time_after_onboarding':
+      case 'new_customer':
         return 'After Onboarding';
-      case 'days_before_renewal':
+      case 'renewal_approaching':
         return 'Before Renewal';
-      case 'account_health_change':
+      case 'usage_drop':
         return 'Health Change';
       case 'manual':
         return 'Manual Activation';
@@ -706,11 +706,11 @@ function PlaybookListItem({ playbook, onEdit }: PlaybookListItemProps) {
   
   const getTriggerLabel = (triggerType: PlaybookTriggerType) => {
     switch (triggerType) {
-      case 'time_after_onboarding':
+      case 'new_customer':
         return 'After Onboarding';
-      case 'days_before_renewal':
+      case 'renewal_approaching':
         return 'Before Renewal';
-      case 'account_health_change':
+      case 'usage_drop':
         return 'Health Change';
       case 'manual':
         return 'Manual Activation';
