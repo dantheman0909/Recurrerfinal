@@ -10,7 +10,8 @@ import {
   getChargebeeInvoice,
   getInvoicesForSubscription,
   getMySQLCompanies,
-  getMySQLCompany
+  getMySQLCompany,
+  getCustomerExternalData
 } from "./external-data";
 
 const app = express();
@@ -58,6 +59,9 @@ app.get('/api/chargebee/invoices/:id', getChargebeeInvoice);
 app.get('/api/chargebee/subscriptions/:id/invoices', getInvoicesForSubscription);
 app.get('/api/mysql/companies', getMySQLCompanies);
 app.get('/api/mysql/companies/:id', getMySQLCompany);
+
+// Customer-specific external data route
+app.get('/api/customers/:id/external-data', getCustomerExternalData);
 
 (async () => {
   const server = await registerRoutes(app);

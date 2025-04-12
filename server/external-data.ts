@@ -2,6 +2,9 @@ import { Request, Response } from "express";
 import { chargebeeService } from "./chargebee";
 import { mysqlService } from "./mysql-service";
 import { log } from "./vite";
+import { db } from "./db";
+import { customers } from "@shared/schema";
+import { eq } from "drizzle-orm";
 
 // Chargebee Routes
 export const getChargebeeSubscriptions = async (req: Request, res: Response) => {
@@ -127,6 +130,60 @@ export const getInvoicesForSubscription = async (req: Request, res: Response) =>
   } catch (error) {
     log(`Error fetching invoices for subscription: ${error}`, 'chargebee');
     res.status(500).json({ error: "Failed to fetch invoices for subscription", details: error });
+  }
+};
+
+// Customer-specific external data
+export const getCustomerExternalData = async (req: Request, res: Response) => {
+  try {
+    const customerId = parseInt(req.params.id);
+    
+    // Get the customer from the database
+    const [customer] = await db.select().from(customers).where(eq(customers.id, customerId));
+    
+    if (!customer) {
+      return res.status(404).json({ error: "Customer not found" });
+    }
+    
+    const externalData: any = {
+      chargebee: null,
+      mysql: null
+    };
+    
+    // Get Chargebee data if we have a Chargebee customer ID
+    if (customer.chargebee_customer_id && chargebeeService) {
+      try {
+        const chargebeeCustomer = await chargebeeService.getCustomer(customer.chargebee_customer_id);
+        externalData.chargebee = { customer: chargebeeCustomer };
+        
+        // If we have a subscription ID, get that data too
+        if (customer.chargebee_subscription_id) {
+          const subscription = await chargebeeService.getSubscription(customer.chargebee_subscription_id);
+          const invoices = await chargebeeService.getInvoicesForSubscription(customer.chargebee_subscription_id);
+          externalData.chargebee.subscription = subscription;
+          externalData.chargebee.invoices = invoices;
+        }
+      } catch (chargebeeError) {
+        log(`Error fetching Chargebee data for customer ${customerId}: ${chargebeeError}`, 'chargebee');
+        externalData.chargebee = { error: "Failed to fetch Chargebee data" };
+      }
+    }
+    
+    // Get MySQL data if we have a MySQL company ID
+    if (customer.mysql_company_id && mysqlService) {
+      try {
+        const mysqlCompany = await mysqlService.getCompanyDataById(customer.mysql_company_id);
+        externalData.mysql = { company: mysqlCompany };
+      } catch (mysqlError) {
+        log(`Error fetching MySQL data for customer ${customerId}: ${mysqlError}`, 'mysql');
+        externalData.mysql = { error: "Failed to fetch MySQL data" };
+      }
+    }
+    
+    res.json(externalData);
+  } catch (error) {
+    log(`Error fetching external data for customer: ${error}`, 'external-data');
+    res.status(500).json({ error: "Failed to fetch external data", details: error });
   }
 };
 

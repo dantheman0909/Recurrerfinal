@@ -34,6 +34,9 @@ export const customers = pgTable("customers", {
   arr: integer("arr"),
   health_status: accountHealthEnum("health_status").default('healthy'),
   created_at: timestamp("created_at").defaultNow(),
+  chargebee_customer_id: text("chargebee_customer_id"),
+  chargebee_subscription_id: text("chargebee_subscription_id"),
+  mysql_company_id: text("mysql_company_id"),
 });
 
 // Tasks
