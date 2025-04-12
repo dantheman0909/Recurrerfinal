@@ -70,27 +70,43 @@ export default function Playbooks() {
         })
       };
       
-      const response = await fetch('/api/playbooks', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify(playbookData),
-      });
+      // Create the playbook first
+      const response = await apiRequest('/api/playbooks', 'POST', playbookData);
       
-      if (!response.ok) {
-        throw new Error('Failed to create playbook');
+      // After creating the playbook, automatically create an initial task
+      if (response && response.id) {
+        try {
+          // Add a default task to the playbook
+          await apiRequest(`/api/playbooks/${response.id}/tasks`, 'POST', {
+            title: "Initial task for " + values.name,
+            description: "This is the first step in the playbook",
+            order: 1,
+            days_offset: 0
+          });
+        } catch (e) {
+          console.error("Failed to create initial task for playbook:", e);
+        }
       }
       
-      return response.json();
+      return response;
     },
-    onSuccess: () => {
+    onSuccess: (data) => {
+      // Invalidate both playbooks and the specific playbook's tasks
       queryClient.invalidateQueries({ queryKey: ['/api/playbooks'] });
+      if (data && data.id) {
+        queryClient.invalidateQueries({ queryKey: [`/api/playbooks/${data.id}/tasks`] });
+      }
+      
       toast({
         title: "Success",
-        description: "Playbook created successfully",
+        description: "Playbook created successfully with initial task",
       });
       setIsCreateDialogOpen(false);
+      
+      // Force refetch after a short delay to ensure UI is updated
+      setTimeout(() => {
+        queryClient.invalidateQueries({ queryKey: ['/api/playbooks'] });
+      }, 500);
     },
     onError: (error) => {
       toast({

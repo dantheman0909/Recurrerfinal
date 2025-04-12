@@ -93,10 +93,7 @@ export default function CustomerDetails() {
         status: "pending"
       };
       
-      await apiRequest('/api/tasks', {
-        method: 'POST',
-        body: JSON.stringify(taskData),
-      });
+      await apiRequest('/api/tasks', 'POST', taskData);
       
       // Reset form
       setNewTaskTitle('');
@@ -420,7 +417,16 @@ export default function CustomerDetails() {
                                 Cancel
                               </Button>
                               <Button 
-                                onClick={handleCreateTask}
+                                onClick={() => {
+                                  const dialogEl = document.querySelector('[role="dialog"]');
+                                  if (dialogEl) {
+                                    const closeButton = dialogEl.querySelector('[data-state="closed"]');
+                                    if (closeButton) {
+                                      (closeButton as HTMLElement).click();
+                                    }
+                                  }
+                                  handleCreateTask();
+                                }}
                                 disabled={isCreatingTask || !newTaskTitle}
                               >
                                 {isCreatingTask ? 'Creating...' : 'Create Task'}
