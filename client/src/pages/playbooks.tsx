@@ -667,8 +667,11 @@ function PlaybookCard({ playbook, onEdit }: PlaybookCardProps) {
                 <CheckSquare className="h-4 w-4 text-teal-500 mt-0.5 mr-2" />
                 <div>
                   <p className="text-sm font-medium">{task.title}</p>
-                  {task.due_days && (
-                    <p className="text-xs text-gray-500">Due: {task.due_days} days {task.due_days > 0 ? 'after' : 'before'}</p>
+                  {task.due_type === 'relative' && task.due_offset && (
+                    <p className="text-xs text-gray-500">Due: {task.due_offset} days {task.due_offset > 0 ? 'after' : 'before'}</p>
+                  )}
+                  {task.due_type === 'fixed' && task.fixed_date && (
+                    <p className="text-xs text-gray-500">Due: Fixed date</p>
                   )}
                 </div>
               </div>
@@ -715,9 +718,9 @@ function PlaybookListItem({ playbook, onEdit }: PlaybookListItemProps) {
       case 'usage_drop':
         return 'Usage Drop';
       case 'manual':
+        return 'Manual Activation';
       case 'custom_event':
         return 'Custom Event';
-        return 'Manual Activation';
       default:
         return triggerType;
     }
