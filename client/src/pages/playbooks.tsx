@@ -131,27 +131,28 @@ export default function Playbooks() {
         })
       };
       
-      const response = await fetch(`/api/playbooks/${id}`, {
-        method: 'PATCH',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify(playbookData),
-      });
+      // Update the playbook using apiRequest
+      const response = await apiRequest(`/api/playbooks/${id}`, 'PATCH', playbookData);
       
-      if (!response.ok) {
-        throw new Error('Failed to update playbook');
+      return response;
+    },
+    onSuccess: (data) => {
+      // Invalidate both playbooks and the specific playbook's tasks
+      queryClient.invalidateQueries({ queryKey: ['/api/playbooks'] });
+      if (data && data.id) {
+        queryClient.invalidateQueries({ queryKey: [`/api/playbooks/${data.id}/tasks`] });
       }
       
-      return response.json();
-    },
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['/api/playbooks'] });
       toast({
         title: "Success",
         description: "Playbook updated successfully",
       });
       setIsEditDialogOpen(false);
+      
+      // Force refetch after a short delay to ensure UI is updated
+      setTimeout(() => {
+        queryClient.invalidateQueries({ queryKey: ['/api/playbooks'] });
+      }, 500);
     },
     onError: (error) => {
       toast({
