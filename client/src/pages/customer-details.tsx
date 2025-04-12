@@ -170,11 +170,11 @@ export default function CustomerDetails() {
                       <div className="grid grid-cols-2 gap-4">
                         <div className="text-center p-3 bg-gray-50 rounded-md">
                           <p className="text-sm text-gray-500">MRR</p>
-                          <p className="text-xl font-semibold">${customer.mrr?.toLocaleString() || 0}</p>
+                          <p className="text-xl font-semibold">₹{customer.mrr?.toLocaleString() || 0}</p>
                         </div>
                         <div className="text-center p-3 bg-gray-50 rounded-md">
                           <p className="text-sm text-gray-500">ARR</p>
-                          <p className="text-xl font-semibold">${customer.arr?.toLocaleString() || 0}</p>
+                          <p className="text-xl font-semibold">₹{customer.arr?.toLocaleString() || 0}</p>
                         </div>
                       </div>
                       

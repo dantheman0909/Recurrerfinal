@@ -87,7 +87,7 @@ export default function Admin() {
           </TabsContent>
           
           <TabsContent value="data-import">
-            <DataImportTab />
+            <DataImportTab setActiveTab={setActiveTab} />
           </TabsContent>
           
           <TabsContent value="users">
@@ -658,22 +658,59 @@ function ChargebeeConfigTab() {
   );
 }
 
-function DataImportTab() {
+function DataImportTab({ setActiveTab }: { setActiveTab: (tab: string) => void }) {
   const [selectedFile, setSelectedFile] = useState<File | null>(null);
   const [isUploading, setIsUploading] = useState(false);
   const [previewData, setPreviewData] = useState<any[]>([]);
   const { toast } = useToast();
+  const [showNoMySQLMessage, setShowNoMySQLMessage] = useState(true);
+  
+  const { data: mysqlConfig, isLoading: isLoadingConfig } = useQuery({
+    queryKey: ['/api/admin/mysql-config'],
+  });
+  
+  // Check if MySQL is configured
+  React.useEffect(() => {
+    if (mysqlConfig && Object.keys(mysqlConfig).length > 0) {
+      setShowNoMySQLMessage(false);
+    } else {
+      setShowNoMySQLMessage(true);
+    }
+  }, [mysqlConfig]);
   
   const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     if (e.target.files && e.target.files.length > 0) {
       setSelectedFile(e.target.files[0]);
       
-      // Mock preview data
-      setPreviewData([
-        { id: 1, name: "Acme Corp", industry: "Technology", contact_name: "John Smith", mrr: 5000 },
-        { id: 2, name: "Global Foods", industry: "Retail", contact_name: "Jane Doe", mrr: 8000 },
-        { id: 3, name: "Tech Solutions", industry: "Software", contact_name: "Mike Johnson", mrr: 3500 }
-      ]);
+      // Read CSV file and generate preview
+      const reader = new FileReader();
+      reader.onload = (event) => {
+        if (event.target?.result) {
+          const csvData = event.target.result as string;
+          const rows = csvData.split('\n');
+          if (rows.length > 0) {
+            const headers = rows[0].split(',');
+            const data = [];
+            
+            // Process up to 5 rows for preview
+            for (let i = 1; i < Math.min(rows.length, 6); i++) {
+              if (rows[i].trim()) {
+                const values = rows[i].split(',');
+                const row: Record<string, string> = {};
+                
+                headers.forEach((header, index) => {
+                  row[header.trim()] = values[index]?.trim() || '';
+                });
+                
+                data.push(row);
+              }
+            }
+            
+            setPreviewData(data);
+          }
+        }
+      };
+      reader.readAsText(e.target.files[0]);
     }
   };
   
@@ -689,18 +726,90 @@ function DataImportTab() {
     
     setIsUploading(true);
     
-    // This would typically upload the file to the server
-    setTimeout(() => {
+    // Create FormData for file upload
+    const formData = new FormData();
+    formData.append('file', selectedFile);
+    
+    // Send file to server endpoint
+    fetch('/api/import/csv', {
+      method: 'POST',
+      body: formData
+    })
+    .then(response => response.json())
+    .then(data => {
+      setIsUploading(false);
+      if (data.success) {
+        toast({
+          title: "Import Successful",
+          description: `Imported ${data.count || previewData.length} records from ${selectedFile.name}`,
+        });
+      } else {
+        throw new Error(data.error || "Import failed");
+      }
+    })
+    .catch(error => {
       setIsUploading(false);
       toast({
-        title: "Import Successful",
-        description: `Imported ${previewData.length} records from ${selectedFile.name}`,
+        title: "Import Failed",
+        description: error.message || "Failed to import data",
+        variant: "destructive",
       });
-    }, 2000);
+    });
+  };
+  
+  const downloadSampleCSV = () => {
+    // Sample CSV data
+    const csvContent = 
+`company_id,company_name,industry,contact_name,contact_email,contact_phone,active_stores,growth_subscription_count,loyalty_active_store_count,loyalty_type,revenue_1_year,onboarded_at
+REC001,Acme Technologies,Software,John Smith,john@acmetech.com,+91-9876543210,5,3,4,Points,5000000,2023-01-15
+REC002,Global Foods,Food & Beverage,Maria Garcia,maria@globalfoods.com,+91-9876543211,12,8,10,Cashback,12000000,2023-02-20
+REC003,Urban Retail,Retail,David Kumar,david@urbanretail.com,+91-9876543212,3,2,2,Stamps,3500000,2023-03-10`;
+    
+    // Create a Blob and download link
+    const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
+    const url = URL.createObjectURL(blob);
+    const link = document.createElement('a');
+    link.href = url;
+    link.setAttribute('download', 'sample_customer_data.csv');
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
   };
   
   return (
     <div className="grid grid-cols-1 gap-6">
+      {showNoMySQLMessage ? (
+        <Card>
+          <CardHeader>
+            <CardTitle className="flex items-center">
+              <AlertTriangle className="h-5 w-5 mr-2 text-amber-500" />
+              No Database Connection
+            </CardTitle>
+            <CardDescription>
+              You don't have an active MySQL connection. Configure and test your connection first, or you can use CSV import as an alternative.
+            </CardDescription>
+          </CardHeader>
+          <CardContent>
+            <div className="flex space-x-4">
+              <Button 
+                onClick={() => setActiveTab("mysql-config")}
+                variant="outline"
+              >
+                <Database className="h-4 w-4 mr-2" />
+                Go to Database Config
+              </Button>
+              <Button 
+                onClick={downloadSampleCSV}
+                variant="outline"
+              >
+                <FileText className="h-4 w-4 mr-2" />
+                Download Sample CSV
+              </Button>
+            </div>
+          </CardContent>
+        </Card>
+      ) : null}
+      
       <Card>
         <CardHeader>
           <CardTitle>CSV Data Import</CardTitle>
@@ -710,8 +819,19 @@ function DataImportTab() {
         </CardHeader>
         <CardContent>
           <div className="space-y-4">
-            <div className="grid gap-2">
-              <Label htmlFor="csv-file">Select CSV File</Label>
+            <div className="grid gap-4">
+              <div className="flex justify-between items-center">
+                <Label htmlFor="csv-file">Select CSV File</Label>
+                <Button 
+                  variant="link" 
+                  className="h-auto p-0 text-xs"
+                  onClick={downloadSampleCSV}
+                >
+                  <FileText className="h-3 w-3 mr-1" />
+                  Download Sample CSV
+                </Button>
+              </div>
+              
               <Input 
                 id="csv-file" 
                 type="file" 
@@ -719,7 +839,7 @@ function DataImportTab() {
                 onChange={handleFileChange}
               />
               <p className="text-xs text-gray-500">
-                File should include customer data with headers
+                File should include customer data with headers for company_id, company_name, etc.
               </p>
             </div>
             
