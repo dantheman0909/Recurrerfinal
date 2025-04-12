@@ -3,13 +3,45 @@ import { cn } from "@/lib/utils";
 
 interface HealthDistributionChartProps {
   data: {
-    healthy: number;
-    atRisk: number;
-    redZone: number;
+    status: string[];
+    counts: number[];
   };
 }
 
 export function HealthDistributionChart({ data }: HealthDistributionChartProps) {
+  // If data is undefined or doesn't have the expected structure, use defaults
+  if (!data || !data.status || !data.counts) {
+    // Default values for rendering
+    return (
+      <Card>
+        <CardContent className="p-5">
+          <h3 className="text-lg leading-6 font-medium text-gray-900">
+            Customer Health Distribution
+          </h3>
+          <div className="mt-2 flex items-center text-sm text-gray-500">
+            <p>No data available</p>
+          </div>
+        </CardContent>
+      </Card>
+    );
+  }
+
+  // Process the data arrays to find the values
+  const getStatusPercentage = (statusName: string): number => {
+    const index = data.status.findIndex(status => 
+      status.toLowerCase() === statusName.toLowerCase()
+    );
+    return index >= 0 ? data.counts[index] : 0;
+  };
+
+  // Extract values for each status type
+  const healthyPercentage = getStatusPercentage('healthy');
+  const atRiskPercentage = getStatusPercentage('at risk');
+  const redZonePercentage = getStatusPercentage('red zone');
+
+  // Calculate the total for the donut chart
+  const total = data.counts.reduce((sum, count) => sum + count, 0);
+  
   return (
     <Card>
       <CardContent className="p-5">
@@ -23,11 +55,11 @@ export function HealthDistributionChart({ data }: HealthDistributionChartProps) 
           <div className="text-center">
             <div className="mx-auto relative">
               <DonutChart 
-                percentage={data.healthy} 
+                percentage={healthyPercentage} 
                 color="bg-teal-400"
               />
               <div className="absolute inset-0 flex items-center justify-center">
-                <span className="text-2xl font-semibold text-gray-900">{data.healthy}%</span>
+                <span className="text-2xl font-semibold text-gray-900">{healthyPercentage}%</span>
               </div>
             </div>
             <p className="mt-3 text-sm font-medium text-gray-500">
@@ -37,9 +69,9 @@ export function HealthDistributionChart({ data }: HealthDistributionChartProps) 
           
           <div className="text-center">
             <div className="flex flex-col space-y-3">
-              <LegendItem color="bg-teal-400" label={`Healthy (${data.healthy}%)`} />
-              <LegendItem color="bg-yellow-400" label={`At Risk (${data.atRisk}%)`} />
-              <LegendItem color="bg-red-400" label={`Red Zone (${data.redZone}%)`} />
+              <LegendItem color="bg-teal-400" label={`Healthy (${healthyPercentage}%)`} />
+              <LegendItem color="bg-yellow-400" label={`At Risk (${atRiskPercentage}%)`} />
+              <LegendItem color="bg-red-400" label={`Red Zone (${redZonePercentage}%)`} />
             </div>
           </div>
         </div>

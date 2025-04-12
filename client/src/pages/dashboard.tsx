@@ -281,8 +281,18 @@ export default function Dashboard() {
 
       {/* Tasks and Red Zone Section */}
       <div className="mt-8 px-4 sm:px-6 lg:px-8 grid grid-cols-1 gap-5 lg:grid-cols-2">
-        <TaskList tasks={tasks?.slice(0, 3) || []} users={userMap} />
-        <RedZoneList alerts={redZoneAlerts?.slice(0, 3) || []} customers={customerMap} />
+        {tasks && (
+          <TaskList 
+            tasks={tasks.slice(0, 3) || []} 
+            users={userMap as any} 
+          />
+        )}
+        {redZoneAlerts && (
+          <RedZoneList 
+            alerts={redZoneAlerts.slice(0, 3) || []} 
+            customers={customerMap as any} 
+          />
+        )}
       </div>
     </>
   );
