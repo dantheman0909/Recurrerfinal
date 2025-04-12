@@ -606,7 +606,7 @@ export class DatabaseStorage implements IStorage {
       .select()
       .from(playbookTasks)
       .where(eq(playbookTasks.playbook_id, playbookId))
-      .orderBy(playbookTasks.position);
+      .orderBy(playbookTasks.order);
   }
 
   async createPlaybookTask(playbookId: number, task: Omit<PlaybookTask, 'id' | 'playbook_id'>): Promise<PlaybookTask> {

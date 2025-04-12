@@ -91,7 +91,7 @@ const playbookTaskSchema = z.object({
   assignment_role: z.enum(["csm", "team_lead", "admin"]),
   required_fields: z.array(z.string()).optional(),
   template_message: z.string().optional(),
-  position: z.number(),
+  order: z.number(),
 });
 
 const playbookSchema = z.object({
@@ -115,7 +115,7 @@ const defaultTask: PlaybookTaskFormValues = {
   assignment_role: "csm",
   required_fields: [],
   template_message: "",
-  position: 0,
+  order: 0,
 };
 
 export default function PlaybookWorkflow() {
