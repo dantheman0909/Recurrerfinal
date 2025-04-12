@@ -770,8 +770,7 @@ export class DatabaseStorage implements IStorage {
     
     const totalCustomers = healthyCounts.length + atRiskCounts.length + redZoneCounts.length;
     
-    // Import chart data utility function
-    const { generateTimeseriesData } = require('./utils/chart-data');
+    // generateTimeseriesData is already imported at the top of the file
     
     // For simplicity, we're mocking some of the data still
     return {
