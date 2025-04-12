@@ -8,6 +8,7 @@ import {
   insertCustomerSchema,
   insertTaskSchema,
   insertPlaybookSchema,
+  insertPlaybookTaskSchema,
   insertRedZoneAlertSchema
 } from "@shared/schema";
 import {
@@ -222,6 +223,84 @@ export async function registerRoutes(app: Express): Promise<Server> {
       res.json(playbook);
     } catch (error) {
       res.status(400).json({ message: 'Invalid playbook data', error });
+    }
+  });
+  
+  // Playbook Workflow - Create playbook with tasks in one transaction
+  app.post('/api/playbooks/workflow', async (req, res) => {
+    try {
+      // Define schema for the entire workflow
+      const workflowSchema = z.object({
+        name: z.string().min(1),
+        description: z.string().optional(),
+        trigger_type: z.enum(['manual', 'new_customer', 'usage_drop', 'renewal_approaching', 'custom_event']),
+        target_segments: z.array(z.enum(['starter', 'growth', 'key'])),
+        filters: z.record(z.string().optional()).optional(),
+        active: z.boolean().default(true),
+        tasks: z.array(z.object({
+          title: z.string().min(1),
+          description: z.string().optional(),
+          due_type: z.enum(['fixed', 'relative']),
+          due_offset: z.number().optional(),
+          fixed_date: z.date().optional(),
+          recurrence: z.enum(['none', 'daily', 'weekly', 'monthly', 'bi-weekly']),
+          assignment_role: z.enum(['csm', 'team_lead', 'admin']),
+          required_fields: z.array(z.string()).optional(),
+          template_message: z.string().optional(),
+          position: z.number()
+        })).min(1)
+      });
+      
+      // Validate the incoming data
+      const workflowData = workflowSchema.parse(req.body);
+      
+      // Extract playbook data
+      const playbookData = {
+        name: workflowData.name,
+        description: workflowData.description || null,
+        trigger_type: workflowData.trigger_type,
+        target_segments: workflowData.target_segments,
+        filters: workflowData.filters ? JSON.stringify(workflowData.filters) : null,
+        active: workflowData.active,
+        created_by: 1, // TODO: Get from auth context
+      };
+      
+      // Create the playbook
+      const playbook = await storage.createPlaybook(playbookData);
+      
+      // Create tasks for the playbook
+      const createdTasks = [];
+      for (const task of workflowData.tasks) {
+        // Convert task data to match DB schema
+        const playbookTaskData = {
+          playbook_id: playbook.id,
+          title: task.title,
+          description: task.description || null,
+          due_type: task.due_type,
+          due_offset: task.due_type === 'relative' ? task.due_offset : null,
+          fixed_date: task.due_type === 'fixed' ? task.fixed_date : null,
+          recurrence: task.recurrence,
+          assignment_role: task.assignment_role,
+          required_fields: task.required_fields || [],
+          template_message: task.template_message || null,
+          position: task.position
+        };
+        
+        const createdTask = await storage.createPlaybookTask(playbook.id, playbookTaskData);
+        createdTasks.push(createdTask);
+      }
+      
+      // Return the created playbook with its tasks
+      res.status(201).json({
+        ...playbook,
+        tasks: createdTasks
+      });
+    } catch (error) {
+      console.error('Error creating playbook workflow:', error);
+      res.status(400).json({ 
+        message: 'Invalid playbook workflow data', 
+        error: error instanceof Error ? error.message : String(error) 
+      });
     }
   });
   
