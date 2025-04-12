@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { 
   CheckSquare, 
@@ -17,36 +17,102 @@ import { Card, CardContent } from "@/components/ui/card";
 import { MetricTimeframe } from "@shared/types";
 import { formatCurrency } from "@/lib/utils";
 
+// Define types for our dashboard data
+interface DashboardData {
+  openTasks: number;
+  openTasksChange: number;
+  campaignGaps: number;
+  campaignGapsChange: number;
+  renewalAlerts: number;
+  renewalAlertsChange: number;
+  redZoneCount: number;
+  redZoneCountChange: number;
+  mrrTotal: number;
+  mrrChange: number;
+  arrTotal: number;
+  arrChange: number;
+  revenuePerCustomer: number;
+  growthRate: number;
+  monthlyMetrics: {
+    months: string[];
+    values: number[];
+  };
+  healthDistribution: {
+    status: string[];
+    counts: number[];
+  };
+}
+
+interface User {
+  id: number;
+  name: string;
+  role: string;
+  [key: string]: any;
+}
+
+interface Customer {
+  id: number;
+  name: string;
+  [key: string]: any;
+}
+
+interface Task {
+  id: number;
+  title: string;
+  due_date: string;
+  status: string;
+  assignee_id: number;
+  customer_id: number;
+  [key: string]: any;
+}
+
+interface RedZoneAlert {
+  id: number;
+  customer_id: number;
+  reason: string;
+  severity: string;
+  created_at: string;
+  [key: string]: any;
+}
+
+interface UserMap {
+  [id: number]: User;
+}
+
+interface CustomerMap {
+  [id: number]: Customer;
+}
+
 export default function Dashboard() {
   const [timeframe, setTimeframe] = useState<MetricTimeframe>("monthly");
   
-  const { data: dashboardData, isLoading } = useQuery({
+  const { data: dashboardData, isLoading } = useQuery<DashboardData>({
     queryKey: [`/api/dashboard?timeframe=${timeframe}`],
   });
   
-  const { data: tasks } = useQuery({
+  const { data: tasks } = useQuery<Task[]>({
     queryKey: ['/api/tasks'],
   });
   
-  const { data: redZoneAlerts } = useQuery({
+  const { data: redZoneAlerts } = useQuery<RedZoneAlert[]>({
     queryKey: ['/api/red-zone'],
   });
   
-  const { data: users } = useQuery({
+  const { data: users } = useQuery<User[]>({
     queryKey: ['/api/users'],
   });
   
-  const { data: customers } = useQuery({
+  const { data: customers } = useQuery<Customer[]>({
     queryKey: ['/api/customers'],
   });
   
   // Format users and customers data for lookups
-  const userMap = users?.reduce((acc, user) => {
+  const userMap: UserMap = users?.reduce<UserMap>((acc: UserMap, user: User) => {
     acc[user.id] = user;
     return acc;
   }, {}) || {};
   
-  const customerMap = customers?.reduce((acc, customer) => {
+  const customerMap: CustomerMap = customers?.reduce<CustomerMap>((acc: CustomerMap, customer: Customer) => {
     acc[customer.id] = customer;
     return acc;
   }, {}) || {};
@@ -111,7 +177,7 @@ export default function Dashboard() {
         <div className="grid grid-cols-1 gap-5 sm:grid-cols-2 lg:grid-cols-4">
           <StatsCard
             title="Open Tasks"
-            value={dashboardData?.openTasks}
+            value={dashboardData?.openTasks || 0}
             icon={<CheckSquare className="h-6 w-6 text-teal-600" />}
             changePercent={dashboardData?.openTasksChange}
             footerLink="/tasks"
@@ -121,7 +187,7 @@ export default function Dashboard() {
           
           <StatsCard
             title="Campaign Gaps"
-            value={dashboardData?.campaignGaps}
+            value={dashboardData?.campaignGaps || 0}
             icon={<MessageSquare className="h-6 w-6 text-indigo-600" />}
             changePercent={dashboardData?.campaignGapsChange}
             footerLink="/reports?filter=campaigns"
@@ -131,7 +197,7 @@ export default function Dashboard() {
           
           <StatsCard
             title="Renewal Alerts"
-            value={dashboardData?.renewalAlerts}
+            value={dashboardData?.renewalAlerts || 0}
             icon={<Clock className="h-6 w-6 text-yellow-600" />}
             changePercent={dashboardData?.renewalAlertsChange}
             footerLink="/reports?filter=renewals"
@@ -141,7 +207,7 @@ export default function Dashboard() {
           
           <StatsCard
             title="Red Zone Count"
-            value={dashboardData?.redZoneCount}
+            value={dashboardData?.redZoneCount || 0}
             icon={<AlertTriangle className="h-6 w-6 text-red-600" />}
             changePercent={dashboardData?.redZoneCountChange}
             footerLink="/red-zone"
@@ -171,8 +237,8 @@ export default function Dashboard() {
                 <p className="text-sm text-gray-500">Total MRR</p>
                 <p className="text-2xl font-semibold">{formatCurrency(dashboardData?.mrrTotal || 0)}</p>
                 <div className="mt-1 flex items-center justify-center text-sm">
-                  <span className={dashboardData?.mrrChange >= 0 ? "text-green-600" : "text-red-600"}>
-                    {dashboardData?.mrrChange >= 0 ? "+" : ""}{dashboardData?.mrrChange}%
+                  <span className={(dashboardData?.mrrChange || 0) >= 0 ? "text-green-600" : "text-red-600"}>
+                    {(dashboardData?.mrrChange || 0) >= 0 ? "+" : ""}{dashboardData?.mrrChange || 0}%
                   </span>
                 </div>
               </div>
@@ -180,8 +246,8 @@ export default function Dashboard() {
                 <p className="text-sm text-gray-500">Total ARR</p>
                 <p className="text-2xl font-semibold">{formatCurrency(dashboardData?.arrTotal || 0)}</p>
                 <div className="mt-1 flex items-center justify-center text-sm">
-                  <span className={dashboardData?.arrChange >= 0 ? "text-green-600" : "text-red-600"}>
-                    {dashboardData?.arrChange >= 0 ? "+" : ""}{dashboardData?.arrChange}%
+                  <span className={(dashboardData?.arrChange || 0) >= 0 ? "text-green-600" : "text-red-600"}>
+                    {(dashboardData?.arrChange || 0) >= 0 ? "+" : ""}{dashboardData?.arrChange || 0}%
                   </span>
                 </div>
               </div>
@@ -201,11 +267,15 @@ export default function Dashboard() {
       {/* Chart Section */}
       <div className="mt-8 px-4 sm:px-6 lg:px-8">
         <div className="grid grid-cols-1 gap-5 lg:grid-cols-2">
-          <MonthlyMetricsChart 
-            data={dashboardData?.monthlyMetrics} 
-            timeframe={timeframe}
-          />
-          <HealthDistributionChart data={dashboardData?.healthDistribution} />
+          {dashboardData?.monthlyMetrics && (
+            <MonthlyMetricsChart 
+              data={dashboardData.monthlyMetrics} 
+              timeframe={timeframe}
+            />
+          )}
+          {dashboardData?.healthDistribution && (
+            <HealthDistributionChart data={dashboardData.healthDistribution} />
+          )}
         </div>
       </div>
 
