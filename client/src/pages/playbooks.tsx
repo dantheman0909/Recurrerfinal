@@ -58,7 +58,7 @@ export default function Playbooks() {
   });
   
   const createPlaybookMutation = useMutation({
-    mutationFn: (values: CreatePlaybookFormValues) => {
+    mutationFn: async (values: CreatePlaybookFormValues) => {
       // Convert the form values to the expected format
       const playbookData = {
         name: values.name,
@@ -70,13 +70,19 @@ export default function Playbooks() {
         })
       };
       
-      return apiRequest('/api/playbooks', {
+      const response = await fetch('/api/playbooks', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
         },
         body: JSON.stringify(playbookData),
       });
+      
+      if (!response.ok) {
+        throw new Error('Failed to create playbook');
+      }
+      
+      return response.json();
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['/api/playbooks'] });
@@ -96,7 +102,7 @@ export default function Playbooks() {
   });
 
   const updatePlaybookMutation = useMutation({
-    mutationFn: (values: CreatePlaybookFormValues & { id: number }) => {
+    mutationFn: async (values: CreatePlaybookFormValues & { id: number }) => {
       const { id, ...rest } = values;
       // Convert the form values to the expected format
       const playbookData = {
@@ -109,13 +115,19 @@ export default function Playbooks() {
         })
       };
       
-      return apiRequest(`/api/playbooks/${id}`, {
+      const response = await fetch(`/api/playbooks/${id}`, {
         method: 'PATCH',
         headers: {
           'Content-Type': 'application/json',
         },
         body: JSON.stringify(playbookData),
       });
+      
+      if (!response.ok) {
+        throw new Error('Failed to update playbook');
+      }
+      
+      return response.json();
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['/api/playbooks'] });

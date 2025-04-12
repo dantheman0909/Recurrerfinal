@@ -235,15 +235,24 @@ export async function registerRoutes(app: Express): Promise<Server> {
     try {
       const taskSchema = z.object({
         title: z.string(),
-        description: z.string().optional(),
-        due_days: z.number().optional(),
-        due_date: z.string().optional(),
-        recurring: z.boolean().optional(),
-        recurrence_pattern: z.string().optional(),
+        description: z.string().nullable().optional(),
+        due_days: z.number().nullable().optional(),
+        due_date: z.string().nullable().optional(),
+        recurring: z.boolean().nullable().optional(),
+        recurrence_pattern: z.string().nullable().optional(),
         order: z.number()
       });
       
-      const taskData = taskSchema.parse(req.body);
+      // Convert undefined to null for database compatibility
+      let taskData = taskSchema.parse(req.body);
+      
+      // Convert undefined values to null
+      if (taskData.description === undefined) taskData.description = null;
+      if (taskData.due_days === undefined) taskData.due_days = null;
+      if (taskData.due_date === undefined) taskData.due_date = null;
+      if (taskData.recurring === undefined) taskData.recurring = null;
+      if (taskData.recurrence_pattern === undefined) taskData.recurrence_pattern = null;
+      
       const task = await storage.createPlaybookTask(playbookId, taskData);
       res.status(201).json(task);
     } catch (error) {
@@ -355,6 +364,21 @@ export async function registerRoutes(app: Express): Promise<Server> {
       res.status(400).json({ message: 'Invalid field mapping data', error });
     }
   });
+  
+  // ----- External Data Routes -----
+  
+  // Chargebee Routes
+  app.get('/api/chargebee/subscriptions', getChargebeeSubscriptions);
+  app.get('/api/chargebee/subscriptions/:id', getChargebeeSubscription);
+  app.get('/api/chargebee/customers', getChargebeeCustomers);
+  app.get('/api/chargebee/customers/:id', getChargebeeCustomer);
+  app.get('/api/chargebee/invoices', getChargebeeInvoices);
+  app.get('/api/chargebee/invoices/:id', getChargebeeInvoice);
+  app.get('/api/chargebee/subscriptions/:id/invoices', getInvoicesForSubscription);
+  
+  // MySQL Routes
+  app.get('/api/mysql/companies', getMySQLCompanies);
+  app.get('/api/mysql/companies/:id', getMySQLCompany);
 
   const httpServer = createServer(app);
   return httpServer;
