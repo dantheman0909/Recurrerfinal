@@ -628,7 +628,21 @@ export class DatabaseStorage implements IStorage {
   // Playbook Task Methods
   async getPlaybookTasks(playbookId: number): Promise<PlaybookTask[]> {
     return await db
-      .select()
+      .select({
+        id: playbookTasks.id,
+        playbook_id: playbookTasks.playbook_id,
+        title: playbookTasks.title,
+        description: playbookTasks.description,
+        due_type: playbookTasks.due_type,
+        due_offset: playbookTasks.due_offset,
+        fixed_date: playbookTasks.fixed_date,
+        recurrence: playbookTasks.recurrence,
+        assignment_role: playbookTasks.assignment_role,
+        required_fields: playbookTasks.required_fields,
+        template_message: playbookTasks.template_message,
+        order: playbookTasks.order,
+        created_at: playbookTasks.created_at
+      })
       .from(playbookTasks)
       .where(eq(playbookTasks.playbook_id, playbookId))
       .orderBy(playbookTasks.order);
