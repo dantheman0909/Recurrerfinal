@@ -139,7 +139,7 @@ export default function PlaybookWorkflow() {
       trigger_type: "manual",
       target_segments: ["growth"],
       filters: {},
-      tasks: [{ ...defaultTask, position: 0 }],
+      tasks: [{ ...defaultTask, order: 0 }],
     },
   });
 
@@ -153,10 +153,10 @@ export default function PlaybookWorkflow() {
   const moveTaskUp = (index: number) => {
     if (index > 0) {
       move(index, index - 1);
-      // Update positions after move
+      // Update orders after move
       const updatedTasks = form.getValues().tasks;
       updatedTasks.forEach((task, idx) => {
-        update(idx, { ...task, position: idx });
+        update(idx, { ...task, order: idx });
       });
     }
   };
@@ -164,10 +164,10 @@ export default function PlaybookWorkflow() {
   const moveTaskDown = (index: number) => {
     if (index < fields.length - 1) {
       move(index, index + 1);
-      // Update positions after move
+      // Update orders after move
       const updatedTasks = form.getValues().tasks;
       updatedTasks.forEach((task, idx) => {
-        update(idx, { ...task, position: idx });
+        update(idx, { ...task, order: idx });
       });
     }
   };
@@ -185,7 +185,7 @@ export default function PlaybookWorkflow() {
         active: true,
         tasks: data.tasks.map((task, index) => ({
           ...task,
-          position: index,
+          order: index,
           required_fields: task.required_fields || [],
         })),
       };
@@ -239,7 +239,7 @@ export default function PlaybookWorkflow() {
   const addTask = () => {
     append({
       ...defaultTask,
-      position: fields.length,
+      order: fields.length,
     });
   };
 
@@ -821,8 +821,8 @@ export default function PlaybookWorkflow() {
                           if (a.due_type === "fixed" && b.due_type === "fixed" && a.fixed_date && b.fixed_date) {
                             return a.fixed_date.getTime() - b.fixed_date.getTime();
                           }
-                          // Default to position
-                          return a.position - b.position;
+                          // Default to order
+                          return a.order - b.order;
                         })
                         .map((task, i) => (
                           <div 
