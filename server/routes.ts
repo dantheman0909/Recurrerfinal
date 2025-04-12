@@ -247,7 +247,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
           assignment_role: z.enum(['csm', 'team_lead', 'admin']),
           required_fields: z.array(z.string()).optional(),
           template_message: z.string().optional(),
-          position: z.number()
+          order: z.number()
         })).min(1)
       });
       
@@ -282,7 +282,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
           assignment_role: task.assignment_role,
           required_fields: task.required_fields || [],
           template_message: task.template_message || null,
-          position: task.position,
+          order: task.order,
           created_at: new Date()
         };
         
@@ -324,7 +324,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
         assignment_role: z.enum(['csm', 'team_lead', 'admin']).default('csm'),
         required_fields: z.array(z.string()).optional(),
         template_message: z.string().nullable().optional(),
-        position: z.number()
+        order: z.number()
       });
       
       // Convert undefined to null for database compatibility
@@ -348,7 +348,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
         assignment_role: taskData.assignment_role,
         required_fields: taskData.required_fields || [],
         template_message: taskData.template_message || null,
-        position: taskData.position,
+        order: taskData.order,
         created_at: new Date()
       };
       
