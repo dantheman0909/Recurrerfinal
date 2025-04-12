@@ -10,6 +10,7 @@ import {
 import { db } from "./db";
 import { eq, and, isNull, desc, gte, lt } from "drizzle-orm";
 import { AccountHealth, MetricTimeframe } from "@shared/types";
+import { generateTimeseriesData } from "./utils/chart-data";
 
 export interface IStorage {
   // Users
@@ -769,36 +770,8 @@ export class DatabaseStorage implements IStorage {
     
     const totalCustomers = healthyCounts.length + atRiskCounts.length + redZoneCounts.length;
     
-    // Function to generate appropriate time series data based on timeframe
-    const generateTimeseriesData = (timeframe: MetricTimeframe) => {
-      switch (timeframe) {
-        case 'weekly':
-          return {
-            months: ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'],
-            values: [35, 42, 38, 45, 40, 25, 30]
-          };
-        case 'monthly':
-          return {
-            months: ['Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov'],
-            values: [40, 28, 48, 56, 36, 52]
-          };
-        case 'quarterly':
-          return {
-            months: ['Q1', 'Q2', 'Q3', 'Q4'],
-            values: [120, 145, 160, 175]
-          };
-        case 'yearly':
-          return {
-            months: ['2020', '2021', '2022', '2023', '2024'],
-            values: [380, 420, 510, 580, 620]
-          };
-        default:
-          return {
-            months: ['Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov'],
-            values: [40, 28, 48, 56, 36, 52]
-          };
-      }
-    };
+    // Import chart data utility function
+    const { generateTimeseriesData } = require('./utils/chart-data');
     
     // For simplicity, we're mocking some of the data still
     return {
