@@ -14,7 +14,7 @@ import {
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
-import { cn } from "@/lib/utils";
+import { cn, formatINR } from "@/lib/utils";
 import { Customer } from "@shared/schema";
 import { Link } from "wouter";
 
@@ -172,11 +172,11 @@ export default function Customers() {
                       <div className="mt-6 grid grid-cols-2 gap-4">
                         <div className="text-center p-2 bg-gray-50 rounded-md">
                           <p className="text-sm text-gray-500">MRR</p>
-                          <p className="text-lg font-semibold">${customer.mrr?.toLocaleString() || 0}</p>
+                          <p className="text-lg font-semibold">{formatINR(customer.mrr || 0)}</p>
                         </div>
                         <div className="text-center p-2 bg-gray-50 rounded-md">
                           <p className="text-sm text-gray-500">ARR</p>
-                          <p className="text-lg font-semibold">${customer.arr?.toLocaleString() || 0}</p>
+                          <p className="text-lg font-semibold">{formatINR(customer.arr || 0)}</p>
                         </div>
                       </div>
                       
