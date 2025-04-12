@@ -27,9 +27,14 @@ import { cn } from "@/lib/utils";
 import { GradientChart } from "@/components/ui/gradient-chart";
 import { format } from "date-fns";
 import { TaskList } from "@/components/dashboard/task-list";
+import { queryClient, apiRequest } from "@/lib/queryClient";
+import { useToast } from "@/hooks/use-toast";
+import { useState } from "react";
 
 export default function CustomerDetails() {
   const { id } = useParams();
+  const [isLoading, setIsLoading] = useState(false);
+  const { toast } = useToast();
   
   const { data: customer, isLoading: isLoadingCustomer } = useQuery({
     queryKey: [`/api/customers/${id}`],
