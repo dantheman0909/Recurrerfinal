@@ -19,7 +19,9 @@ import {
   getChargebeeInvoice,
   getInvoicesForSubscription,
   getMySQLCompanies,
-  getMySQLCompany
+  getMySQLCompany,
+  importMySQLDataToCustomer,
+  getCustomerExternalData
 } from "./external-data";
 
 export async function registerRoutes(app: Express): Promise<Server> {

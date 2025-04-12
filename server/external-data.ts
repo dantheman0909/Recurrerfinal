@@ -174,6 +174,44 @@ export const getCustomerExternalData = async (req: Request, res: Response) => {
       try {
         const mysqlCompany = await mysqlService.getCompanyDataById(customer.mysql_company_id);
         externalData.mysql = { company: mysqlCompany };
+        
+        // Sync MySQL data to customer record
+        if (mysqlCompany) {
+          await db.update(customers)
+            .set({
+              name: mysqlCompany.company_name, // Update name from MySQL
+              currency_code: 'INR', // Default currency is INR for MySQL data
+              active_stores: mysqlCompany.active_stores,
+              growth_subscription_count: mysqlCompany.growth_subscription_count,
+              loyalty_active_store_count: mysqlCompany.loyalty_active_store_count,
+              loyalty_inactive_store_count: mysqlCompany.loyalty_inactive_store_count,
+              loyalty_active_channels: mysqlCompany.loyalty_active_channels,
+              loyalty_channel_credits: mysqlCompany.loyalty_channel_credits,
+              negative_feedback_alert_inactive: mysqlCompany.negative_feedback_alert_inactive,
+              less_than_300_bills: mysqlCompany.less_than_300_bills,
+              active_auto_campaigns_count: mysqlCompany.active_auto_campaigns_count,
+              unique_customers_captured: mysqlCompany.unique_customers_captured,
+              revenue_1_year: mysqlCompany.revenue_1_year,
+              customers_with_min_one_visit: mysqlCompany.customers_with_min_one_visit,
+              customers_with_min_two_visit: mysqlCompany.customers_with_min_two_visit,
+              customers_without_min_visits: mysqlCompany.customers_without_min_visits,
+              percentage_of_inactive_customers: mysqlCompany.percentage_of_inactive_customers,
+              negative_feedbacks_count: mysqlCompany.negative_feedbacks_count,
+              campaigns_sent_last_90_days: mysqlCompany.campaigns_sent_last_90_days,
+              bills_received_last_30_days: mysqlCompany.bills_received_last_30_days,
+              customers_acquired_last_30_days: mysqlCompany.customers_acquired_last_30_days,
+              loyalty_type: mysqlCompany.loyalty_type,
+              loyalty_reward: mysqlCompany.loyalty_reward,
+              updated_from_mysql_at: new Date(),
+              
+              // Link to Chargebee if IDs are available in MySQL
+              chargebee_customer_id: mysqlCompany.customer_id || customer.chargebee_customer_id,
+              chargebee_subscription_id: mysqlCompany.subscription_id || customer.chargebee_subscription_id
+            })
+            .where(eq(customers.id, customer.id));
+            
+          log(`Synced MySQL data to customer ${customerId}`, 'mysql');
+        }
       } catch (mysqlError) {
         log(`Error fetching MySQL data for customer ${customerId}: ${mysqlError}`, 'mysql');
         externalData.mysql = { error: "Failed to fetch MySQL data" };
@@ -219,5 +257,81 @@ export const getMySQLCompany = async (req: Request, res: Response) => {
   } catch (error) {
     log(`Error fetching company data by ID from MySQL: ${error}`, 'mysql');
     res.status(500).json({ error: "Failed to fetch company data", details: error });
+  }
+};
+
+// Import MySQL data to a customer record
+export const importMySQLDataToCustomer = async (req: Request, res: Response) => {
+  try {
+    const { customerId, mysqlCompanyId } = req.body;
+    
+    if (!customerId || !mysqlCompanyId) {
+      return res.status(400).json({ error: "Missing required fields: customerId and mysqlCompanyId" });
+    }
+    
+    if (!mysqlService) {
+      return res.status(500).json({ error: "MySQL service not initialized" });
+    }
+    
+    // Find the customer
+    const [customer] = await db.select().from(customers).where(eq(customers.id, customerId));
+    
+    if (!customer) {
+      return res.status(404).json({ error: "Customer not found" });
+    }
+    
+    // Get MySQL company data
+    const mysqlCompany = await mysqlService.getCompanyDataById(mysqlCompanyId);
+    
+    if (!mysqlCompany) {
+      return res.status(404).json({ error: "MySQL company not found" });
+    }
+    
+    // Update customer with MySQL data
+    await db.update(customers)
+      .set({
+        mysql_company_id: mysqlCompanyId,
+        name: mysqlCompany.company_name,
+        currency_code: 'INR', // Default currency is INR for MySQL data
+        active_stores: mysqlCompany.active_stores,
+        growth_subscription_count: mysqlCompany.growth_subscription_count,
+        loyalty_active_store_count: mysqlCompany.loyalty_active_store_count,
+        loyalty_inactive_store_count: mysqlCompany.loyalty_inactive_store_count,
+        loyalty_active_channels: mysqlCompany.loyalty_active_channels,
+        loyalty_channel_credits: mysqlCompany.loyalty_channel_credits,
+        negative_feedback_alert_inactive: mysqlCompany.negative_feedback_alert_inactive,
+        less_than_300_bills: mysqlCompany.less_than_300_bills,
+        active_auto_campaigns_count: mysqlCompany.active_auto_campaigns_count,
+        unique_customers_captured: mysqlCompany.unique_customers_captured,
+        revenue_1_year: mysqlCompany.revenue_1_year,
+        customers_with_min_one_visit: mysqlCompany.customers_with_min_one_visit,
+        customers_with_min_two_visit: mysqlCompany.customers_with_min_two_visit,
+        customers_without_min_visits: mysqlCompany.customers_without_min_visits,
+        percentage_of_inactive_customers: mysqlCompany.percentage_of_inactive_customers,
+        negative_feedbacks_count: mysqlCompany.negative_feedbacks_count,
+        campaigns_sent_last_90_days: mysqlCompany.campaigns_sent_last_90_days,
+        bills_received_last_30_days: mysqlCompany.bills_received_last_30_days,
+        customers_acquired_last_30_days: mysqlCompany.customers_acquired_last_30_days,
+        loyalty_type: mysqlCompany.loyalty_type,
+        loyalty_reward: mysqlCompany.loyalty_reward,
+        updated_from_mysql_at: new Date(),
+        
+        // Link to Chargebee if IDs are available in MySQL
+        chargebee_customer_id: mysqlCompany.customer_id || customer.chargebee_customer_id,
+        chargebee_subscription_id: mysqlCompany.subscription_id || customer.chargebee_subscription_id
+      })
+      .where(eq(customers.id, customerId));
+    
+    // Return the updated customer data  
+    const [updatedCustomer] = await db.select().from(customers).where(eq(customers.id, customerId));
+    
+    res.json({ 
+      success: true, 
+      message: `Successfully imported MySQL data for customer ${customerId}`,
+      customer: updatedCustomer
+    });
+  } catch (error) {
+    log(`Error importing MySQL data: ${error}`, 'mysql');
+    res.status(500).json({ error: "Failed to import MySQL data", details: error });
   }
 };
