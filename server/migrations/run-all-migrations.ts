@@ -6,6 +6,7 @@ import { addDueTypeColumn } from './add-due-type-column';
 import { addDueOffsetColumn } from './add-due-offset-column';
 import { addFixedDateColumn } from './add-fixed-date-column';
 import { addRecurrenceColumn } from './add-recurrence-column';
+import { addRemainingColumns } from './add-remaining-columns';
 
 async function runAllMigrations() {
   try {
@@ -17,6 +18,7 @@ async function runAllMigrations() {
     await addDueOffsetColumn();
     await addFixedDateColumn();
     await addRecurrenceColumn();
+    await addRemainingColumns();
     
     console.log("All migrations completed successfully.");
     return true;
