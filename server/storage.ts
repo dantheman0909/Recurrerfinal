@@ -450,6 +450,37 @@ export class MemStorage implements IStorage {
 
   // Dashboard Stats
   async getDashboardStats(timeframe: MetricTimeframe): Promise<any> {
+    // Function to generate appropriate time series data based on timeframe
+    const generateTimeseriesData = (timeframe: MetricTimeframe) => {
+      switch (timeframe) {
+        case 'weekly':
+          return {
+            months: ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'],
+            values: [35, 42, 38, 45, 40, 25, 30]
+          };
+        case 'monthly':
+          return {
+            months: ['Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov'],
+            values: [40, 28, 48, 56, 36, 52]
+          };
+        case 'quarterly':
+          return {
+            months: ['Q1', 'Q2', 'Q3', 'Q4'],
+            values: [120, 145, 160, 175]
+          };
+        case 'yearly':
+          return {
+            months: ['2020', '2021', '2022', '2023', '2024'],
+            values: [380, 420, 510, 580, 620]
+          };
+        default:
+          return {
+            months: ['Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov'],
+            values: [40, 28, 48, 56, 36, 52]
+          };
+      }
+    };
+    
     // Mock dashboard stats
     return {
       openTasks: 36,
@@ -465,10 +496,7 @@ export class MemStorage implements IStorage {
         atRisk: 23,
         redZone: 12
       },
-      monthlyMetrics: {
-        months: ['Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov'],
-        values: [40, 28, 48, 56, 36, 52]
-      }
+      monthlyMetrics: generateTimeseriesData(timeframe)
     };
   }
 }
@@ -769,6 +797,37 @@ export class DatabaseStorage implements IStorage {
     
     const totalCustomers = healthyCounts.length + atRiskCounts.length + redZoneCounts.length;
     
+    // Function to generate appropriate time series data based on timeframe
+    const generateTimeseriesData = (timeframe: MetricTimeframe) => {
+      switch (timeframe) {
+        case 'weekly':
+          return {
+            months: ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'],
+            values: [35, 42, 38, 45, 40, 25, 30]
+          };
+        case 'monthly':
+          return {
+            months: ['Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov'],
+            values: [40, 28, 48, 56, 36, 52]
+          };
+        case 'quarterly':
+          return {
+            months: ['Q1', 'Q2', 'Q3', 'Q4'],
+            values: [120, 145, 160, 175]
+          };
+        case 'yearly':
+          return {
+            months: ['2020', '2021', '2022', '2023', '2024'],
+            values: [380, 420, 510, 580, 620]
+          };
+        default:
+          return {
+            months: ['Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov'],
+            values: [40, 28, 48, 56, 36, 52]
+          };
+      }
+    };
+    
     // For simplicity, we're mocking some of the data still
     return {
       openTasks: openTasks.length,
@@ -784,10 +843,7 @@ export class DatabaseStorage implements IStorage {
         atRisk: Math.round((atRiskCounts.length / totalCustomers) * 100),
         redZone: Math.round((redZoneCounts.length / totalCustomers) * 100)
       },
-      monthlyMetrics: {
-        months: ['Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov'],
-        values: [40, 28, 48, 56, 36, 52] // mocked
-      }
+      monthlyMetrics: generateTimeseriesData(timeframe)
     };
   }
 }
