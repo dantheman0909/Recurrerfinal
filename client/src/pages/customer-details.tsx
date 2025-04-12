@@ -30,10 +30,20 @@ import { TaskList } from "@/components/dashboard/task-list";
 import { queryClient, apiRequest } from "@/lib/queryClient";
 import { useToast } from "@/hooks/use-toast";
 import { useState } from "react";
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
+import { Label } from "@/components/ui/label";
+import { Input } from "@/components/ui/input";
+import { Textarea } from "@/components/ui/textarea";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 
 export default function CustomerDetails() {
   const { id } = useParams();
   const [isLoading, setIsLoading] = useState(false);
+  const [isCreatingTask, setIsCreatingTask] = useState(false);
+  const [newTaskTitle, setNewTaskTitle] = useState("");
+  const [newTaskDescription, setNewTaskDescription] = useState("");
+  const [newTaskAssignee, setNewTaskAssignee] = useState("");
+  const [newTaskDueDate, setNewTaskDueDate] = useState("");
   const { toast } = useToast();
   
   const { data: customer, isLoading: isLoadingCustomer } = useQuery({
@@ -59,6 +69,60 @@ export default function CustomerDetails() {
   const { data: externalData } = useQuery({
     queryKey: [`/api/customers/${id}/external-data`],
   });
+  
+  // Handle task creation
+  const handleCreateTask = async () => {
+    if (!newTaskTitle) {
+      toast({
+        title: "Error",
+        description: "Task title is required",
+        variant: "destructive"
+      });
+      return;
+    }
+    
+    setIsCreatingTask(true);
+    
+    try {
+      const taskData = {
+        title: newTaskTitle,
+        description: newTaskDescription,
+        customer_id: parseInt(id || "0"),
+        assignee_id: newTaskAssignee ? parseInt(newTaskAssignee) : null,
+        due_date: newTaskDueDate ? new Date(newTaskDueDate).toISOString() : null,
+        status: "pending"
+      };
+      
+      await apiRequest('/api/tasks', {
+        method: 'POST',
+        body: JSON.stringify(taskData),
+      });
+      
+      // Reset form
+      setNewTaskTitle('');
+      setNewTaskDescription('');
+      setNewTaskAssignee('');
+      setNewTaskDueDate('');
+      
+      // Invalidate tasks query to refresh the list
+      queryClient.invalidateQueries({ queryKey: [`/api/tasks?customerId=${id}`] });
+      
+      toast({
+        title: "Success",
+        description: "Task created successfully"
+      });
+      
+    } catch (error) {
+      console.error("Error creating task:", error);
+      toast({
+        title: "Error",
+        description: "Failed to create task. Please try again.",
+        variant: "destructive"
+      });
+    } finally {
+      setIsCreatingTask(false);
+    }
+  };
   
   // Format users data for lookups
   const userMap = users?.reduce((acc: any, user: any) => {
