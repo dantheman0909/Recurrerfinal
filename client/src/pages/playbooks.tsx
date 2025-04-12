@@ -627,14 +627,16 @@ function PlaybookCard({ playbook, onEdit }: PlaybookCardProps) {
   const getTriggerLabel = (triggerType: PlaybookTriggerType) => {
     switch (triggerType) {
       case 'new_customer':
-        return 'After Onboarding';
+        return 'New Customer Created';
       case 'renewal_approaching':
-        return 'Before Renewal';
+        return 'Renewal Approaching';
       case 'usage_drop':
-        return 'Health Change';
+        return 'Usage Drop';
       case 'manual':
         return 'Manual Activation';
       default:
+      case 'custom_event':
+        return 'Custom Event';
         return triggerType;
     }
   };
@@ -707,12 +709,14 @@ function PlaybookListItem({ playbook, onEdit }: PlaybookListItemProps) {
   const getTriggerLabel = (triggerType: PlaybookTriggerType) => {
     switch (triggerType) {
       case 'new_customer':
-        return 'After Onboarding';
+        return 'New Customer Created';
       case 'renewal_approaching':
-        return 'Before Renewal';
+        return 'Renewal Approaching';
       case 'usage_drop':
-        return 'Health Change';
+        return 'Usage Drop';
       case 'manual':
+      case 'custom_event':
+        return 'Custom Event';
         return 'Manual Activation';
       default:
         return triggerType;
