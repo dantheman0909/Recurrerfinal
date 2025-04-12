@@ -1,6 +1,7 @@
 import { Card, CardContent } from "@/components/ui/card";
 import { GradientChart } from "@/components/ui/gradient-chart";
 import { formatCurrency } from "@/lib/utils";
+import { generateWeekDates } from "@/lib/date-utils";
 import { MetricTimeframe } from "@shared/types";
 
 interface MonthlyMetricsChartProps {
@@ -28,10 +29,27 @@ export function MonthlyMetricsChart({ data, timeframe = "monthly" }: MonthlyMetr
   }
   
   // Transform data for the chart component
-  const chartData = data.months.map((month, index) => ({
-    name: month,
-    value: data.values[index]
-  }));
+  let chartData;
+  
+  if (timeframe === "weekly") {
+    // For weekly data, use actual dates from the current week (Monday-Sunday)
+    const weekDates = generateWeekDates();
+    
+    // If there are 7 values in the data array, we can map them directly
+    // Otherwise, we'll use the available data and dates
+    const datesToUse = data.months.length === 7 ? weekDates : data.months;
+    
+    chartData = datesToUse.map((date, index) => ({
+      name: date,
+      value: data.values[index] || 0
+    }));
+  } else {
+    // For other timeframes, use the provided data
+    chartData = data.months.map((month, index) => ({
+      name: month,
+      value: data.values[index]
+    }));
+  }
 
   // Determine the chart title and description based on timeframe
   const getChartTitle = () => {
