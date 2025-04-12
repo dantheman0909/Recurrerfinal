@@ -23,7 +23,7 @@ import {
   ExternalLink
 } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
-import { cn } from "@/lib/utils";
+import { cn, formatINR } from "@/lib/utils";
 import { GradientChart } from "@/components/ui/gradient-chart";
 import { format } from "date-fns";
 import { TaskList } from "@/components/dashboard/task-list";
@@ -231,11 +231,11 @@ export default function CustomerDetails() {
                       <div className="grid grid-cols-2 gap-4">
                         <div className="text-center p-3 bg-gray-50 rounded-md">
                           <p className="text-sm text-gray-500">MRR</p>
-                          <p className="text-xl font-semibold">₹{customer.mrr?.toLocaleString() || 0}</p>
+                          <p className="text-xl font-semibold">{formatINR(customer.mrr)}</p>
                         </div>
                         <div className="text-center p-3 bg-gray-50 rounded-md">
                           <p className="text-sm text-gray-500">ARR</p>
-                          <p className="text-xl font-semibold">₹{customer.arr?.toLocaleString() || 0}</p>
+                          <p className="text-xl font-semibold">{formatINR(customer.arr)}</p>
                         </div>
                       </div>
                       
@@ -699,7 +699,7 @@ export default function CustomerDetails() {
                             <p><span className="font-medium">Loyalty Type:</span> {externalData.mysql.company.loyalty_type}</p>
                           )}
                           {externalData.mysql.company?.revenue_1_year && (
-                            <p><span className="font-medium">Revenue (1Y):</span> ₹{new Intl.NumberFormat('en-IN').format(externalData.mysql.company.revenue_1_year)}</p>
+                            <p><span className="font-medium">Revenue (1Y):</span> {formatINR(externalData.mysql.company.revenue_1_year)}</p>
                           )}
                           {customer.updated_from_mysql_at && (
                             <p className="mt-2"><span className="font-medium">Last Sync:</span> {new Date(customer.updated_from_mysql_at).toLocaleString()}</p>
