@@ -22,7 +22,7 @@ import {
 } from "lucide-react";
 import { GradientChart } from "@/components/ui/gradient-chart";
 import { MetricTimeframe } from "@shared/types";
-import { cn } from "@/lib/utils";
+import { cn, formatINR } from "@/lib/utils";
 
 // Mock data for reports
 const mockOnboardingData = [
