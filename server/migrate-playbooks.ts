@@ -5,14 +5,14 @@ async function fixPlaybooksTable() {
   try {
     console.log("Checking if filters column exists in playbooks table...");
     
-    // Check if the column already exists
-    const checkResult = await db.execute(sql`
+    // Check if the filters column already exists
+    const checkFiltersResult = await db.execute(sql`
       SELECT column_name
       FROM information_schema.columns
       WHERE table_name = 'playbooks' AND column_name = 'filters'
     `);
     
-    if (checkResult.rows.length === 0) {
+    if (checkFiltersResult.rows.length === 0) {
       console.log("Column 'filters' not found. Adding it to the playbooks table...");
       
       // Add the column if it doesn't exist
@@ -26,9 +26,31 @@ async function fixPlaybooksTable() {
       console.log("Column 'filters' already exists in playbooks table.");
     }
     
+    // Check if the active column already exists
+    console.log("Checking if active column exists in playbooks table...");
+    const checkActiveResult = await db.execute(sql`
+      SELECT column_name
+      FROM information_schema.columns
+      WHERE table_name = 'playbooks' AND column_name = 'active'
+    `);
+    
+    if (checkActiveResult.rows.length === 0) {
+      console.log("Column 'active' not found. Adding it to the playbooks table...");
+      
+      // Add the column if it doesn't exist
+      await db.execute(sql`
+        ALTER TABLE playbooks
+        ADD COLUMN active BOOLEAN DEFAULT true
+      `);
+      
+      console.log("Column 'active' added successfully to playbooks table.");
+    } else {
+      console.log("Column 'active' already exists in playbooks table.");
+    }
+    
     return true;
   } catch (error) {
-    console.error("Error adding filters column:", error);
+    console.error("Error fixing playbooks table:", error);
     throw error;
   }
 }
