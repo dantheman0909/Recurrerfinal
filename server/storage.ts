@@ -579,11 +579,35 @@ export class DatabaseStorage implements IStorage {
 
   // Playbook Methods
   async getPlaybooks(): Promise<Playbook[]> {
-    return await db.select().from(playbooks);
+    // Explicitly select only essential columns to avoid errors with missing columns
+    return await db.select({
+      id: playbooks.id,
+      name: playbooks.name,
+      description: playbooks.description,
+      trigger_type: playbooks.trigger_type,
+      target_segments: playbooks.target_segments,
+      filters: playbooks.filters,
+      active: playbooks.active,
+      created_by: playbooks.created_by,
+      created_at: playbooks.created_at
+    }).from(playbooks);
   }
 
   async getPlaybook(id: number): Promise<Playbook | undefined> {
-    const [playbook] = await db.select().from(playbooks).where(eq(playbooks.id, id));
+    const [playbook] = await db.select({
+      id: playbooks.id,
+      name: playbooks.name,
+      description: playbooks.description,
+      trigger_type: playbooks.trigger_type,
+      target_segments: playbooks.target_segments,
+      filters: playbooks.filters,
+      active: playbooks.active,
+      created_by: playbooks.created_by,
+      created_at: playbooks.created_at
+    })
+    .from(playbooks)
+    .where(eq(playbooks.id, id));
+    
     return playbook;
   }
 
