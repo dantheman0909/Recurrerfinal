@@ -232,13 +232,9 @@ export default function Playbooks() {
   );
 
   const showTriggerFields = (triggerType: string) => {
-    if (triggerType === 'new_customer' || triggerType === 'renewal_approaching') {
-      return true;
-    } else if (triggerType === 'usage_drop') {
-      return true;
-    } else {
-      return false;
-    }
+    return triggerType === 'new_customer' || 
+           triggerType === 'renewal_approaching' || 
+           triggerType === 'usage_drop';
   };
 
   return (
@@ -308,10 +304,10 @@ export default function Playbooks() {
                                 </SelectTrigger>
                               </FormControl>
                               <SelectContent>
-                                <SelectItem value="time_after_onboarding">Time After Onboarding</SelectItem>
-                                <SelectItem value="days_before_renewal">Days Before Renewal</SelectItem>
-                                <SelectItem value="account_health_change">Account Health Change</SelectItem>
-                                <SelectItem value="manual">Manual Activation</SelectItem>
+                                <SelectItem value="new_customer">New Customer Created</SelectItem>
+                                <SelectItem value="renewal_approaching">Renewal Approaching</SelectItem>
+                                <SelectItem value="usage_drop">Usage Drop</SelectItem>
+                                <SelectItem value="manual">Manual Activation</SelectItem> \n                                <SelectItem value="custom_event">Custom Event</SelectItem>
                               </SelectContent>
                             </Select>
                             <FormMessage />
@@ -320,7 +316,7 @@ export default function Playbooks() {
                       />
                       
                       {/* Conditional fields based on trigger type */}
-                      {form.watch("trigger_type") === "account_health_change" && (
+                      {form.watch("trigger_type") === "usage_drop" && (
                         <FormField
                           control={form.control}
                           name="health_status"
@@ -435,10 +431,10 @@ export default function Playbooks() {
                                 </SelectTrigger>
                               </FormControl>
                               <SelectContent>
-                                <SelectItem value="time_after_onboarding">Time After Onboarding</SelectItem>
-                                <SelectItem value="days_before_renewal">Days Before Renewal</SelectItem>
-                                <SelectItem value="account_health_change">Account Health Change</SelectItem>
-                                <SelectItem value="manual">Manual Activation</SelectItem>
+                                <SelectItem value="new_customer">New Customer Created</SelectItem>
+                                <SelectItem value="renewal_approaching">Renewal Approaching</SelectItem>
+                                <SelectItem value="usage_drop">Usage Drop</SelectItem>
+                                <SelectItem value="manual">Manual Activation</SelectItem> \n                                <SelectItem value="custom_event">Custom Event</SelectItem>
                               </SelectContent>
                             </Select>
                             <FormMessage />
@@ -447,7 +443,7 @@ export default function Playbooks() {
                       />
                       
                       {/* Conditional fields based on trigger type */}
-                      {editForm.watch("trigger_type") === "account_health_change" && (
+                      {editForm.watch("trigger_type") === "usage_drop" && (
                         <FormField
                           control={editForm.control}
                           name="health_status"
