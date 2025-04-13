@@ -1865,6 +1865,47 @@ export default function CustomReports() {
           </div>
         )}
       </div>
+      
+      {/* Delete Metric Confirmation Dialog */}
+      <Dialog open={openDialog === 'deleteMetricConfirm'} onOpenChange={(open) => setOpenDialog(open ? 'deleteMetricConfirm' : null)}>
+        <DialogContent className="sm:max-w-[425px]">
+          <DialogHeader>
+            <DialogTitle>Delete Metric</DialogTitle>
+            <DialogDescription>
+              Are you sure you want to delete this metric? This action cannot be undone.
+            </DialogDescription>
+          </DialogHeader>
+          <DialogFooter className="flex space-x-2 justify-end">
+            <Button variant="outline" onClick={() => setOpenDialog(null)}>
+              Cancel
+            </Button>
+            <Button variant="destructive" onClick={confirmDeleteMetric}>
+              Delete
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+      
+      {/* Delete Report Confirmation Dialog */}
+      <Dialog open={openDialog === 'deleteReportConfirm'} onOpenChange={(open) => setOpenDialog(open ? 'deleteReportConfirm' : null)}>
+        <DialogContent className="sm:max-w-[425px]">
+          <DialogHeader>
+            <DialogTitle>Delete Report</DialogTitle>
+            <DialogDescription>
+              Are you sure you want to delete this report? This action cannot be undone.
+              All associated metrics and schedules will also be deleted.
+            </DialogDescription>
+          </DialogHeader>
+          <DialogFooter className="flex space-x-2 justify-end">
+            <Button variant="outline" onClick={() => setOpenDialog(null)}>
+              Cancel
+            </Button>
+            <Button variant="destructive" onClick={confirmDeleteReport}>
+              Delete
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </>
   );
 }
