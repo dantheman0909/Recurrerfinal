@@ -10,7 +10,9 @@ import {
   insertPlaybookSchema,
   insertPlaybookTaskSchema,
   insertRedZoneAlertSchema,
-  insertMySQLSavedQuerySchema
+  insertMySQLSavedQuerySchema,
+  insertNotificationSchema,
+  insertUserAchievementSchema
 } from "@shared/schema";
 import {
   getChargebeeSubscriptions,
@@ -874,6 +876,141 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // Notifications
+  app.get('/api/notifications', async (req, res) => {
+    try {
+      const userId = req.query.userId ? parseInt(req.query.userId as string) : undefined;
+      
+      if (!userId) {
+        return res.status(400).json({ message: 'User ID is required' });
+      }
+      
+      const notifications = await storage.getNotificationsByUser(userId);
+      res.json(notifications);
+    } catch (error) {
+      console.error('Error fetching notifications:', error);
+      res.status(500).json({ message: 'Error fetching notifications' });
+    }
+  });
+  
+  app.post('/api/notifications', async (req, res) => {
+    try {
+      const notificationData = insertNotificationSchema.parse(req.body);
+      const notification = await storage.createNotification(notificationData);
+      res.status(201).json(notification);
+    } catch (error) {
+      res.status(400).json({ message: 'Invalid notification data', error });
+    }
+  });
+  
+  app.patch('/api/notifications/:id/mark-read', async (req, res) => {
+    try {
+      const id = parseInt(req.params.id);
+      const notification = await storage.markNotificationAsRead(id);
+      
+      if (!notification) {
+        return res.status(404).json({ message: 'Notification not found' });
+      }
+      
+      res.json(notification);
+    } catch (error) {
+      res.status(500).json({ message: 'Error marking notification as read', error });
+    }
+  });
+  
+  app.patch('/api/notifications/mark-all-read', async (req, res) => {
+    try {
+      const { userId } = req.body;
+      
+      if (!userId) {
+        return res.status(400).json({ message: 'User ID is required' });
+      }
+      
+      const result = await storage.markAllNotificationsAsRead(userId);
+      res.json({ success: true, count: result });
+    } catch (error) {
+      res.status(500).json({ message: 'Error marking all notifications as read', error });
+    }
+  });
+  
+  // User Achievements
+  app.get('/api/achievements', async (req, res) => {
+    try {
+      const userId = req.query.userId ? parseInt(req.query.userId as string) : undefined;
+      
+      if (!userId) {
+        return res.status(400).json({ message: 'User ID is required' });
+      }
+      
+      const achievements = await storage.getAchievementsByUser(userId);
+      res.json(achievements);
+    } catch (error) {
+      console.error('Error fetching achievements:', error);
+      res.status(500).json({ message: 'Error fetching achievements' });
+    }
+  });
+  
+  app.post('/api/achievements', async (req, res) => {
+    try {
+      const achievementData = insertUserAchievementSchema.parse(req.body);
+      const achievement = await storage.createUserAchievement(achievementData);
+      res.status(201).json(achievement);
+    } catch (error) {
+      res.status(400).json({ message: 'Invalid achievement data', error });
+    }
+  });
+  
+  app.patch('/api/achievements/:id/mark-viewed', async (req, res) => {
+    try {
+      const id = parseInt(req.params.id);
+      const achievement = await storage.markAchievementAsViewed(id);
+      
+      if (!achievement) {
+        return res.status(404).json({ message: 'Achievement not found' });
+      }
+      
+      res.json(achievement);
+    } catch (error) {
+      res.status(500).json({ message: 'Error marking achievement as viewed', error });
+    }
+  });
+  
+  app.get('/api/achievements/stats', async (req, res) => {
+    try {
+      const userId = req.query.userId ? parseInt(req.query.userId as string) : undefined;
+      
+      if (!userId) {
+        return res.status(400).json({ message: 'User ID is required' });
+      }
+      
+      // Get user achievements
+      const achievements = await storage.getAchievementsByUser(userId);
+      
+      // Calculate stats
+      const totalXp = achievements.reduce((sum, achievement) => sum + (achievement.xp_earned || 0), 0);
+      const totalAchievements = achievements.length;
+      const achievementsByType = achievements.reduce((acc, achievement) => {
+        const type = achievement.achievement_type;
+        acc[type] = (acc[type] || 0) + 1;
+        return acc;
+      }, {} as Record<string, number>);
+      
+      // Calculate level based on XP (simple calculation, can be customized)
+      const level = Math.floor(totalXp / 1000) + 1;
+      
+      res.json({
+        totalXp,
+        totalAchievements,
+        level,
+        achievementsByType,
+        recentAchievements: achievements.slice(0, 5)
+      });
+    } catch (error) {
+      console.error('Error fetching achievement stats:', error);
+      res.status(500).json({ message: 'Error fetching achievement stats' });
+    }
+  });
+  
   // MySQL Saved Queries
   app.get('/api/admin/mysql-saved-queries', async (req, res) => {
     try {
