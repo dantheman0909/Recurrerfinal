@@ -133,14 +133,23 @@ app.get('/api/customers/:id/external-data', getCustomerExternalData);
     
     // Start the MySQL scheduler
     try {
+      // Start MySQL scheduler
       import('./mysql-scheduler').then(({ mysqlScheduler }) => {
         mysqlScheduler.start();
         log('MySQL scheduler started');
       }).catch(error => {
         console.error('Error starting MySQL scheduler:', error);
       });
+      
+      // Start Chargebee scheduler
+      import('./chargebee-scheduler').then(({ chargebeeScheduler }) => {
+        chargebeeScheduler.start();
+        log('Chargebee scheduler started');
+      }).catch(error => {
+        console.error('Error starting Chargebee scheduler:', error);
+      });
     } catch (error) {
-      console.error('Error importing MySQL scheduler:', error);
+      console.error('Error importing schedulers:', error);
     }
   });
 })();

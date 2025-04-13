@@ -665,6 +665,49 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
   
+  // Chargebee Scheduler Control
+  app.post('/api/admin/chargebee-scheduler/:action', async (req, res) => {
+    try {
+      const { action } = req.params;
+      const { chargebeeScheduler } = await import('./chargebee-scheduler');
+      
+      let result: { success: boolean; message: string; status?: string };
+      
+      switch (action) {
+        case 'start':
+          chargebeeScheduler.start();
+          result = { success: true, message: 'Chargebee scheduler started', status: 'running' };
+          break;
+        
+        case 'stop':
+          chargebeeScheduler.stop();
+          result = { success: true, message: 'Chargebee scheduler stopped', status: 'stopped' };
+          break;
+        
+        case 'status':
+          const isRunning = chargebeeScheduler.isRunning();
+          result = { 
+            success: true, 
+            message: `Chargebee scheduler is ${isRunning ? 'running' : 'stopped'}`,
+            status: isRunning ? 'running' : 'stopped'
+          };
+          break;
+        
+        default:
+          result = { success: false, message: `Unknown action: ${action}`, status: 'unknown' };
+      }
+      
+      res.json(result);
+    } catch (error) {
+      console.error('Chargebee scheduler control error:', error);
+      res.status(500).json({ 
+        success: false, 
+        message: `Error controlling Chargebee scheduler: ${error instanceof Error ? error.message : String(error)}`,
+        status: 'error'
+      });
+    }
+  });
+  
   app.post('/api/admin/mysql-field-mappings', async (req, res) => {
     try {
       const mappingSchema = z.object({
