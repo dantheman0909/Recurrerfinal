@@ -14,6 +14,8 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { Command, CommandEmpty, CommandGroup, CommandInput, CommandItem, CommandList } from "@/components/ui/command";
+import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { 
   Table, 
   TableBody, 
@@ -25,6 +27,7 @@ import {
 } from "@/components/ui/table";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Badge } from "@/components/ui/badge";
+import { Switch } from "@/components/ui/switch";
 import { useToast } from "@/hooks/use-toast";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 import { queryClient, apiRequest } from "@/lib/queryClient";
@@ -137,6 +140,14 @@ function DatabaseConfigTab() {
   const [saveQueryDialogOpen, setSaveQueryDialogOpen] = useState(false);
   const [queryName, setQueryName] = useState("");
   const [queryDescription, setQueryDescription] = useState("");
+  
+  // State for saved queries
+  const [selectedSavedQuery, setSelectedSavedQuery] = useState<string | null>(null);
+  
+  // Query to fetch saved queries
+  const { data: existingSavedQueries, isLoading: isLoadingSavedQueries } = useQuery({
+    queryKey: ['/api/admin/mysql-saved-queries'],
+  });
   
   // State for field mapping form
   const [mappingDialogOpen, setMappingDialogOpen] = useState(false);
