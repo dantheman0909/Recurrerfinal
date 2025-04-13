@@ -84,8 +84,17 @@ interface CustomerMap {
   [id: number]: Customer;
 }
 
+// Function to get greeting based on time of day
+const getGreeting = (): string => {
+  const hour = new Date().getHours();
+  if (hour < 12) return "Good morning";
+  if (hour < 18) return "Good afternoon";
+  return "Good evening";
+};
+
 export default function Dashboard() {
   const [timeframe, setTimeframe] = useState<MetricTimeframe>("monthly");
+  const [greeting] = useState<string>(getGreeting());
   
   const { data: dashboardData, isLoading } = useQuery<DashboardData>({
     queryKey: [`/api/dashboard?timeframe=${timeframe}`],
@@ -132,7 +141,12 @@ export default function Dashboard() {
         <div className="px-4 sm:px-6 lg:max-w-7xl lg:mx-auto lg:px-8">
           <div className="py-6 md:flex md:items-center md:justify-between">
             <div className="flex-1 min-w-0">
-              <h1 className="text-2xl font-semibold text-gray-900">Dashboard</h1>
+              <div className="flex items-center mb-1">
+                <h1 className="text-2xl font-semibold text-gray-900">
+                  {greeting}, {users && users.length > 0 ? users[0].name.split(' ')[0] : 'User'}
+                </h1>
+                <div className="ml-2 h-2 w-2 rounded-full bg-green-500 animate-pulse"></div>
+              </div>
               <p className="mt-1 text-sm text-gray-500">
                 Overview of your customer success metrics and tasks
               </p>
