@@ -469,7 +469,7 @@ export default function CustomReports() {
                 }}
               />
               <Legend />
-              {metrics.map((metric: CustomMetric) => (
+              {metrics.filter(metric => metric.report_id === selectedReportId).map((metric: CustomMetric) => (
                 <Line
                   key={metric.id}
                   type="monotone"
@@ -499,7 +499,7 @@ export default function CustomReports() {
                 }}
               />
               <Legend />
-              {metrics.map((metric: CustomMetric) => (
+              {metrics.filter(metric => metric.report_id === selectedReportId).map((metric: CustomMetric) => (
                 <Bar
                   key={metric.id}
                   dataKey="value"
@@ -516,7 +516,7 @@ export default function CustomReports() {
           <ResponsiveContainer width="100%" height="100%">
             <PieChart>
               <Pie
-                data={metrics.map((metric: CustomMetric) => ({
+                data={metrics.filter(metric => metric.report_id === selectedReportId).map((metric: CustomMetric) => ({
                   name: metric.name,
                   value: metric.target_value || 0
                 }))}
@@ -529,7 +529,7 @@ export default function CustomReports() {
                 label={({name, value}) => `${name}: ${value}`}
                 labelLine={false}
               >
-                {metrics.map((metric: CustomMetric, index: number) => (
+                {metrics.filter(metric => metric.report_id === selectedReportId).map((metric: CustomMetric, index: number) => (
                   <Cell key={`cell-${index}`} fill={metric.display_color} />
                 ))}
               </Pie>
@@ -1291,7 +1291,7 @@ export default function CustomReports() {
                         </div>
                       ) : (
                         <div className="space-y-4">
-                          {metrics.map((metric: CustomMetric) => (
+                          {metrics.filter(metric => metric.report_id === selectedReportId).map((metric: CustomMetric) => (
                             <div key={metric.id} className="flex items-center justify-between p-3 border rounded-md">
                               <div className="flex items-center">
                                 <div 
