@@ -1500,6 +1500,97 @@ export class DatabaseStorage implements IStorage {
     
     return updatedAchievement;
   }
+  
+  // Achievement System Configuration Methods
+  // For the database implementation, we'll use a similar approach to the in-memory storage
+  // but store the configurations in the database when a proper schema is created
+  
+  // Default configurations that will be returned until proper database tables are created
+  private defaultThresholds: AchievementThresholds = {
+    tasks_completed: 10,
+    customer_health_improved: 5,
+    feedback_collected: 15,
+    playbooks_executed: 3,
+    red_zone_resolved: 8,
+    login_streak: 7
+  };
+  
+  private defaultBadgeConfig: BadgeConfiguration = {
+    tasks_completed: { icon: 'check-circle', color: '#4CAF50' },
+    customer_health_improved: { icon: 'trending-up', color: '#2196F3' },
+    feedback_collected: { icon: 'message-circle', color: '#9C27B0' },
+    playbooks_executed: { icon: 'book-open', color: '#FF9800' },
+    red_zone_resolved: { icon: 'shield', color: '#F44336' },
+    login_streak: { icon: 'zap', color: '#FFC107' }
+  };
+  
+  private defaultNotificationSettings: NotificationSettings = {
+    enableAchievementNotifications: true,
+    notifyOnLevelUp: true,
+    showBadgesInProfile: true,
+    showAchievementsInDashboard: true,
+  };
+  
+  private defaultXpConfig: XpConfiguration = {
+    tasks_completed: 100,
+    customer_health_improved: 200,
+    feedback_collected: 150,
+    playbooks_executed: 250,
+    red_zone_resolved: 300,
+    login_streak: 50
+  };
+  
+  async getAchievementThresholds(): Promise<AchievementThresholds> {
+    // Placeholder for database implementation
+    // Will be replaced with actual database queries when tables are created
+    return this.defaultThresholds;
+  }
+  
+  async saveAchievementThresholds(thresholds: AchievementThresholds): Promise<AchievementThresholds> {
+    // Placeholder for database implementation
+    // Will be replaced with actual database queries when tables are created
+    this.defaultThresholds = { ...thresholds };
+    return this.defaultThresholds;
+  }
+  
+  async getBadgeConfiguration(): Promise<BadgeConfiguration> {
+    // Placeholder for database implementation
+    // Will be replaced with actual database queries when tables are created
+    return this.defaultBadgeConfig;
+  }
+  
+  async saveBadgeConfiguration(config: BadgeConfiguration): Promise<BadgeConfiguration> {
+    // Placeholder for database implementation
+    // Will be replaced with actual database queries when tables are created
+    this.defaultBadgeConfig = { ...config };
+    return this.defaultBadgeConfig;
+  }
+  
+  async getNotificationSettings(): Promise<NotificationSettings> {
+    // Placeholder for database implementation
+    // Will be replaced with actual database queries when tables are created
+    return this.defaultNotificationSettings;
+  }
+  
+  async saveNotificationSettings(settings: NotificationSettings): Promise<NotificationSettings> {
+    // Placeholder for database implementation
+    // Will be replaced with actual database queries when tables are created
+    this.defaultNotificationSettings = { ...settings };
+    return this.defaultNotificationSettings;
+  }
+  
+  async getXpConfiguration(): Promise<XpConfiguration> {
+    // Placeholder for database implementation
+    // Will be replaced with actual database queries when tables are created
+    return this.defaultXpConfig;
+  }
+  
+  async saveXpConfiguration(config: XpConfiguration): Promise<XpConfiguration> {
+    // Placeholder for database implementation
+    // Will be replaced with actual database queries when tables are created
+    this.defaultXpConfig = { ...config };
+    return this.defaultXpConfig;
+  }
 }
 
 // Choose storage implementation based on whether we have a database connection
