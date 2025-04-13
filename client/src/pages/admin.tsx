@@ -49,7 +49,9 @@ import {
   Calendar,
   Clock,
   Percent,
-  Search
+  Search,
+  ChevronsUpDown,
+  Check
 } from "lucide-react";
 import { UserRole } from "@shared/types";
 import { AvatarWithInitials } from "@/components/ui/avatar-with-initials";

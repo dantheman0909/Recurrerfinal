@@ -828,6 +828,20 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // Customer Fields for Field Mapping
+  app.get('/api/admin/customer-fields', async (req, res) => {
+    try {
+      const fields = await storage.getCustomerTableFields();
+      res.json(fields);
+    } catch (error) {
+      console.error('Error fetching customer fields:', error);
+      res.status(500).json({ 
+        message: 'Failed to fetch customer fields', 
+        error: error instanceof Error ? error.message : String(error) 
+      });
+    }
+  });
+
   // MySQL Saved Queries
   app.get('/api/admin/mysql-saved-queries', async (req, res) => {
     try {
