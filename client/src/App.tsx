@@ -7,6 +7,7 @@ import Tasks from "@/pages/tasks";
 import Playbooks from "@/pages/playbooks";
 import PlaybookWorkflow from "@/pages/playbooks/workflow";
 import Reports from "@/pages/reports";
+import CustomReports from "@/pages/custom-reports";
 import RedZone from "@/pages/red-zone";
 import Admin from "@/pages/admin";
 import Achievements from "@/pages/achievements";
@@ -24,6 +25,7 @@ function App() {
         <Route path="/playbooks" component={Playbooks} />
         <Route path="/playbooks/workflow" component={PlaybookWorkflow} />
         <Route path="/reports" component={Reports} />
+        <Route path="/custom-reports" component={CustomReports} />
         <Route path="/red-zone" component={RedZone} />
         <Route path="/admin" component={Admin} />
         <Route path="/achievements" component={Achievements} />
