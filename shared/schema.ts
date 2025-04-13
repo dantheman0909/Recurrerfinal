@@ -189,6 +189,19 @@ export const chargebeeConfig = pgTable("chargebee_config", {
   apiKey: text("apiKey").notNull(),
   status: integrationStatusEnum("status").default('active'),
   last_synced_at: timestamp("last_synced_at"),
+  sync_frequency: integer("sync_frequency").default(24), // Sync frequency in hours
+  created_by: integer("created_by").references(() => users.id),
+  created_at: timestamp("created_at").defaultNow(),
+});
+
+// Chargebee Field Mapping
+export const chargebeeFieldMappings = pgTable("chargebee_field_mappings", {
+  id: serial("id").primaryKey(),
+  chargebee_entity: text("chargebee_entity").notNull(), // customer, subscription, invoice
+  chargebee_field: text("chargebee_field").notNull(), 
+  local_table: text("local_table").notNull(),
+  local_field: text("local_field").notNull(),
+  is_key_field: boolean("is_key_field").default(false), // Whether this field is used for matching records
   created_by: integer("created_by").references(() => users.id),
   created_at: timestamp("created_at").defaultNow(),
 });
@@ -252,6 +265,7 @@ export const insertRedZoneAlertSchema = createInsertSchema(redZoneAlerts).omit({
 export const insertMySQLConfigSchema = createInsertSchema(mysqlConfig).omit({ id: true, created_at: true });
 export const insertMySQLFieldMappingSchema = createInsertSchema(mysqlFieldMappings).omit({ id: true, created_at: true });
 export const insertChargebeeConfigSchema = createInsertSchema(chargebeeConfig).omit({ id: true, created_at: true, last_synced_at: true });
+export const insertChargebeeFieldMappingSchema = createInsertSchema(chargebeeFieldMappings).omit({ id: true, created_at: true });
 
 // Types
 export type User = typeof users.$inferSelect;
@@ -283,3 +297,5 @@ export type MySQLConfig = typeof mysqlConfig.$inferSelect;
 export type MySQLFieldMapping = typeof mysqlFieldMappings.$inferSelect;
 export type ChargebeeConfig = typeof chargebeeConfig.$inferSelect;
 export type InsertChargebeeConfig = z.infer<typeof insertChargebeeConfigSchema>;
+export type ChargebeeFieldMapping = typeof chargebeeFieldMappings.$inferSelect;
+export type InsertChargebeeFieldMapping = z.infer<typeof insertChargebeeFieldMappingSchema>;
