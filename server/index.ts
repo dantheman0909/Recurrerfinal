@@ -1,6 +1,7 @@
 import express, { type Request, Response, NextFunction } from "express";
 import { registerRoutes } from "./routes";
 import { setupVite, serveStatic, log } from "./vite";
+import http from "http";
 // Chargebee and MySQL routes
 import {
   getChargebeeSubscriptions,
@@ -17,10 +18,15 @@ import {
 } from "./external-data";
 import { runMigrationsOnStartup } from "./run-migrations-startup";
 
+// Initialize Express app
 const app = express();
 app.use(express.json());
 app.use(express.urlencoded({ extended: false }));
 
+// Create HTTP server early
+const server = http.createServer(app);
+
+// Request logging middleware
 app.use((req, res, next) => {
   const start = Date.now();
   const path = req.path;
@@ -78,7 +84,8 @@ app.get('/api/customers/:id/external-data', getCustomerExternalData);
     await runMigrationsOnStartup();
 
     console.log("Registering routes...");
-    const server = await registerRoutes(app);
+    // We're not using the server returned from registerRoutes as we created our own
+    await registerRoutes(app);
 
     // Error handling middleware
     app.use((err: any, _req: Request, res: Response, _next: NextFunction) => {
@@ -97,13 +104,21 @@ app.get('/api/customers/:id/external-data', getCustomerExternalData);
     }
 
     // Start the server
-    const port = 5000;
-    server.listen({
-      port,
-      host: "0.0.0.0",
-      reusePort: true,
-    }, () => {
+    const port = parseInt(process.env.PORT || "5000");
+    console.log(`Attempting to start server on port ${port}...`);
+    
+    // Start server
+    server.listen(port, "0.0.0.0", () => {
+      console.log(`Server is now running on http://0.0.0.0:${port}`);
       log(`serving on port ${port}`);
+    });
+    
+    // Set up error handler
+    server.on("error", (error: any) => {
+      console.error(`Server error: ${error.message}`);
+      if (error.code === "EADDRINUSE") {
+        console.error(`Port ${port} is already in use`);
+      }
     });
   } catch (error) {
     console.error("Fatal error during application startup:", error);
