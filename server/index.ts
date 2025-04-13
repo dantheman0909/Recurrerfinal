@@ -55,6 +55,47 @@ app.get('/api/chargebee/subscriptions', getChargebeeSubscriptions);
 app.get('/api/chargebee/subscriptions/:id', getChargebeeSubscription);
 app.get('/api/chargebee/customers', getChargebeeCustomers);
 
+// Data synchronization endpoints (direct route to avoid Vite middleware interference)
+app.post('/api/admin/mysql-sync', async (req, res) => {
+  try {
+    const { mysqlSyncService } = await import('./mysql-sync-service');
+    const result = await mysqlSyncService.synchronizeData();
+    
+    // Ensure correct content type and response
+    res.setHeader('Content-Type', 'application/json');
+    res.json(result);
+  } catch (error) {
+    console.error('MySQL sync error:', error);
+    
+    // Ensure correct content type and response
+    res.setHeader('Content-Type', 'application/json');
+    res.status(500).json({ 
+      success: false, 
+      message: `Error synchronizing MySQL data: ${error instanceof Error ? error.message : String(error)}` 
+    });
+  }
+});
+
+app.post('/api/admin/chargebee-sync', async (req, res) => {
+  try {
+    const { chargebeeSyncService } = await import('./chargebee-sync-service');
+    const result = await chargebeeSyncService.synchronizeData();
+    
+    // Ensure correct content type and response
+    res.setHeader('Content-Type', 'application/json');
+    res.json(result);
+  } catch (error) {
+    console.error('Chargebee sync error:', error);
+    
+    // Ensure correct content type and response
+    res.setHeader('Content-Type', 'application/json');
+    res.status(500).json({ 
+      success: false, 
+      message: `Error synchronizing Chargebee data: ${error instanceof Error ? error.message : String(error)}` 
+    });
+  }
+});
+
 // Customer external data integration routes
 app.post('/api/customers/import-mysql-data', importMySQLDataToCustomer);
 app.get('/api/chargebee/customers/:id', getChargebeeCustomer);
@@ -63,6 +104,101 @@ app.get('/api/chargebee/invoices/:id', getChargebeeInvoice);
 app.get('/api/chargebee/subscriptions/:id/invoices', getInvoicesForSubscription);
 app.get('/api/mysql/companies', getMySQLCompanies);
 app.get('/api/mysql/companies/:id', getMySQLCompany);
+
+// Scheduler control endpoints (direct routes to avoid Vite middleware interference)
+app.post('/api/admin/mysql-scheduler/:action', async (req, res) => {
+  try {
+    const { action } = req.params;
+    const { mysqlScheduler } = await import('./mysql-scheduler');
+    
+    let result: { success: boolean; message: string; status?: string };
+    
+    switch (action) {
+      case 'start':
+        mysqlScheduler.start();
+        result = { success: true, message: 'MySQL scheduler started', status: 'running' };
+        break;
+      
+      case 'stop':
+        mysqlScheduler.stop();
+        result = { success: true, message: 'MySQL scheduler stopped', status: 'stopped' };
+        break;
+      
+      case 'status':
+        const isRunning = mysqlScheduler.isRunning();
+        result = { 
+          success: true, 
+          message: `MySQL scheduler is ${isRunning ? 'running' : 'stopped'}`,
+          status: isRunning ? 'running' : 'stopped' 
+        };
+        break;
+      
+      default:
+        result = { success: false, message: `Unknown action: ${action}`, status: 'unknown' };
+    }
+    
+    // Ensure correct content type and response
+    res.setHeader('Content-Type', 'application/json');
+    res.json(result);
+  } catch (error) {
+    console.error('MySQL scheduler control error:', error);
+    
+    // Ensure correct content type and response
+    res.setHeader('Content-Type', 'application/json');
+    res.status(500).json({ 
+      success: false, 
+      message: `Error controlling MySQL scheduler: ${error instanceof Error ? error.message : String(error)}`,
+      status: 'error'
+    });
+  }
+});
+
+app.post('/api/admin/chargebee-scheduler/:action', async (req, res) => {
+  try {
+    const { action } = req.params;
+    const { chargebeeScheduler } = await import('./chargebee-scheduler');
+    
+    let result: { success: boolean; message: string; status?: string };
+    
+    switch (action) {
+      case 'start':
+        chargebeeScheduler.start();
+        result = { success: true, message: 'Chargebee scheduler started', status: 'running' };
+        break;
+      
+      case 'stop':
+        chargebeeScheduler.stop();
+        result = { success: true, message: 'Chargebee scheduler stopped', status: 'stopped' };
+        break;
+      
+      case 'status':
+        const isRunning = chargebeeScheduler.isRunning();
+        result = { 
+          success: true, 
+          message: `Chargebee scheduler is ${isRunning ? 'running' : 'stopped'}`,
+          status: isRunning ? 'running' : 'stopped'
+        };
+        break;
+      
+      default:
+        result = { success: false, message: `Unknown action: ${action}`, status: 'unknown' };
+    }
+    
+    // Ensure correct content type and response
+    res.setHeader('Content-Type', 'application/json');
+    res.json(result);
+  } catch (error) {
+    console.error('Chargebee scheduler control error:', error);
+    
+    // Ensure correct content type and response
+    res.setHeader('Content-Type', 'application/json');
+    res.status(500).json({ 
+      success: false, 
+      message: `Error controlling Chargebee scheduler: ${error instanceof Error ? error.message : String(error)}`,
+      status: 'error'
+    });
+  }
+});
 
 // Customer-specific external data route
 app.get('/api/customers/:id/external-data', getCustomerExternalData);
