@@ -38,9 +38,14 @@ const HelpTooltip = ({
         <TooltipContent 
           side={side} 
           align={align}
-          className="max-w-xs bg-white p-2 text-xs text-gray-700 shadow-lg rounded-md border border-gray-200"
+          className="max-w-[225px] font-manrope bg-white p-3 text-sm leading-snug text-gray-700 shadow-md rounded-md border border-gray-100"
+          sideOffset={4}
         >
-          {content}
+          {typeof content === 'string' ? (
+            <div className="font-medium">{content}</div>
+          ) : (
+            content
+          )}
         </TooltipContent>
       </Tooltip>
     </TooltipProvider>

@@ -199,10 +199,9 @@ export default function Dashboard() {
             footerText="View all tasks"
             iconBgColor="bg-teal-100"
             helpText={
-              <div>
-                <p className="font-medium mb-1">Open Tasks</p>
-                <p>Number of tasks that are pending or in progress across all customers.</p>
-                <p className="mt-1 italic text-xs">Updates daily based on task statuses and due dates.</p>
+              <div className="space-y-1">
+                <h5 className="font-semibold text-gray-800">Open Tasks</h5>
+                <p>Tasks pending or in progress across all customers.</p>
               </div>
             }
           />
@@ -216,10 +215,9 @@ export default function Dashboard() {
             footerText="View all gaps"
             iconBgColor="bg-indigo-100"
             helpText={
-              <div>
-                <p className="font-medium mb-1">Campaign Gaps</p>
-                <p>Customers who haven't received a campaign in the last 30 days.</p>
-                <p className="mt-1 italic text-xs">Regular communication is essential for maintaining customer engagement.</p>
+              <div className="space-y-1">
+                <h5 className="font-semibold text-gray-800">Campaign Gaps</h5>
+                <p>Customers without campaigns in the last 30 days.</p>
               </div>
             }
           />
@@ -233,10 +231,9 @@ export default function Dashboard() {
             footerText="View all renewals"
             iconBgColor="bg-yellow-100"
             helpText={
-              <div>
-                <p className="font-medium mb-1">Renewal Alerts</p>
+              <div className="space-y-1">
+                <h5 className="font-semibold text-gray-800">Renewal Alerts</h5>
                 <p>Subscriptions due for renewal in the next 60 days that require attention.</p>
-                <p className="mt-1 italic text-xs">Proactive renewal management can significantly improve retention rates.</p>
               </div>
             }
           />
@@ -250,10 +247,9 @@ export default function Dashboard() {
             footerText="View red zone accounts"
             iconBgColor="bg-red-100"
             helpText={
-              <div>
-                <p className="font-medium mb-1">Red Zone Count</p>
-                <p>High-risk customers requiring immediate intervention based on health scores and engagement metrics.</p>
-                <p className="mt-1 italic text-xs">These accounts should be prioritized to prevent potential churn.</p>
+              <div className="space-y-1">
+                <h5 className="font-semibold text-gray-800">Red Zone Count</h5>
+                <p>High-risk customers requiring immediate intervention.</p>
               </div>
             }
           />
@@ -281,10 +277,9 @@ export default function Dashboard() {
                   Total MRR
                   <HelpTooltip 
                     content={
-                      <div>
-                        <p className="font-medium mb-1">Monthly Recurring Revenue</p>
+                      <div className="space-y-1">
+                        <h5 className="font-semibold text-gray-800">Monthly Recurring Revenue</h5>
                         <p>Total revenue generated each month from all active subscriptions.</p>
-                        <p className="mt-1 italic text-xs">Key indicator of business health and growth.</p>
                       </div>
                     } 
                   />
@@ -301,10 +296,9 @@ export default function Dashboard() {
                   Total ARR
                   <HelpTooltip 
                     content={
-                      <div>
-                        <p className="font-medium mb-1">Annual Recurring Revenue</p>
-                        <p>Total revenue expected over the next 12 months from all active subscriptions.</p>
-                        <p className="mt-1 italic text-xs">Calculated as MRR × 12.</p>
+                      <div className="space-y-1">
+                        <h5 className="font-semibold text-gray-800">Annual Recurring Revenue</h5>
+                        <p>Total revenue expected over the next 12 months (MRR × 12).</p>
                       </div>
                     } 
                   />
@@ -321,10 +315,9 @@ export default function Dashboard() {
                   Avg. Revenue Per Customer
                   <HelpTooltip 
                     content={
-                      <div>
-                        <p className="font-medium mb-1">Average Revenue Per Customer</p>
-                        <p>The average monthly revenue generated per customer.</p>
-                        <p className="mt-1 italic text-xs">Calculated as Total MRR ÷ Number of active customers.</p>
+                      <div className="space-y-1">
+                        <div className="font-semibold text-gray-800">Average Revenue Per Customer</div>
+                        <div>Monthly revenue per customer (MRR ÷ active customers).</div>
                       </div>
                     } 
                   />
