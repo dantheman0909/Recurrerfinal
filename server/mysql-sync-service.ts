@@ -232,18 +232,22 @@ export class MySQLSyncService {
         : [];
       
       // Make sure the updated_from_mysql_at column exists
-      if (!existingColumns.includes('updated_from_mysql_at')) {
+      // Check if the column already exists (case-insensitive)
+      if (!existingColumns.includes('updated_from_mysql_at'.toLowerCase())) {
         const alterQuery = `
           ALTER TABLE ${tableName} 
           ADD COLUMN updated_from_mysql_at TIMESTAMP NULL
         `;
         await db.execute(sql.raw(alterQuery));
         console.log(`Added updated_from_mysql_at column to ${tableName}`);
+      } else {
+        console.log(`Column updated_from_mysql_at already exists in ${tableName}`);
       }
       
       // Check each mapped field and create if missing
       for (const mapping of mappings) {
         const fieldName = mapping.local_field.toLowerCase();
+        // Check if the column already exists (case-insensitive)
         if (!existingColumns.includes(fieldName)) {
           // Convert field_type to a PostgreSQL type
           const pgType = this.convertToPgType(mapping.field_type);
@@ -255,6 +259,8 @@ export class MySQLSyncService {
           
           await db.execute(sql.raw(alterQuery));
           console.log(`Added column ${fieldName} to ${tableName}`);
+        } else {
+          console.log(`Column ${fieldName} already exists in ${tableName}`);
         }
       }
     } catch (error) {
