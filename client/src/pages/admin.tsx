@@ -570,12 +570,20 @@ function ChargebeeConfigTab() {
   
   // Set form fields if we have existing config
   React.useEffect(() => {
-    if (existingConfig && existingConfig.site && existingConfig.apiKey) {
-      setChargebeeConfig({
-        site: existingConfig.site || "",
-        apiKey: existingConfig.apiKey || "", // Using apiKey to match the database schema
-      });
-      setIsConnected(true);
+    if (existingConfig) {
+      // Check if the data is not null and has the expected properties
+      if (typeof existingConfig === 'object' && existingConfig !== null) {
+        const config = existingConfig as Record<string, any>;
+        setChargebeeConfig({
+          site: config.site || "",
+          apiKey: config.apiKey || "",
+        });
+        
+        // Only set as connected if we have actual values
+        if (config.site && config.apiKey) {
+          setIsConnected(true);
+        }
+      }
     }
   }, [existingConfig]);
   
@@ -644,61 +652,70 @@ function ChargebeeConfigTab() {
         </CardDescription>
       </CardHeader>
       <CardContent>
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-          <div className="space-y-4">
-            <div className="grid gap-2">
-              <Label htmlFor="site">Chargebee Site</Label>
-              <Input 
-                id="site" 
-                name="site" 
-                placeholder="e.g., yourcompany" 
-                value={chargebeeConfig.site}
-                onChange={handleConfigChange}
-              />
-              <p className="text-xs text-gray-500">
-                Your Chargebee site name (yourcompany.chargebee.com)
-              </p>
+        {isLoadingConfig ? (
+          <div className="flex items-center justify-center py-8">
+            <div className="animate-spin mr-2">
+              <RefreshCw className="h-5 w-5 text-gray-400" />
             </div>
+            <p>Loading configuration...</p>
           </div>
-          
-          <div className="space-y-4">
-            <div className="grid gap-2">
-              <Label htmlFor="apiKey">API Key</Label>
-              <Input 
-                id="apiKey" 
-                name="apiKey" 
-                type="password" 
-                placeholder="Chargebee API Key" 
-                value={chargebeeConfig.apiKey}
-                onChange={handleConfigChange}
-              />
-              <p className="text-xs text-gray-500">
-                Create a read-only API key in your Chargebee dashboard
-              </p>
+        ) : (
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            <div className="space-y-4">
+              <div className="grid gap-2">
+                <Label htmlFor="site">Chargebee Site</Label>
+                <Input 
+                  id="site" 
+                  name="site" 
+                  placeholder="e.g., yourcompany" 
+                  value={chargebeeConfig.site}
+                  onChange={handleConfigChange}
+                />
+                <p className="text-xs text-gray-500">
+                  Your Chargebee site name (yourcompany.chargebee.com)
+                </p>
+              </div>
             </div>
             
-            <div className="flex items-center justify-between mt-6">
-              <div>
-                {isConnected && (
-                  <Badge className="bg-green-100 text-green-800">
-                    Connected
-                  </Badge>
-                )}
+            <div className="space-y-4">
+              <div className="grid gap-2">
+                <Label htmlFor="apiKey">API Key</Label>
+                <Input 
+                  id="apiKey" 
+                  name="apiKey" 
+                  type="password" 
+                  placeholder="Chargebee API Key" 
+                  value={chargebeeConfig.apiKey}
+                  onChange={handleConfigChange}
+                />
+                <p className="text-xs text-gray-500">
+                  Create a read-only API key in your Chargebee dashboard
+                </p>
               </div>
-              <div className="space-x-2">
-                <Button 
-                  variant="outline" 
-                  onClick={handleTestConnection}
-                >
-                  Test Connection
-                </Button>
-                <Button onClick={handleSaveConfig}>
-                  Save Configuration
-                </Button>
+              
+              <div className="flex items-center justify-between mt-6">
+                <div>
+                  {isConnected && (
+                    <Badge className="bg-green-100 text-green-800">
+                      Connected
+                    </Badge>
+                  )}
+                </div>
+                <div className="space-x-2">
+                  <Button 
+                    variant="outline" 
+                    onClick={handleTestConnection}
+                  >
+                    Test Connection
+                  </Button>
+                  <Button onClick={handleSaveConfig}>
+                    Save Configuration
+                  </Button>
+                </div>
               </div>
             </div>
           </div>
-        </div>
+        )}
       </CardContent>
     </Card>
   );

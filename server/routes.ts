@@ -417,8 +417,25 @@ export async function registerRoutes(app: Express): Promise<Server> {
   
   // MySQL Config
   app.get('/api/admin/mysql-config', async (req, res) => {
-    const config = await storage.getMySQLConfig();
-    res.json(config || {});
+    try {
+      const config = await storage.getMySQLConfig();
+      res.json(config || { 
+        host: "", 
+        port: 3306, 
+        username: "", 
+        password: "", 
+        database: "" 
+      });
+    } catch (error) {
+      console.error('Error getting MySQL config:', error);
+      res.json({ 
+        host: "", 
+        port: 3306, 
+        username: "", 
+        password: "", 
+        database: "" 
+      });
+    }
   });
   
   app.post('/api/admin/mysql-config', async (req, res) => {
@@ -466,8 +483,13 @@ export async function registerRoutes(app: Express): Promise<Server> {
   
   // Chargebee Config
   app.get('/api/admin/chargebee-config', async (req, res) => {
-    const config = await storage.getChargebeeConfig();
-    res.json(config || {});
+    try {
+      const config = await storage.getChargebeeConfig();
+      res.json(config || { site: "", apiKey: "" });
+    } catch (error) {
+      console.error('Error getting Chargebee config:', error);
+      res.json({ site: "", apiKey: "" });
+    }
   });
   
   app.post('/api/admin/chargebee-config', async (req, res) => {
