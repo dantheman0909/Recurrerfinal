@@ -2,6 +2,7 @@ import express, { type Request, Response, NextFunction } from "express";
 import { registerRoutes } from "./routes";
 import { setupVite, serveStatic, log } from "./vite";
 import http from "http";
+import cors from "cors";
 // Chargebee and MySQL routes
 import {
   getChargebeeSubscriptions,
@@ -17,11 +18,14 @@ import {
   importMySQLDataToCustomer
 } from "./external-data";
 import { runMigrationsOnStartup } from "./run-migrations-startup";
+import { db, testDatabaseConnection } from "./db-fixed";
+import { FixedDatabaseStorage } from "./fixed-storage";
 
 // Initialize Express app
 const app = express();
 app.use(express.json());
 app.use(express.urlencoded({ extended: false }));
+app.use(cors());
 
 // Create HTTP server early
 const server = http.createServer(app);
@@ -80,6 +84,17 @@ app.get('/api/customers/:id/external-data', getCustomerExternalData);
   try {
     console.log("Starting application...");
     
+    // Test database connection
+    console.log("Initializing database connection...");
+    await testDatabaseConnection();
+    console.log("Database connection successful");
+    
+    // Initialize the fixed database storage
+    console.log("Initializing FixedDatabaseStorage...");
+    const storage = new FixedDatabaseStorage();
+    global.appStorage = storage;
+    console.log("FixedDatabaseStorage initialized successfully");
+    
     // Run migrations before starting the server
     await runMigrationsOnStartup();
 
@@ -97,29 +112,37 @@ app.get('/api/customers/:id/external-data', getCustomerExternalData);
     });
 
     // Setup vite or static file serving
-    if (app.get("env") === "development") {
-      await setupVite(app, server);
-    } else {
-      serveStatic(app);
-    }
-
-    // Start the server
-    const port = parseInt(process.env.PORT || "5000");
-    console.log(`Attempting to start server on port ${port}...`);
-    
-    // Start server
-    server.listen(port, "0.0.0.0", () => {
-      console.log(`Server is now running on http://0.0.0.0:${port}`);
-      log(`serving on port ${port}`);
-    });
-    
-    // Set up error handler
-    server.on("error", (error: any) => {
-      console.error(`Server error: ${error.message}`);
-      if (error.code === "EADDRINUSE") {
-        console.error(`Port ${port} is already in use`);
+    try {
+      console.log("Setting up Vite or static file serving...");
+      if (app.get("env") === "development") {
+        await setupVite(app, server);
+        console.log("Vite setup completed successfully.");
+      } else {
+        serveStatic(app);
+        console.log("Static file serving setup completed.");
       }
-    });
+
+      // Start the server
+      const port = parseInt(process.env.PORT || "5000");
+      console.log(`Attempting to start server on port ${port}...`);
+      
+      // Start server
+      server.listen(port, "0.0.0.0", () => {
+        console.log(`Server is now running on http://0.0.0.0:${port}`);
+        log(`serving on port ${port}`);
+      });
+      
+      // Set up error handler
+      server.on("error", (error: any) => {
+        console.error(`Server error: ${error.message}`);
+        console.error(`Full error details:`, error);
+        if (error.code === "EADDRINUSE") {
+          console.error(`Port ${port} is already in use`);
+        }
+      });
+    } catch (error) {
+      console.error("Critical error during server setup:", error);
+    }
   } catch (error) {
     console.error("Fatal error during application startup:", error);
     process.exit(1);

@@ -863,9 +863,10 @@ export class DatabaseStorage implements IStorage {
 }
 
 // Choose storage implementation based on whether we have a database connection
-// Use Database Storage when DATABASE_URL is available
+// Use FixedDatabaseStorage when DATABASE_URL is available
+import { FixedDatabaseStorage } from "./fixed-storage";
 const useDatabase = process.env.DATABASE_URL !== undefined;
-export const storage = useDatabase ? new DatabaseStorage() : new MemStorage();
+export const storage = useDatabase ? new FixedDatabaseStorage() : new MemStorage();
 
 // Log which storage is being used
 console.log(`Using ${useDatabase ? 'Database' : 'Memory'} storage for application data.`);

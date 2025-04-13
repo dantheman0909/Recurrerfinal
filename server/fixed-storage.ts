@@ -8,12 +8,9 @@ import {
   type InsertPlaybook, type PlaybookTask, type RedZoneAlert, 
   type InsertRedZoneAlert, type CustomerMetric, type MySQLConfig, 
   type MySQLFieldMapping, type ChargebeeConfig, type InsertChargebeeConfig
-}
-
-// Define MetricTimeframe type since it's not exported from schema
-type MetricTimeframe = 'last_7_days' | 'last_30_days' | 'last_90_days' | 'year_to_date' | 'all_time';
 } from "@shared/schema";
 import { eq } from "drizzle-orm";
+import { MetricTimeframe } from "@shared/types";
 
 // Improved Database Storage implementation with additional error handling and logging
 export class FixedDatabaseStorage implements IStorage {
@@ -133,7 +130,7 @@ export class FixedDatabaseStorage implements IStorage {
 
   async getTasksByAssignee(userId: number): Promise<Task[]> {
     return this.dbOperation('getTasksByAssignee', async () => {
-      return await db.select().from(tasks).where(eq(tasks.assignee_id, userId));
+      return await db.select().from(tasks).where(eq(tasks.assigned_to, userId));
     });
   }
 
@@ -393,20 +390,20 @@ export class FixedDatabaseStorage implements IStorage {
       const now = new Date();
       let dateLimit: Date;
       
+      // Map the timeframe values from shared/types.ts
       switch (timeframe) {
-        case 'last_7_days':
+        case 'weekly':
           dateLimit = new Date(now.getTime() - 7 * 24 * 60 * 60 * 1000);
           break;
-        case 'last_30_days':
+        case 'monthly':
           dateLimit = new Date(now.getTime() - 30 * 24 * 60 * 60 * 1000);
           break;
-        case 'last_90_days':
+        case 'quarterly':
           dateLimit = new Date(now.getTime() - 90 * 24 * 60 * 60 * 1000);
           break;
-        case 'year_to_date':
+        case 'yearly':
           dateLimit = new Date(now.getFullYear(), 0, 1);
           break;
-        case 'all_time':
         default:
           dateLimit = new Date(0); // Beginning of time
           break;

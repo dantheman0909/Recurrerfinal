@@ -4,16 +4,14 @@ import http from "http";
 import cors from "cors";
 import { registerRoutes } from "./routes";
 import { setupVite, serveStatic, log } from "./vite";
-import { FixedDatabaseStorage } from "./fixed-storage";
 import { db, testDatabaseConnection } from "./db-fixed";
-import * as schema from "@shared/schema";
-
-const useDatabase = true; // Set this to false to use in-memory storage
+import { FixedDatabaseStorage } from "./fixed-storage";
+import { Pool } from "@neondatabase/serverless";
 
 // Main entry point
 (async () => {
   try {
-    console.log("Starting application...");
+    console.log("Starting enhanced application server...");
     
     // Create express app and HTTP server
     const app = express();
@@ -21,35 +19,66 @@ const useDatabase = true; // Set this to false to use in-memory storage
 
     // Setup middleware
     app.use(express.json());
+    app.use(express.urlencoded({ extended: false }));
     app.use(cors());
 
-    // Database initialization
-    let storage;
-    if (useDatabase) {
-      try {
-        // Test database connection
-        await testDatabaseConnection();
-        
-        // Run migrations
-        console.log("Running database migrations...");
-        await runMigrations();
+    // Request logging middleware
+    app.use((req, res, next) => {
+      const start = Date.now();
+      const path = req.path;
+      let capturedJsonResponse: Record<string, any> | undefined = undefined;
 
-        // Initialize storage
-        storage = new FixedDatabaseStorage();
-        console.log("Using Database storage for application data.");
-      } catch (dbError) {
-        console.error("Database setup error:", dbError);
-        throw new Error("Database initialization failed: " + (dbError as Error).message);
-      }
-    } else {
-      console.log("Using in-memory storage for application data.");
-      // Imports done inside else to avoid load errors if DB not available
-      const { MemStorage } = await import("./storage");
-      storage = new MemStorage();
+      const originalResJson = res.json;
+      res.json = function (bodyJson, ...args) {
+        capturedJsonResponse = bodyJson;
+        return originalResJson.apply(res, [bodyJson, ...args]);
+      };
+
+      res.on("finish", () => {
+        const duration = Date.now() - start;
+        if (path.startsWith("/api")) {
+          let logLine = `${req.method} ${path} ${res.statusCode} in ${duration}ms`;
+          if (capturedJsonResponse) {
+            logLine += ` :: ${JSON.stringify(capturedJsonResponse)}`;
+          }
+
+          if (logLine.length > 80) {
+            logLine = logLine.slice(0, 79) + "…";
+          }
+
+          log(logLine);
+        }
+      });
+
+      next();
+    });
+
+    // Database initialization
+    try {
+      console.log("Initializing database connection...");
+      // Test database connection
+      await testDatabaseConnection();
+      console.log("Database connection successful!");
+      
+      // Initialize the fixed database storage
+      console.log("Initializing FixedDatabaseStorage...");
+      const storage = new FixedDatabaseStorage();
+      global.appStorage = storage;
+      console.log("FixedDatabaseStorage initialized successfully");
+      
+      // Run migrations
+      console.log("Running database migrations...");
+      await addPlaybookTaskConditionField();
+      console.log("Migrations completed successfully.");
+    } catch (dbError) {
+      console.error("Database setup error:", dbError);
+      throw new Error("Database initialization failed: " + (dbError as Error).message);
     }
 
-    // Setup API routes
+    // Setup routes
+    console.log("Registering API routes...");
     await registerRoutes(app);
+    console.log("API routes registered successfully.");
 
     // Setup error handler
     app.use((err: any, _req: Request, res: Response, _next: NextFunction) => {
@@ -87,6 +116,15 @@ const useDatabase = true; // Set this to false to use in-memory storage
           console.error(`Port ${port} is already in use`);
         }
       });
+
+      // Keep the process alive
+      process.on('SIGINT', () => {
+        console.log('Gracefully shutting down server...');
+        server.close(() => {
+          console.log('Server closed');
+          process.exit(0);
+        });
+      });
     } catch (error) {
       console.error("Critical error during server setup:", error);
       process.exit(1);
@@ -96,16 +134,6 @@ const useDatabase = true; // Set this to false to use in-memory storage
     process.exit(1);
   }
 })();
-
-// Function to add missing columns if needed
-async function runMigrations() {
-  try {
-    await addPlaybookTaskConditionField();
-  } catch (error) {
-    console.error("Migration error:", error);
-    throw error;
-  }
-}
 
 // Migration to add condition_field to playbook_tasks if it doesn't exist
 async function addPlaybookTaskConditionField() {
@@ -132,8 +160,6 @@ async function addPlaybookTaskConditionField() {
       } else {
         console.log("Column 'condition_field' already exists in playbook_tasks table.");
       }
-      
-      console.log("Migration completed successfully.");
     } finally {
       client.release();
     }
