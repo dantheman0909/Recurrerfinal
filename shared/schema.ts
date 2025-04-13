@@ -167,6 +167,9 @@ export const mysqlConfig = pgTable("mysql_config", {
   username: text("username").notNull(),
   password: text("password").notNull(),
   database: text("database").notNull(),
+  status: integrationStatusEnum("status").default('active'),
+  last_synced_at: timestamp("last_synced_at"),
+  sync_frequency: integer("sync_frequency").default(24), // Sync frequency in hours
   created_by: integer("created_by").references(() => users.id),
   created_at: timestamp("created_at").defaultNow(),
 });
@@ -178,6 +181,8 @@ export const mysqlFieldMappings = pgTable("mysql_field_mappings", {
   mysql_field: text("mysql_field").notNull(),
   local_table: text("local_table").notNull(),
   local_field: text("local_field").notNull(),
+  field_type: text("field_type").default("text"), // Data type of the field (text, integer, date, etc.)
+  is_key_field: boolean("is_key_field").default(false), // Whether this field is used for matching records
   created_by: integer("created_by").references(() => users.id),
   created_at: timestamp("created_at").defaultNow(),
 });

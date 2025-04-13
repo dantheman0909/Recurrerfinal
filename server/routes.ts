@@ -446,7 +446,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
         username: z.string(),
         password: z.string(),
         database: z.string(),
-        created_by: z.number()
+        status: z.enum(['active', 'pending', 'error']).optional().default('active'),
+        sync_frequency: z.number().optional().default(24), // Default sync every 24 hours
+        created_by: z.number().optional().default(1)
       });
       
       const configData = configSchema.parse(req.body);
@@ -595,7 +597,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
         mysql_field: z.string(),
         local_table: z.string(),
         local_field: z.string(),
-        created_by: z.number()
+        field_type: z.string().optional().default('text'),
+        is_key_field: z.boolean().optional().default(false),
+        created_by: z.number().optional().default(1)
       });
       
       const mappingData = mappingSchema.parse(req.body);
@@ -603,6 +607,46 @@ export async function registerRoutes(app: Express): Promise<Server> {
       res.status(201).json(mapping);
     } catch (error) {
       res.status(400).json({ message: 'Invalid field mapping data', error });
+    }
+  });
+  
+  app.put('/api/admin/mysql-field-mappings/:id', async (req, res) => {
+    try {
+      const id = parseInt(req.params.id);
+      const mappingSchema = z.object({
+        mysql_table: z.string(),
+        mysql_field: z.string(),
+        local_table: z.string(),
+        local_field: z.string(),
+        field_type: z.string().optional(),
+        is_key_field: z.boolean().optional()
+      });
+      
+      const mappingData = mappingSchema.parse(req.body);
+      const mapping = await storage.updateMySQLFieldMapping(id, mappingData);
+      
+      if (!mapping) {
+        return res.status(404).json({ message: 'Field mapping not found' });
+      }
+      
+      res.json(mapping);
+    } catch (error) {
+      res.status(400).json({ message: 'Invalid mapping data', error });
+    }
+  });
+  
+  app.delete('/api/admin/mysql-field-mappings/:id', async (req, res) => {
+    try {
+      const id = parseInt(req.params.id);
+      const success = await storage.deleteMySQLFieldMapping(id);
+      
+      if (!success) {
+        return res.status(404).json({ message: 'Field mapping not found' });
+      }
+      
+      res.json({ success });
+    } catch (error) {
+      res.status(500).json({ message: 'Failed to delete field mapping', error });
     }
   });
   
