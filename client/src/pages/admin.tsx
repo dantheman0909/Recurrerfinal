@@ -267,6 +267,48 @@ function DatabaseConfigTab() {
     if (existingCustomerFields && Array.isArray(existingCustomerFields)) {
       // Store all fields to have them available
       setAvailableRecurrerFields(existingCustomerFields);
+      
+      // Query the server for table-specific fields
+      const fetchTableFields = async () => {
+        try {
+          // Get fields for customers table 
+          const customersResponse = await fetch('/api/admin/table-fields/customers');
+          if (customersResponse.ok) {
+            const customersFields = await customersResponse.json();
+            // Update existing table fields state with customer fields
+            setExistingTableFields(prev => ({
+              ...prev,
+              customers: customersFields
+            }));
+          }
+          
+          // Get fields for customer_metrics table
+          const metricsResponse = await fetch('/api/admin/table-fields/customer_metrics');
+          if (metricsResponse.ok) {
+            const metricsFields = await metricsResponse.json();
+            // Update existing table fields state with metrics fields
+            setExistingTableFields(prev => ({
+              ...prev,
+              customer_metrics: metricsFields
+            }));
+          }
+          
+          // Get fields for tasks table
+          const tasksResponse = await fetch('/api/admin/table-fields/tasks');
+          if (tasksResponse.ok) {
+            const tasksFields = await tasksResponse.json();
+            // Update existing table fields state with tasks fields
+            setExistingTableFields(prev => ({
+              ...prev,
+              tasks: tasksFields
+            }));
+          }
+        } catch (error) {
+          console.error('Error fetching table fields:', error);
+        }
+      };
+      
+      fetchTableFields();
     }
   }, [existingCustomerFields]);
   

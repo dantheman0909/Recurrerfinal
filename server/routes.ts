@@ -842,6 +842,37 @@ export async function registerRoutes(app: Express): Promise<Server> {
       });
     }
   });
+  
+  // Table-specific fields for filtering dropdowns
+  app.get('/api/admin/table-fields/:tableName', async (req, res) => {
+    try {
+      const { tableName } = req.params;
+      let fields = [];
+      
+      // Validate table name to prevent SQL injection
+      const validTables = ['customers', 'customer_metrics', 'tasks'];
+      if (!validTables.includes(tableName)) {
+        return res.status(400).json({ message: 'Invalid table name' });
+      }
+      
+      // Get fields for the specified table
+      if (tableName === 'customers') {
+        fields = await storage.getCustomerTableFields();
+      } else if (tableName === 'customer_metrics') {
+        fields = await storage.getTableFields('customer_metrics');
+      } else if (tableName === 'tasks') {
+        fields = await storage.getTableFields('tasks');
+      }
+      
+      res.json(fields);
+    } catch (error) {
+      console.error(`Error getting fields for table: ${error}`);
+      res.status(500).json({ 
+        message: `Failed to get table fields`, 
+        error: error instanceof Error ? error.message : String(error) 
+      });
+    }
+  });
 
   // MySQL Saved Queries
   app.get('/api/admin/mysql-saved-queries', async (req, res) => {
