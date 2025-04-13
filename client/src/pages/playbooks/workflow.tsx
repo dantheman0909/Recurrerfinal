@@ -851,6 +851,116 @@ export default function PlaybookWorkflow() {
                       </div>
                     </div>
                     
+                    <div className="mt-4">
+                      <Accordion type="single" collapsible className="w-full border rounded-md">
+                        <AccordionItem value="condition" className="border-none">
+                          <AccordionTrigger className="py-3 px-4">
+                            <div className="flex items-center">
+                              <Split className="h-4 w-4 mr-2" />
+                              <span>Task Condition (Optional)</span>
+                            </div>
+                          </AccordionTrigger>
+                          <AccordionContent className="px-4 pb-4">
+                            <div className="space-y-4">
+                              <p className="text-sm text-muted-foreground">
+                                Add conditional logic to determine when this task should be executed.
+                              </p>
+                              
+                              <div className="grid grid-cols-3 gap-2">
+                                <FormField
+                                  control={form.control}
+                                  name={`tasks.${index}.condition_field.field`}
+                                  render={({ field }) => (
+                                    <FormItem>
+                                      <FormLabel>Field</FormLabel>
+                                      <Select
+                                        value={field.value}
+                                        onValueChange={field.onChange}
+                                      >
+                                        <FormControl>
+                                          <SelectTrigger>
+                                            <SelectValue placeholder="Select field" />
+                                          </SelectTrigger>
+                                        </FormControl>
+                                        <SelectContent>
+                                          <SelectItem value="health_status">Health Status</SelectItem>
+                                          <SelectItem value="renewal_in_days">Days to Renewal</SelectItem>
+                                          <SelectItem value="customer_type">Customer Type</SelectItem>
+                                          <SelectItem value="usage_percentage">Usage Percentage</SelectItem>
+                                          <SelectItem value="task_completed">Previous Task Completed</SelectItem>
+                                        </SelectContent>
+                                      </Select>
+                                      <FormMessage />
+                                    </FormItem>
+                                  )}
+                                />
+                                
+                                <FormField
+                                  control={form.control}
+                                  name={`tasks.${index}.condition_field.operator`}
+                                  render={({ field }) => (
+                                    <FormItem>
+                                      <FormLabel>Operator</FormLabel>
+                                      <Select
+                                        value={field.value}
+                                        onValueChange={field.onChange}
+                                      >
+                                        <FormControl>
+                                          <SelectTrigger>
+                                            <SelectValue placeholder="Select operator" />
+                                          </SelectTrigger>
+                                        </FormControl>
+                                        <SelectContent>
+                                          <SelectItem value="equals">Equals</SelectItem>
+                                          <SelectItem value="not_equals">Not Equals</SelectItem>
+                                          <SelectItem value="greater_than">Greater Than</SelectItem>
+                                          <SelectItem value="less_than">Less Than</SelectItem>
+                                          <SelectItem value="contains">Contains</SelectItem>
+                                        </SelectContent>
+                                      </Select>
+                                      <FormMessage />
+                                    </FormItem>
+                                  )}
+                                />
+                                
+                                <FormField
+                                  control={form.control}
+                                  name={`tasks.${index}.condition_field.value`}
+                                  render={({ field }) => (
+                                    <FormItem>
+                                      <FormLabel>Value</FormLabel>
+                                      <FormControl>
+                                        <Input 
+                                          placeholder="Comparison value" 
+                                          {...field} 
+                                          value={field.value?.toString() || ""}
+                                          onChange={(e) => {
+                                            // Try to convert to appropriate type based on field
+                                            const conditionField = form.getValues(`tasks.${index}.condition_field.field`);
+                                            if (conditionField === 'renewal_in_days' || conditionField === 'usage_percentage') {
+                                              const numValue = parseFloat(e.target.value);
+                                              field.onChange(isNaN(numValue) ? e.target.value : numValue);
+                                            } else {
+                                              field.onChange(e.target.value);
+                                            }
+                                          }}
+                                        />
+                                      </FormControl>
+                                      <FormMessage />
+                                    </FormItem>
+                                  )}
+                                />
+                              </div>
+                              
+                              <p className="text-xs text-muted-foreground">
+                                Example: Only run this task if Health Status equals "at_risk" or Days to Renewal is less than 30.
+                              </p>
+                            </div>
+                          </AccordionContent>
+                        </AccordionItem>
+                      </Accordion>
+                    </div>
+                    
                     <FormField
                       control={form.control}
                       name={`tasks.${index}.template_message`}
@@ -1016,6 +1126,18 @@ export default function PlaybookWorkflow() {
                               
                               {task.description && (
                                 <p className="text-gray-600 mt-1">{task.description}</p>
+                              )}
+                              
+                              {task.condition_field && (
+                                <div className="bg-gray-50 p-2 rounded-md mt-2 text-sm">
+                                  <div className="flex items-center">
+                                    <Split className="h-4 w-4 mr-1 text-gray-400" />
+                                    <span className="font-medium">Condition: </span>
+                                    <span className="ml-1 text-gray-600">
+                                      {`${task.condition_field.field.replace(/_/g, " ")} ${task.condition_field.operator.replace(/_/g, " ")} ${task.condition_field.value}`}
+                                    </span>
+                                  </div>
+                                </div>
                               )}
                               
                               <div className="flex flex-wrap gap-x-6 gap-y-1 mt-2 text-sm">
