@@ -464,6 +464,61 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
   
+  // Chargebee Config
+  app.get('/api/admin/chargebee-config', async (req, res) => {
+    const config = await storage.getChargebeeConfig();
+    res.json(config || {});
+  });
+  
+  app.post('/api/admin/chargebee-config', async (req, res) => {
+    try {
+      const configSchema = z.object({
+        site: z.string(),
+        apiKey: z.string(),
+        created_by: z.number().optional().default(1)
+      });
+      
+      const configData = configSchema.parse(req.body);
+      const config = await storage.createChargebeeConfig(configData);
+      res.status(201).json(config);
+    } catch (error) {
+      res.status(400).json({ message: 'Invalid Chargebee config data', error });
+    }
+  });
+  
+  app.post('/api/admin/chargebee-config/test', async (req, res) => {
+    try {
+      const configSchema = z.object({
+        site: z.string(),
+        apiKey: z.string()
+      });
+      
+      const configData = configSchema.parse(req.body);
+      
+      // Set temporary environment variables for testing
+      process.env.CHARGEBEE_SITE = configData.site;
+      process.env.CHARGEBEE_API_KEY = configData.apiKey;
+      
+      // Try to initialize the service with the new credentials
+      const { chargebeeService } = await import('./chargebee');
+      
+      if (!chargebeeService) {
+        return res.status(500).json({ success: false, message: 'Failed to initialize Chargebee service' });
+      }
+      
+      // Try a test API call to validate credentials
+      await chargebeeService.getSubscriptions(1);
+      
+      res.json({ success: true, message: 'Connection successful' });
+    } catch (error) {
+      res.status(400).json({ 
+        success: false, 
+        message: 'Chargebee connection failed', 
+        error: error.message || 'Unknown error' 
+      });
+    }
+  });
+
   // Note: External data routes are now registered directly in server/index.ts
 
   const httpServer = createServer(app);

@@ -281,3 +281,5 @@ export type CustomerMetric = typeof customerMetrics.$inferSelect;
 
 export type MySQLConfig = typeof mysqlConfig.$inferSelect;
 export type MySQLFieldMapping = typeof mysqlFieldMappings.$inferSelect;
+export type ChargebeeConfig = typeof chargebeeConfig.$inferSelect;
+export type InsertChargebeeConfig = z.infer<typeof insertChargebeeConfigSchema>;

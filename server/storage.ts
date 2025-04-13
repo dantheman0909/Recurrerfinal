@@ -66,6 +66,10 @@ export interface IStorage {
   getMySQLFieldMappings(): Promise<MySQLFieldMapping[]>;
   createMySQLFieldMapping(mapping: Omit<MySQLFieldMapping, 'id' | 'created_at'>): Promise<MySQLFieldMapping>;
   
+  // Chargebee Configuration
+  getChargebeeConfig(): Promise<ChargebeeConfig | undefined>;
+  createChargebeeConfig(config: Omit<ChargebeeConfig, 'id' | 'created_at' | 'last_synced_at'>): Promise<ChargebeeConfig>;
+  
   // Dashboard
   getDashboardStats(timeframe: MetricTimeframe): Promise<any>;
 }
