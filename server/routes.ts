@@ -856,7 +856,16 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
   app.post('/api/admin/mysql-saved-queries', async (req, res) => {
     try {
-      const queryData = insertMySQLSavedQuerySchema.parse(req.body);
+      // Remove any LIMIT statements from the query before saving
+      let query = req.body.query || '';
+      const limitRegex = /\s+LIMIT\s+\d+(\s*,\s*\d+)?/i;
+      query = query.replace(limitRegex, '');
+      
+      const queryData = insertMySQLSavedQuerySchema.parse({
+        ...req.body,
+        query: query.trim()
+      });
+      
       const savedQuery = await storage.createMySQLSavedQuery(queryData);
       res.status(201).json(savedQuery);
     } catch (error) {

@@ -216,9 +216,15 @@ function DatabaseConfigTab() {
   
   const runQueryMutation = useMutation({
     mutationFn: async () => {
+      // Ensure query doesn't already have a LIMIT clause
+      let queryToExecute = sqlQuery;
+      if (!queryToExecute.toLowerCase().includes('limit')) {
+        queryToExecute = `${queryToExecute} LIMIT 10`;
+      }
+      
       const response = await apiRequest("POST", "/api/admin/mysql-query", {
-        query: sqlQuery,
-        preview: true // This is a preview query that will be limited to 10 rows
+        query: queryToExecute,
+        preview: true // This is a preview query
       });
       return response.json();
     },
@@ -308,10 +314,15 @@ function DatabaseConfigTab() {
   // Add save query mutation
   const saveQueryMutation = useMutation({
     mutationFn: async () => {
+      // Remove any LIMIT clause when saving the query for future use
+      let queryToSave = sqlQuery;
+      const limitRegex = /\s+LIMIT\s+\d+(\s*,\s*\d+)?/i;
+      queryToSave = queryToSave.replace(limitRegex, '');
+      
       const response = await apiRequest("POST", "/api/admin/mysql-saved-queries", {
         name: queryName,
         description: queryDescription,
-        query: sqlQuery,
+        query: queryToSave,
         created_by: 1 // Default to first user for demo
       });
       return response.json();
@@ -512,11 +523,14 @@ function DatabaseConfigTab() {
                           <Textarea 
                             id="query-preview" 
                             className="font-mono"
-                            value={sqlQuery}
+                            value={sqlQuery.replace(/\s+LIMIT\s+\d+(\s*,\s*\d+)?/i, '')}
                             readOnly
                           />
                           <p className="text-xs text-gray-500">
                             Saved queries will run without the 10-row preview limitation when used for data synchronization.
+                            {sqlQuery.toLowerCase().includes('limit') && (
+                              <span className="block mt-1 text-amber-600">Note: LIMIT clause will be removed when saving this query.</span>
+                            )}
                           </p>
                         </div>
                       </div>
