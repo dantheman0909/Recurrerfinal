@@ -1,14 +1,15 @@
 import { 
   users, customers, tasks, taskComments, playbooks, playbookTasks, 
   redZoneAlerts, customerMetrics, mysqlConfig, mysqlFieldMappings, mysqlSavedQueries,
-  chargebeeConfig, chargebeeFieldMappings,
+  chargebeeConfig, chargebeeFieldMappings, notifications, userAchievements,
   type User, type Customer, type Task, type TaskComment, type Playbook, 
   type PlaybookTask, type RedZoneAlert, type CustomerMetric, 
   type MySQLConfig, type MySQLFieldMapping, type MySQLSavedQuery,
-  type ChargebeeConfig, type ChargebeeFieldMapping,
+  type ChargebeeConfig, type ChargebeeFieldMapping, type Notification, type UserAchievement,
   type InsertUser, type InsertCustomer, type InsertTask, type InsertPlaybook,
   type InsertRedZoneAlert, type InsertMySQLSavedQuery,
-  type InsertChargebeeConfig, type InsertChargebeeFieldMapping
+  type InsertChargebeeConfig, type InsertChargebeeFieldMapping,
+  type InsertNotification, type InsertUserAchievement
 } from "@shared/schema";
 import { db } from "./db";
 import { eq, and, isNull, desc, gte, lt } from "drizzle-orm";
@@ -95,6 +96,21 @@ export interface IStorage {
   
   // Dashboard
   getDashboardStats(timeframe: MetricTimeframe): Promise<any>;
+  
+  // Notifications
+  getNotifications(userId: number): Promise<Notification[]>;
+  getUnreadNotificationsCount(userId: number): Promise<number>;
+  getNotification(id: number): Promise<Notification | undefined>;
+  createNotification(notification: InsertNotification): Promise<Notification>;
+  markNotificationAsRead(id: number): Promise<Notification | undefined>;
+  markAllNotificationsAsRead(userId: number): Promise<void>;
+  
+  // User Achievements
+  getUserAchievements(userId: number): Promise<UserAchievement[]>;
+  getUnviewedAchievementsCount(userId: number): Promise<number>;
+  getUserAchievement(id: number): Promise<UserAchievement | undefined>;
+  createUserAchievement(achievement: InsertUserAchievement): Promise<UserAchievement>;
+  markAchievementAsViewed(id: number): Promise<UserAchievement | undefined>;
 }
 
 export class MemStorage implements IStorage {
@@ -109,6 +125,8 @@ export class MemStorage implements IStorage {
   private mysqlConfigs: Map<number, MySQLConfig>;
   private mysqlFieldMappings: Map<number, MySQLFieldMapping>;
   private mysqlSavedQueries: Map<number, MySQLSavedQuery>;
+  private notifications: Map<number, Notification>;
+  private userAchievements: Map<number, UserAchievement>;
   
   private userId: number = 1;
   private customerId: number = 1;
@@ -121,6 +139,8 @@ export class MemStorage implements IStorage {
   private configId: number = 1;
   private mappingId: number = 1;
   private savedQueryId: number = 1;
+  private notificationId: number = 1;
+  private achievementId: number = 1;
 
   constructor() {
     this.users = new Map();
@@ -134,6 +154,8 @@ export class MemStorage implements IStorage {
     this.mysqlConfigs = new Map();
     this.mysqlFieldMappings = new Map();
     this.mysqlSavedQueries = new Map();
+    this.notifications = new Map();
+    this.userAchievements = new Map();
     
     // Initialize with mock data
     this.initMockData();
