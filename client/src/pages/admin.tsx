@@ -172,6 +172,12 @@ function DatabaseConfigTab() {
   
   // Track available Recurrer fields from the database
   const [availableRecurrerFields, setAvailableRecurrerFields] = useState<string[]>([]);
+  // State to store table-specific fields (used to filter the field dropdown)
+  const [existingTableFields, setExistingTableFields] = useState<Record<string, string[]>>({
+    customers: [],
+    customer_metrics: [],
+    tasks: []
+  });
   const [fieldSearchTerm, setFieldSearchTerm] = useState("");
   
   const { toast } = useToast();
@@ -259,6 +265,7 @@ function DatabaseConfigTab() {
   // Extract available Recurrer fields from customer fields data
   React.useEffect(() => {
     if (existingCustomerFields && Array.isArray(existingCustomerFields)) {
+      // Store all fields to have them available
       setAvailableRecurrerFields(existingCustomerFields);
     }
   }, [existingCustomerFields]);
@@ -1028,7 +1035,12 @@ function DatabaseConfigTab() {
                                   <CommandEmpty>No matching fields found. Type to create a new field.</CommandEmpty>
                                   <CommandGroup>
                                     {availableRecurrerFields.filter(field => 
-                                      field.toLowerCase().includes(fieldSearchTerm.toLowerCase())
+                                      // Filter by selected table fields if a table is selected
+                                      field.toLowerCase().includes(fieldSearchTerm.toLowerCase()) && 
+                                      // If we have table-specific fields, filter by them
+                                      (existingTableFields[newMapping.local_table] ? 
+                                        existingTableFields[newMapping.local_table].includes(field) : 
+                                        true)
                                     ).map(field => (
                                       <CommandItem
                                         key={field}
