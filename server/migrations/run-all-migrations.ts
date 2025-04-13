@@ -9,6 +9,7 @@ import { addRecurrenceColumn } from './add-recurrence-column';
 import { addRemainingColumns } from './add-remaining-columns';
 import { addCreatedAtColumn } from './add-created-at-column';
 import { addConditionFieldColumn } from './add-condition-field-column';
+import { migrateAdditionalCustomerFields } from './add-additional-customer-fields';
 
 async function runAllMigrations() {
   try {
@@ -23,6 +24,7 @@ async function runAllMigrations() {
     await addRemainingColumns();
     await addCreatedAtColumn();
     await addConditionFieldColumn();
+    await migrateAdditionalCustomerFields();
     
     console.log("All migrations completed successfully.");
     return true;
