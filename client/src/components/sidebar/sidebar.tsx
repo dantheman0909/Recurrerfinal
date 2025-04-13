@@ -36,6 +36,7 @@ export default function Sidebar({ open, setOpen }: SidebarProps) {
     { name: "Task Management", href: "/tasks", icon: CheckSquare },
     { name: "Playbooks", href: "/playbooks", icon: Layers },
     { name: "Reports", href: "/reports", icon: BarChart2 },
+    { name: "Custom Reports", href: "/custom-reports", icon: BarChart2 },
     { name: "Red Zone", href: "/red-zone", icon: AlertTriangle, badgeCount: 12 },
     { name: "Admin", href: "/admin", icon: Settings }
   ];
