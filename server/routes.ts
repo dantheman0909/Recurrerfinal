@@ -612,9 +612,15 @@ export async function registerRoutes(app: Express): Promise<Server> {
     try {
       const { mysqlSyncService } = await import('./mysql-sync-service');
       const result = await mysqlSyncService.synchronizeData();
+      
+      // Ensure correct content type and response
+      res.setHeader('Content-Type', 'application/json');
       res.json(result);
     } catch (error) {
       console.error('MySQL sync error:', error);
+      
+      // Ensure correct content type and response
+      res.setHeader('Content-Type', 'application/json');
       res.status(500).json({ 
         success: false, 
         message: `Error synchronizing MySQL data: ${error instanceof Error ? error.message : String(error)}` 
@@ -704,6 +710,27 @@ export async function registerRoutes(app: Express): Promise<Server> {
         success: false, 
         message: `Error controlling Chargebee scheduler: ${error instanceof Error ? error.message : String(error)}`,
         status: 'error'
+      });
+    }
+  });
+  
+  // Chargebee Data Sync
+  app.post('/api/admin/chargebee-sync', async (req, res) => {
+    try {
+      const { chargebeeSyncService } = await import('./chargebee-sync-service');
+      const result = await chargebeeSyncService.synchronizeData();
+      
+      // Ensure correct content type and response
+      res.setHeader('Content-Type', 'application/json');
+      res.json(result);
+    } catch (error) {
+      console.error('Chargebee sync error:', error);
+      
+      // Ensure correct content type and response
+      res.setHeader('Content-Type', 'application/json');
+      res.status(500).json({ 
+        success: false, 
+        message: `Error synchronizing Chargebee data: ${error instanceof Error ? error.message : String(error)}` 
       });
     }
   });
