@@ -198,7 +198,13 @@ export default function CustomReports() {
         data: metric
       }),
     onSuccess: () => {
+      // Invalidate both metrics for this report and the report list to refresh everything
       queryClient.invalidateQueries({ queryKey: ['/api/custom-reports', selectedReportId, 'metrics'] });
+      queryClient.invalidateQueries({ queryKey: ['/api/custom-reports'] });
+      
+      // Trigger a refetch to ensure the UI updates
+      refetchMetrics();
+      
       toast({
         title: "Success",
         description: "Metric added successfully",
@@ -222,7 +228,19 @@ export default function CustomReports() {
         data: schedule
       }),
     onSuccess: () => {
+      // Invalidate both schedules for this report and the report list
       queryClient.invalidateQueries({ queryKey: ['/api/custom-reports', selectedReportId, 'schedules'] });
+      queryClient.invalidateQueries({ queryKey: ['/api/custom-reports'] });
+      
+      // Manually refetch to ensure UI updates
+      setTimeout(() => {
+        if (selectedReportId) {
+          queryClient.refetchQueries({ 
+            queryKey: ['/api/custom-reports', selectedReportId, 'schedules'] 
+          });
+        }
+      }, 300);
+      
       toast({
         title: "Success",
         description: "Schedule created successfully",
@@ -291,7 +309,13 @@ export default function CustomReports() {
         data: metric
       }),
     onSuccess: () => {
+      // Invalidate both metrics for this report and the report list to refresh everything
       queryClient.invalidateQueries({ queryKey: ['/api/custom-reports', selectedReportId, 'metrics'] });
+      queryClient.invalidateQueries({ queryKey: ['/api/custom-reports'] });
+      
+      // Trigger a refetch to ensure the UI updates
+      refetchMetrics();
+      
       toast({
         title: "Success",
         description: "Metric updated successfully",
@@ -315,7 +339,13 @@ export default function CustomReports() {
         method: 'DELETE'
       }),
     onSuccess: () => {
+      // Invalidate both metrics for this report and the report list to refresh everything
       queryClient.invalidateQueries({ queryKey: ['/api/custom-reports', selectedReportId, 'metrics'] });
+      queryClient.invalidateQueries({ queryKey: ['/api/custom-reports'] });
+      
+      // Trigger a refetch to ensure the UI updates
+      refetchMetrics();
+      
       toast({
         title: "Success",
         description: "Metric deleted successfully",
@@ -415,7 +445,27 @@ export default function CustomReports() {
   // Handle schedule form submission
   const onScheduleSubmit = (values: z.infer<typeof createScheduleSchema>) => {
     if (!selectedReportId) return;
-    createScheduleMutation.mutate({ reportId: selectedReportId, schedule: values });
+    
+    // Filter out any empty recipients
+    const cleanedValues = {
+      ...values,
+      recipients: values.recipients.filter(email => email.trim() !== '')
+    };
+    
+    // Ensure there's at least one valid recipient
+    if (cleanedValues.recipients.length === 0) {
+      toast({
+        title: "Error",
+        description: "Please add at least one valid email recipient",
+        variant: "destructive",
+      });
+      return;
+    }
+    
+    createScheduleMutation.mutate({ 
+      reportId: selectedReportId, 
+      schedule: cleanedValues 
+    });
   };
 
   // Select a report to view details
