@@ -867,10 +867,18 @@ export class DatabaseStorage implements IStorage {
   }
   
   async deleteChargebeeFieldMapping(id: number): Promise<boolean> {
-    const result = await db
+    // First check if the record exists
+    const exists = await this.getChargebeeFieldMapping(id);
+    if (!exists) {
+      return false;
+    }
+    
+    // Then delete it
+    await db
       .delete(chargebeeFieldMappings)
       .where(eq(chargebeeFieldMappings.id, id));
-    return result.count > 0;
+      
+    return true;
   }
 
   // Dashboard Stats
