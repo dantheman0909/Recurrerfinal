@@ -135,9 +135,11 @@ function DatabaseConfigTab() {
   
   const [sqlQuery, setSqlQuery] = useState("SELECT * FROM customers LIMIT 10");
   const [queryResults, setQueryResults] = useState<any>(null);
-  const [mappings, setMappings] = useState<any[]>([]);
   const [isConfigTested, setIsConfigTested] = useState(false);
   const [isConnected, setIsConnected] = useState(false);
+  
+  // State for mappings
+  const [mappings, setMappings] = useState<any[]>([]);
   
   // State for save query dialog
   const [saveQueryDialogOpen, setSaveQueryDialogOpen] = useState(false);
@@ -175,7 +177,7 @@ function DatabaseConfigTab() {
     queryKey: ['/api/admin/mysql-config'],
   });
   
-  const { data: existingMappings, isLoading: isLoadingMappings } = useQuery({
+  const { data: existingMappings, isLoading: isLoadingFieldMappings } = useQuery({
     queryKey: ['/api/admin/mysql-field-mappings'],
   });
   
