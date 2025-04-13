@@ -1,4 +1,4 @@
-import React, { useRef, useEffect } from 'react';
+import React, { useEffect, useRef } from 'react';
 import { Chart, ChartData, ChartOptions, registerables } from 'chart.js';
 
 Chart.register(...registerables);
@@ -14,16 +14,15 @@ export function BarChart({ data, options }: BarChartProps) {
 
   useEffect(() => {
     if (!chartRef.current) return;
-    
-    // Destroy existing Chart instance
+
+    const ctx = chartRef.current.getContext('2d');
+    if (!ctx) return;
+
+    // Destroy existing chart instance
     if (chartInstanceRef.current) {
       chartInstanceRef.current.destroy();
     }
-    
-    // Create a new Chart instance
-    const ctx = chartRef.current.getContext('2d');
-    if (!ctx) return;
-    
+
     const defaultOptions: ChartOptions = {
       responsive: true,
       maintainAspectRatio: false,
@@ -32,37 +31,42 @@ export function BarChart({ data, options }: BarChartProps) {
           display: false,
         },
         tooltip: {
-          backgroundColor: 'rgba(0, 0, 0, 0.7)',
-          padding: 10,
+          backgroundColor: 'rgba(0, 0, 0, 0.8)',
+          titleColor: '#fff',
+          bodyColor: '#fff',
+          padding: 12,
+          borderColor: 'rgba(255, 255, 255, 0.1)',
+          borderWidth: 1,
           cornerRadius: 4,
-          titleFont: {
-            size: 14,
-            weight: 'bold',
-          },
-          bodyFont: {
-            size: 12,
-          },
-          displayColors: true,
-          usePointStyle: true,
         },
       },
       scales: {
         y: {
           beginAtZero: true,
+          grid: {
+            color: 'rgba(0, 0, 0, 0.05)',
+          },
+          border: {
+            dash: [4, 4],
+          },
           ticks: {
-            precision: 0,
+            precision: 0
+          }
+        },
+        x: {
+          grid: {
+            display: false,
           },
         },
       },
     };
-    
+
     chartInstanceRef.current = new Chart(ctx, {
       type: 'bar',
-      data: data,
+      data,
       options: { ...defaultOptions, ...options },
     });
-    
-    // Cleanup function
+
     return () => {
       if (chartInstanceRef.current) {
         chartInstanceRef.current.destroy();

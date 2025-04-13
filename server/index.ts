@@ -239,6 +239,19 @@ app.get('/api/customers/:id/external-data', getCustomerExternalData);
         const achievementResult = await createAchievementTables();
         if (achievementResult.success) {
           log('Notifications and achievements tables created successfully');
+          
+          // Seed achievements after table creation is successful
+          try {
+            const seedAchievements = (await import('./seed-achievements')).default;
+            const seedResult = await seedAchievements();
+            if (seedResult.success) {
+              log('Sample achievements seeded successfully');
+            } else {
+              console.warn('Achievement seeding warning:', seedResult.message || seedResult.error);
+            }
+          } catch (seedError) {
+            console.error('Error seeding achievements:', seedError);
+          }
         } else {
           console.warn('Notifications and achievements tables warning:', achievementResult.error);
         }
