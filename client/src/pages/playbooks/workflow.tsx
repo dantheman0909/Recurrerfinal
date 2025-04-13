@@ -69,6 +69,11 @@ import {
   Trash2,
   Save,
   AlertCircle,
+  FilePlus,
+  ClipboardCheck,
+  Phone,
+  Mail,
+  FileQuestion
 } from "lucide-react";
 
 // API and types
@@ -79,6 +84,85 @@ const requiredFieldsOptions = [
   { id: "comment", label: "Comment" },
   { id: "recording_link", label: "Recording Link" },
   { id: "attachment", label: "Attachment" },
+];
+
+// Predefined task templates
+const taskTemplates = [
+  {
+    id: "kickoff_call",
+    name: "Kickoff Call",
+    icon: <Phone className="h-4 w-4 mr-2" />,
+    task: {
+      title: "Schedule Kickoff Call",
+      description: "Introduce the team and review customer goals and implementation plan",
+      due_type: "relative",
+      due_offset: 1,
+      recurrence: "none",
+      assignment_role: "csm",
+      required_fields: ["recording_link", "comment"],
+      template_message: "Hi {{customer_name}},\n\nI'd like to schedule our kickoff call to discuss your goals and how we can help you achieve success with our platform. Please let me know your availability for this week.\n\nBest regards,\n{{csm_name}}"
+    }
+  },
+  {
+    id: "monthly_review",
+    name: "Monthly Review",
+    icon: <ClipboardCheck className="h-4 w-4 mr-2" />,
+    task: {
+      title: "Monthly Business Review",
+      description: "Review monthly metrics and discuss progress against key goals",
+      due_type: "relative",
+      due_offset: 30,
+      recurrence: "monthly",
+      assignment_role: "csm",
+      required_fields: ["recording_link", "comment"],
+      template_message: "Hi {{customer_name}},\n\nIt's time for our monthly business review. I've prepared an overview of your key metrics and would like to discuss your progress and any challenges you're facing.\n\nBest regards,\n{{csm_name}}"
+    }
+  },
+  {
+    id: "renewal_discussion",
+    name: "Renewal Discussion",
+    icon: <CalendarIcon className="h-4 w-4 mr-2" />,
+    task: {
+      title: "Renewal Discussion",
+      description: "Discuss upcoming renewal and ensure customer satisfaction",
+      due_type: "relative",
+      due_offset: 60,
+      recurrence: "none",
+      assignment_role: "csm",
+      required_fields: ["comment"],
+      template_message: "Hi {{customer_name}},\n\nYour subscription is coming up for renewal on {{renewal_date}}. I'd like to schedule some time to discuss your experience with our platform and ensure everything is set for a smooth renewal process.\n\nBest regards,\n{{csm_name}}"
+    }
+  },
+  {
+    id: "health_check",
+    name: "Health Check",
+    icon: <FileQuestion className="h-4 w-4 mr-2" />,
+    task: {
+      title: "Customer Health Assessment",
+      description: "Assess overall customer health and identify any risks",
+      due_type: "relative",
+      due_offset: 14,
+      recurrence: "bi-weekly",
+      assignment_role: "csm",
+      required_fields: ["comment"],
+      template_message: "Internal Note: Complete customer health assessment using the health score framework and document any potential risks or concerns."
+    }
+  },
+  {
+    id: "check_in_email",
+    name: "Check-in Email",
+    icon: <Mail className="h-4 w-4 mr-2" />,
+    task: {
+      title: "Send Check-in Email",
+      description: "Quick email to check in with customer",
+      due_type: "relative",
+      due_offset: 7,
+      recurrence: "weekly",
+      assignment_role: "csm",
+      required_fields: ["comment"],
+      template_message: "Hi {{customer_name}},\n\nI hope you're doing well! I wanted to check in and see how things are going with your implementation of our platform. Is there anything our team can help with this week?\n\nBest regards,\n{{csm_name}}"
+    }
+  }
 ];
 
 const playbookTaskSchema = z.object({
@@ -718,14 +802,42 @@ export default function PlaybookWorkflow() {
                           <FormLabel>Template Message</FormLabel>
                           <FormControl>
                             <Textarea 
-                              placeholder="Enter template message with variables like &#123;&#123;customer_name&#125;&#125;" 
+                              placeholder="Enter template message with variables like {{customer_name}}" 
                               {...field} 
                               value={field.value || ""}
                               className="resize-none h-24"
                             />
                           </FormControl>
-                          <FormDescription>
-                            You can use variables like &#123;&#123;customer_name&#125;&#125;, &#123;&#123;renewal_date&#125;&#125;, &#123;&#123;csm_name&#125;&#125;
+                          <FormDescription className="text-sm">
+                            <div className="mt-2">
+                              <p className="mb-1">Available variables:</p>
+                              <div className="grid grid-cols-2 gap-x-4 gap-y-1 text-xs bg-gray-50 p-2 rounded-md">
+                                <div className="flex items-center">
+                                  <span className="bg-gray-200 text-gray-700 px-1 py-0.5 rounded font-mono text-xs mr-2">{'{{customer_name}}'}</span>
+                                  <span>Customer name</span>
+                                </div>
+                                <div className="flex items-center">
+                                  <span className="bg-gray-200 text-gray-700 px-1 py-0.5 rounded font-mono text-xs mr-2">{'{{csm_name}}'}</span>
+                                  <span>CSM name</span>
+                                </div>
+                                <div className="flex items-center">
+                                  <span className="bg-gray-200 text-gray-700 px-1 py-0.5 rounded font-mono text-xs mr-2">{'{{renewal_date}}'}</span>
+                                  <span>Renewal date</span>
+                                </div>
+                                <div className="flex items-center">
+                                  <span className="bg-gray-200 text-gray-700 px-1 py-0.5 rounded font-mono text-xs mr-2">{'{{company}}'}</span>
+                                  <span>Company name</span>
+                                </div>
+                                <div className="flex items-center">
+                                  <span className="bg-gray-200 text-gray-700 px-1 py-0.5 rounded font-mono text-xs mr-2">{'{{task_due_date}}'}</span>
+                                  <span>Task due date</span>
+                                </div>
+                                <div className="flex items-center">
+                                  <span className="bg-gray-200 text-gray-700 px-1 py-0.5 rounded font-mono text-xs mr-2">{'{{mrr}}'}</span>
+                                  <span>Monthly recurring revenue</span>
+                                </div>
+                              </div>
+                            </div>
                           </FormDescription>
                           <FormMessage />
                         </FormItem>
