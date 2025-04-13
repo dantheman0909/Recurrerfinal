@@ -275,10 +275,21 @@ function DatabaseConfigTab() {
           const customersResponse = await fetch('/api/admin/table-fields/customers');
           if (customersResponse.ok) {
             const customersFields = await customersResponse.json();
-            // Update existing table fields state with customer fields
+            
+            // Get fields for customer_metrics table
+            const metricsResponse = await fetch('/api/admin/table-fields/customer_metrics');
+            const metricsFields = metricsResponse.ok ? await metricsResponse.json() : [];
+            
+            // Get fields for tasks table
+            const tasksResponse = await fetch('/api/admin/table-fields/tasks');
+            const tasksFields = tasksResponse.ok ? await tasksResponse.json() : [];
+            
+            // Update existing table fields state with all table fields
             setExistingTableFields(prev => ({
               ...prev,
-              customers: customersFields
+              'customers': customersFields,
+              'customer_metrics': metricsFields,
+              'tasks': tasksFields
             }));
           }
           
