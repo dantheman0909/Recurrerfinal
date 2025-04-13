@@ -1,11 +1,11 @@
 import { useState } from "react";
 import { useQuery } from "@tanstack/react-query";
-import { 
-  CheckSquare, 
-  Clock, 
-  AlertTriangle, 
+import {
+  CheckSquare,
+  Clock,
+  AlertTriangle,
   MessageSquare,
-  TrendingUp
+  TrendingUp,
 } from "lucide-react";
 import { StatsCard } from "@/components/dashboard/stats-card";
 import { MonthlyMetricsChart } from "@/components/dashboard/monthly-metrics-chart";
@@ -96,46 +96,52 @@ const getGreeting = (): string => {
 export default function Dashboard() {
   const [timeframe, setTimeframe] = useState<MetricTimeframe>("monthly");
   const [greeting] = useState<string>(getGreeting());
-  
+
   const { data: dashboardData, isLoading } = useQuery<DashboardData>({
     queryKey: [`/api/dashboard?timeframe=${timeframe}`],
   });
-  
+
   const { data: tasks } = useQuery<Task[]>({
-    queryKey: ['/api/tasks'],
+    queryKey: ["/api/tasks"],
   });
-  
+
   const { data: redZoneAlerts } = useQuery<RedZoneAlert[]>({
-    queryKey: ['/api/red-zone'],
+    queryKey: ["/api/red-zone"],
   });
-  
+
   const { data: users } = useQuery<User[]>({
-    queryKey: ['/api/users'],
+    queryKey: ["/api/users"],
   });
-  
+
   const { data: customers } = useQuery<Customer[]>({
-    queryKey: ['/api/customers'],
+    queryKey: ["/api/customers"],
   });
-  
+
   // Format users and customers data for lookups
-  const userMap: UserMap = users?.reduce<UserMap>((acc: UserMap, user: User) => {
-    acc[user.id] = user;
-    return acc;
-  }, {}) || {};
-  
-  const customerMap: CustomerMap = customers?.reduce<CustomerMap>((acc: CustomerMap, customer: Customer) => {
-    acc[customer.id] = customer;
-    return acc;
-  }, {}) || {};
-  
+  const userMap: UserMap =
+    users?.reduce<UserMap>((acc: UserMap, user: User) => {
+      acc[user.id] = user;
+      return acc;
+    }, {}) || {};
+
+  const customerMap: CustomerMap =
+    customers?.reduce<CustomerMap>((acc: CustomerMap, customer: Customer) => {
+      acc[customer.id] = customer;
+      return acc;
+    }, {}) || {};
+
   const handleTimeframeChange = (newTimeframe: MetricTimeframe) => {
     setTimeframe(newTimeframe);
   };
-  
+
   if (isLoading) {
-    return <div className="flex justify-center items-center h-full p-8">Loading dashboard data...</div>;
+    return (
+      <div className="flex justify-center items-center h-full p-8">
+        Loading dashboard data...
+      </div>
+    );
   }
-  
+
   return (
     <>
       <div className="bg-white shadow">
@@ -144,7 +150,11 @@ export default function Dashboard() {
             <div className="flex-1 min-w-0">
               <div className="flex items-center mb-1">
                 <h1 className="text-2xl font-semibold text-gray-900">
-                  {greeting}, {users && users.length > 0 ? users[0].name.split(' ')[0] : 'User'} <span className="ml-1 animate-bounce inline-block">👋</span>
+                  {greeting},{" "}
+                  {users && users.length > 0
+                    ? users[0].name.split(" ")[0]
+                    : "User"}{" "}
+                  <span className="ml-1 animate-bounce inline-block">👋</span>
                 </h1>
               </div>
               <p className="mt-1 text-sm text-gray-500">
@@ -155,7 +165,9 @@ export default function Dashboard() {
               <div className="inline-flex shadow-sm rounded-md">
                 <Button
                   variant="outline"
-                  className={timeframe === "weekly" ? "bg-teal-50 text-teal-700" : ""}
+                  className={
+                    timeframe === "weekly" ? "bg-teal-50 text-teal-700" : ""
+                  }
                   onClick={() => handleTimeframeChange("weekly")}
                 >
                   Weekly
@@ -176,7 +188,9 @@ export default function Dashboard() {
                 </Button>
                 <Button
                   variant="outline"
-                  className={timeframe === "yearly" ? "bg-teal-50 text-teal-700" : ""}
+                  className={
+                    timeframe === "yearly" ? "bg-teal-50 text-teal-700" : ""
+                  }
                   onClick={() => handleTimeframeChange("yearly")}
                 >
                   Yearly
@@ -205,7 +219,7 @@ export default function Dashboard() {
               </div>
             }
           />
-          
+
           <StatsCard
             title="Campaign Gaps"
             value={dashboardData?.campaignGaps || 0}
@@ -221,7 +235,7 @@ export default function Dashboard() {
               </div>
             }
           />
-          
+
           <StatsCard
             title="Renewal Alerts"
             value={dashboardData?.renewalAlerts || 0}
@@ -233,11 +247,14 @@ export default function Dashboard() {
             helpText={
               <div className="space-y-1">
                 <h5 className="font-semibold text-gray-800">Renewal Alerts</h5>
-                <p>Subscriptions due for renewal in the next 60 days that require attention.</p>
+                <p>
+                  Subscriptions due for renewal in the next 60 days that require
+                  attention.
+                </p>
               </div>
             }
           />
-          
+
           <StatsCard
             title="Red Zone Count"
             value={dashboardData?.redZoneCount || 0}
@@ -266,77 +283,122 @@ export default function Dashboard() {
                 Revenue Overview ({timeframe})
               </h3>
               <div className="text-sm text-gray-500">
-                {timeframe === "weekly" ? "Last 7 days" : 
-                 timeframe === "monthly" ? "Last 30 days" : 
-                 timeframe === "quarterly" ? "Last 90 days" : "Last 12 months"}
+                {timeframe === "weekly"
+                  ? "Last 7 days"
+                  : timeframe === "monthly"
+                    ? "Last 30 days"
+                    : timeframe === "quarterly"
+                      ? "Last 90 days"
+                      : "Last 12 months"}
               </div>
             </div>
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 mb-6">
               <div className="bg-gray-50 rounded-lg p-4 text-center">
-                <p className="text-sm text-gray-500 flex items-center justify-center gap-1">
+                <div className="text-sm text-gray-500 flex items-center justify-center gap-1">
                   Total MRR
-                  <HelpTooltip 
+                  <HelpTooltip
                     content={
                       <div className="space-y-1">
-                        <h5 className="font-semibold text-gray-800">Monthly Recurring Revenue</h5>
-                        <p>Total revenue generated each month from all active subscriptions.</p>
+                        <div className="font-semibold text-gray-800">
+                          Monthly Recurring Revenue
+                        </div>
+                        <div>
+                          Total revenue generated each month from all active
+                          subscriptions.
+                        </div>
                       </div>
-                    } 
+                    }
                   />
+                </div>
+                <p className="text-2xl font-semibold">
+                  {formatCurrency(dashboardData?.mrrTotal || 0)}
                 </p>
-                <p className="text-2xl font-semibold">{formatCurrency(dashboardData?.mrrTotal || 0)}</p>
                 <div className="mt-1 flex items-center justify-center text-sm">
-                  <span className={(dashboardData?.mrrChange || 0) >= 0 ? "text-green-600" : "text-red-600"}>
-                    {(dashboardData?.mrrChange || 0) >= 0 ? "+" : ""}{dashboardData?.mrrChange || 0}%
+                  <span
+                    className={
+                      (dashboardData?.mrrChange || 0) >= 0
+                        ? "text-green-600"
+                        : "text-red-600"
+                    }
+                  >
+                    {(dashboardData?.mrrChange || 0) >= 0 ? "+" : ""}
+                    {dashboardData?.mrrChange || 0}%
                   </span>
                 </div>
               </div>
               <div className="bg-gray-50 rounded-lg p-4 text-center">
-                <p className="text-sm text-gray-500 flex items-center justify-center gap-1">
+                <div className="text-sm text-gray-500 flex items-center justify-center gap-1">
                   Total ARR
-                  <HelpTooltip 
+                  <HelpTooltip
                     content={
                       <div className="space-y-1">
-                        <h5 className="font-semibold text-gray-800">Annual Recurring Revenue</h5>
-                        <p>Total revenue expected over the next 12 months (MRR × 12).</p>
+                        <div className="font-semibold text-gray-800">
+                          Annual Recurring Revenue
+                        </div>
+                        <div>
+                          Total revenue expected over the next 12 months (MRR ×
+                          12).
+                        </div>
                       </div>
-                    } 
+                    }
                   />
+                </div>
+                <p className="text-2xl font-semibold">
+                  {formatCurrency(dashboardData?.arrTotal || 0)}
                 </p>
-                <p className="text-2xl font-semibold">{formatCurrency(dashboardData?.arrTotal || 0)}</p>
                 <div className="mt-1 flex items-center justify-center text-sm">
-                  <span className={(dashboardData?.arrChange || 0) >= 0 ? "text-green-600" : "text-red-600"}>
-                    {(dashboardData?.arrChange || 0) >= 0 ? "+" : ""}{dashboardData?.arrChange || 0}%
+                  <span
+                    className={
+                      (dashboardData?.arrChange || 0) >= 0
+                        ? "text-green-600"
+                        : "text-red-600"
+                    }
+                  >
+                    {(dashboardData?.arrChange || 0) >= 0 ? "+" : ""}
+                    {dashboardData?.arrChange || 0}%
                   </span>
                 </div>
               </div>
               <div className="bg-gray-50 rounded-lg p-4 text-center">
                 <p className="text-sm text-gray-500 flex items-center justify-center gap-1">
                   Avg. Revenue Per Customer
-                  <HelpTooltip 
+                  <HelpTooltip
                     content={
                       <div className="space-y-1">
-                        <div className="font-semibold text-gray-800">Average Revenue Per Customer</div>
-                        <div>Monthly revenue per customer (MRR ÷ active customers).</div>
+                        <div className="font-semibold text-gray-800">
+                          Average Revenue Per Customer
+                        </div>
+                        <div>
+                          Monthly revenue per customer (MRR ÷ active customers).
+                        </div>
                       </div>
-                    } 
+                    }
                   />
                 </p>
-                <p className="text-2xl font-semibold">{formatCurrency(dashboardData?.revenuePerCustomer || 0)}</p>
+                <p className="text-2xl font-semibold">
+                  {formatCurrency(dashboardData?.revenuePerCustomer || 0)}
+                </p>
               </div>
               <div className="bg-gray-50 rounded-lg p-4 text-center">
                 <p className="text-sm text-gray-500 flex items-center justify-center gap-1">
                   Growth Rate
-                  <HelpTooltip 
+                  <HelpTooltip
                     content={
                       <div className="space-y-1">
-                        <div className="font-semibold text-gray-800">Growth Rate</div>
-                        <div>Percentage increase in MRR compared to previous period.</div>
+                        <div className="font-semibold text-gray-800">
+                          Growth Rate
+                        </div>
+                        <div>
+                          Percentage increase in MRR compared to previous
+                          period.
+                        </div>
                       </div>
-                    } 
+                    }
                   />
                 </p>
-                <p className="text-2xl font-semibold">{dashboardData?.growthRate || 0}%</p>
+                <p className="text-2xl font-semibold">
+                  {dashboardData?.growthRate || 0}%
+                </p>
               </div>
             </div>
           </CardContent>
@@ -352,18 +414,23 @@ export default function Dashboard() {
                 <div className="flex items-center justify-between mb-4">
                   <h3 className="text-lg font-medium text-gray-900 flex items-center gap-1">
                     Monthly Key Metrics
-                    <HelpTooltip 
+                    <HelpTooltip
                       content={
                         <div className="space-y-1">
-                          <div className="font-semibold text-gray-800">Monthly Key Metrics</div>
-                          <div>Trends of important business metrics over time, showing month-by-month performance.</div>
+                          <div className="font-semibold text-gray-800">
+                            Monthly Key Metrics
+                          </div>
+                          <div>
+                            Trends of important business metrics over time,
+                            showing month-by-month performance.
+                          </div>
                         </div>
-                      } 
+                      }
                     />
                   </h3>
                 </div>
-                <MonthlyMetricsChart 
-                  data={dashboardData.monthlyMetrics} 
+                <MonthlyMetricsChart
+                  data={dashboardData.monthlyMetrics}
                   timeframe={timeframe}
                 />
               </CardContent>
@@ -374,42 +441,47 @@ export default function Dashboard() {
               <div className="flex items-center justify-between mb-4">
                 <h3 className="text-lg font-medium text-gray-900 flex items-center gap-1">
                   Customer Health Distribution
-                  <HelpTooltip 
+                  <HelpTooltip
                     content={
                       <div className="space-y-1">
-                        <div className="font-semibold text-gray-800">Customer Health Distribution</div>
-                        <div>Breakdown of customer health across different market segments.</div>
+                        <div className="font-semibold text-gray-800">
+                          Customer Health Distribution
+                        </div>
+                        <div>
+                          Breakdown of customer health across different market
+                          segments.
+                        </div>
                       </div>
-                    } 
+                    }
                   />
                 </h3>
               </div>
-              <HealthDistributionChart 
+              <HealthDistributionChart
                 data={[
                   {
-                    segment: 'Enterprise',
+                    segment: "Enterprise",
                     excellent: 48,
                     good: 32,
                     average: 10,
                     at_risk: 6,
-                    critical: 4
+                    critical: 4,
                   },
                   {
-                    segment: 'Mid-Market',
+                    segment: "Mid-Market",
                     excellent: 35,
                     good: 40,
                     average: 15,
                     at_risk: 7,
-                    critical: 3
+                    critical: 3,
                   },
                   {
-                    segment: 'Small Business',
+                    segment: "Small Business",
                     excellent: 28,
                     good: 35,
                     average: 22,
                     at_risk: 10,
-                    critical: 5
-                  }
+                    critical: 5,
+                  },
                 ]}
               />
             </CardContent>
@@ -420,15 +492,12 @@ export default function Dashboard() {
       {/* Tasks and Red Zone Section */}
       <div className="mt-8 px-4 sm:px-6 lg:px-8 grid grid-cols-1 gap-5 lg:grid-cols-2">
         {tasks && (
-          <TaskList 
-            tasks={tasks.slice(0, 3) || []} 
-            users={userMap as any} 
-          />
+          <TaskList tasks={tasks.slice(0, 3) || []} users={userMap as any} />
         )}
         {redZoneAlerts && (
-          <RedZoneList 
-            alerts={redZoneAlerts.slice(0, 3) || []} 
-            customers={customerMap as any} 
+          <RedZoneList
+            alerts={redZoneAlerts.slice(0, 3) || []}
+            customers={customerMap as any}
           />
         )}
       </div>
