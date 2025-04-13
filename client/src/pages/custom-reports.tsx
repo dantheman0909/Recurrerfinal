@@ -173,18 +173,46 @@ export default function CustomReports() {
         method: 'POST',
         data: newReport
       }),
-    onSuccess: () => {
+    onSuccess: (data) => {
       queryClient.invalidateQueries({ queryKey: ['/api/custom-reports'] });
       toast({
         title: "Success",
         description: "Report created successfully",
       });
       setOpenDialog(null);
+      // If data includes id, select the newly created report
+      if (data && data.id) {
+        setSelectedReportId(data.id);
+      }
     },
     onError: (error) => {
       toast({
         title: "Error",
         description: "Failed to create report. Please try again.",
+        variant: "destructive",
+      });
+    }
+  });
+  
+  // Update report mutation
+  const updateReportMutation = useMutation({
+    mutationFn: ({ id, report }: { id: number, report: z.infer<typeof createReportSchema> }) => 
+      apiRequest(`/api/custom-reports/${id}`, {
+        method: 'PATCH',
+        data: report
+      }),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['/api/custom-reports'] });
+      toast({
+        title: "Success",
+        description: "Report updated successfully",
+      });
+      setOpenDialog(null);
+    },
+    onError: (error) => {
+      toast({
+        title: "Error",
+        description: "Failed to update report. Please try again.",
         variant: "destructive",
       });
     }
@@ -403,7 +431,16 @@ export default function CustomReports() {
 
   // Handle report form submission
   const onReportSubmit = (values: z.infer<typeof createReportSchema>) => {
-    createReportMutation.mutate(values);
+    if (selectedReportId) {
+      // Update existing report
+      updateReportMutation.mutate({
+        id: selectedReportId,
+        report: values
+      });
+    } else {
+      // Create new report
+      createReportMutation.mutate(values);
+    }
   };
 
   // Handle metric form submission
@@ -620,6 +657,45 @@ export default function CustomReports() {
     }
   };
 
+  // Generate chart data from metrics
+  const generateChartData = (metricsData: CustomMetric[]) => {
+    const months = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
+    const currentMonth = new Date().getMonth();
+    
+    // Create data points for the last 6 months
+    return months
+      .slice(Math.max(0, currentMonth - 5), currentMonth + 1)
+      .map((month, index) => {
+        const dataPoint: any = { name: month };
+        
+        // For each metric, add a value to the data point
+        metricsData.forEach(metric => {
+          // For demo purposes, we'll generate some random values based on the target_value
+          // In a real app, this would come from actual metric data
+          const baseValue = metric.target_value || 100;
+          const randomFactor = 0.5 + Math.random(); // 0.5 to 1.5 random factor
+          
+          // Use different data patterns for different metrics
+          let value;
+          if (index < 2) {
+            // First two months have lower values
+            value = baseValue * randomFactor * 0.6;
+          } else if (index >= 4) {
+            // Last two months have higher values  
+            value = baseValue * randomFactor * 1.2;
+          } else {
+            // Middle months have values close to target
+            value = baseValue * randomFactor;
+          }
+          
+          dataPoint[`metric_${metric.id}`] = Math.round(value);
+          dataPoint.value = Math.round(value); // for backward compatibility
+        });
+        
+        return dataPoint;
+      });
+  };
+  
   // Sample data for preview when no metrics exist
   const sampleData = [
     { name: 'Jan', value: 100 },
@@ -748,8 +824,13 @@ export default function CustomReports() {
                       />
                       
                       <DialogFooter>
-                        <Button type="submit" disabled={createReportMutation.isPending}>
-                          {createReportMutation.isPending ? "Creating..." : "Create Report"}
+                        <Button 
+                          type="submit" 
+                          disabled={createReportMutation.isPending || updateReportMutation.isPending}
+                        >
+                          {selectedReportId 
+                            ? (updateReportMutation.isPending ? "Updating..." : "Update Report") 
+                            : (createReportMutation.isPending ? "Creating..." : "Create Report")}
                         </Button>
                       </DialogFooter>
                     </form>
@@ -976,7 +1057,7 @@ export default function CustomReports() {
                           </Button>
                         </div>
                       ) : (
-                        getChartComponent(report.chart_type, sampleData)
+                        getChartComponent(report.chart_type, metrics.length > 0 ? generateChartData(metrics) : sampleData)
                       )}
                     </div>
                   </CardContent>
