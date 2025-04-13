@@ -345,6 +345,26 @@ export default function CustomReports() {
       deleteReportMutation.mutate(reportId);
     }
   };
+  
+  // Edit metric function
+  const editMetric = (metricId: number) => {
+    const metric = metrics.find((m: CustomMetric) => m.id === metricId);
+    if (metric) {
+      metricForm.reset({
+        name: metric.name,
+        description: metric.description,
+        data_source: metric.data_source,
+        metric_type: metric.metric_type,
+        sql_query: metric.sql_query || "",
+        display_format: metric.display_format,
+        display_color: metric.display_color,
+        target_value: metric.target_value || 0,
+        is_active: metric.is_active
+      });
+      setSelectedMetricId(metric.id);
+      setOpenDialog('editMetric');
+    }
+  };
 
   // Helper to get chart component by type
   const getChartComponent = (type: string, data: any[]) => {
@@ -1066,10 +1086,7 @@ export default function CustomReports() {
                                 <Button 
                                   variant="ghost" 
                                   size="sm" 
-                                  onClick={() => {
-                                    setSelectedMetricId(metric.id);
-                                    setOpenDialog('editMetric');
-                                  }}
+                                  onClick={() => editMetric(metric.id)}
                                 >
                                   <Settings className="h-4 w-4" />
                                 </Button>
