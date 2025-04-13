@@ -135,7 +135,8 @@ const createScheduleSchema = z.object({
 
 export default function CustomReports() {
   const [selectedReportId, setSelectedReportId] = useState<number | null>(null);
-  const [openDialog, setOpenDialog] = useState<'report' | 'metric' | 'schedule' | null>(null);
+  const [selectedMetricId, setSelectedMetricId] = useState<number | null>(null);
+  const [openDialog, setOpenDialog] = useState<'report' | 'metric' | 'editMetric' | 'schedule' | null>(null);
   const { toast } = useToast();
   const queryClient = useQueryClient();
 
@@ -1062,7 +1063,14 @@ export default function CustomReports() {
                                 <Badge variant="outline" className="mr-2 capitalize">
                                   {metric.data_source}
                                 </Badge>
-                                <Button variant="ghost" size="sm">
+                                <Button 
+                                  variant="ghost" 
+                                  size="sm" 
+                                  onClick={() => {
+                                    setSelectedMetricId(metric.id);
+                                    setOpenDialog('editMetric');
+                                  }}
+                                >
                                   <Settings className="h-4 w-4" />
                                 </Button>
                               </div>
