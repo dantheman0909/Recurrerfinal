@@ -605,19 +605,46 @@ function DatabaseConfigTab() {
             </CardHeader>
             <CardContent>
               <div className="space-y-4">
-                <div className="grid grid-cols-4 gap-4 mb-2">
+                <div className="grid grid-cols-6 gap-4 mb-2">
                   <div className="font-medium text-sm text-gray-500">MySQL Table</div>
                   <div className="font-medium text-sm text-gray-500">MySQL Field</div>
                   <div className="font-medium text-sm text-gray-500">Recurrer Table</div>
                   <div className="font-medium text-sm text-gray-500">Recurrer Field</div>
+                  <div className="font-medium text-sm text-gray-500">Data Type</div>
+                  <div className="font-medium text-sm text-gray-500">Primary Key</div>
                 </div>
                 
                 {mappings.map((mapping, index) => (
-                  <div key={index} className="grid grid-cols-4 gap-4 items-center">
+                  <div key={index} className="grid grid-cols-6 gap-4 items-center">
                     <Input value={mapping.mysql_table} disabled />
                     <Input value={mapping.mysql_field} disabled />
                     <Input value={mapping.local_table} disabled />
                     <Input value={mapping.local_field} disabled />
+                    <Badge variant="outline" className={
+                      mapping.field_type === 'number' ? 'bg-blue-50 text-blue-700' : 
+                      mapping.field_type === 'percentage' ? 'bg-green-50 text-green-700' :
+                      mapping.field_type === 'percentage_calculated' ? 'bg-emerald-50 text-emerald-700' :
+                      mapping.field_type === 'date' ? 'bg-amber-50 text-amber-700' :
+                      mapping.field_type === 'time' ? 'bg-indigo-50 text-indigo-700' :
+                      mapping.field_type === 'revenue' ? 'bg-purple-50 text-purple-700' :
+                      'bg-gray-50 text-gray-700'
+                    }>
+                      {mapping.field_type === 'number' ? 'Number' :
+                       mapping.field_type === 'percentage' ? 'Percentage' :
+                       mapping.field_type === 'percentage_calculated' ? 'Percentage (Calculated)' :
+                       mapping.field_type === 'date' ? 'Date' :
+                       mapping.field_type === 'time' ? 'Time' :
+                       mapping.field_type === 'revenue' ? 'Revenue (₹)' :
+                       'Text'}
+                    </Badge>
+                    {mapping.is_key_field ? (
+                      <Badge className="bg-yellow-50 text-yellow-700">
+                        <Key className="h-3 w-3 mr-1" />
+                        Primary Key
+                      </Badge>
+                    ) : (
+                      <span className="text-gray-400 text-xs">-</span>
+                    )}
                   </div>
                 ))}
                 
