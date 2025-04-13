@@ -16,6 +16,41 @@ import { eq, and, isNull, desc, gte, lt, count } from "drizzle-orm";
 import { AccountHealth, MetricTimeframe } from "@shared/types";
 import { generateTimeseriesData } from "./utils/chart-data";
 
+// Define interfaces for achievement system configuration
+interface AchievementThresholds {
+  tasks_completed: number;
+  customer_health_improved: number;
+  feedback_collected: number;
+  playbooks_executed: number;
+  red_zone_resolved: number;
+  login_streak: number;
+}
+
+interface BadgeConfiguration {
+  tasks_completed: { icon: string; color: string };
+  customer_health_improved: { icon: string; color: string };
+  feedback_collected: { icon: string; color: string };
+  playbooks_executed: { icon: string; color: string };
+  red_zone_resolved: { icon: string; color: string };
+  login_streak: { icon: string; color: string };
+}
+
+interface NotificationSettings {
+  enableAchievementNotifications: boolean;
+  notifyOnLevelUp: boolean;
+  showBadgesInProfile: boolean;
+  showAchievementsInDashboard: boolean;
+}
+
+interface XpConfiguration {
+  tasks_completed: number;
+  customer_health_improved: number;
+  feedback_collected: number;
+  playbooks_executed: number;
+  red_zone_resolved: number;
+  login_streak: number;
+}
+
 export interface IStorage {
   // Users
   getUser(id: number): Promise<User | undefined>;
@@ -111,6 +146,16 @@ export interface IStorage {
   getUserAchievement(id: number): Promise<UserAchievement | undefined>;
   createUserAchievement(achievement: InsertUserAchievement): Promise<UserAchievement>;
   markAchievementAsViewed(id: number): Promise<UserAchievement | undefined>;
+  
+  // Achievement System Configuration
+  getAchievementThresholds(): Promise<AchievementThresholds>;
+  saveAchievementThresholds(thresholds: AchievementThresholds): Promise<AchievementThresholds>;
+  getBadgeConfiguration(): Promise<BadgeConfiguration>;
+  saveBadgeConfiguration(config: BadgeConfiguration): Promise<BadgeConfiguration>;
+  getNotificationSettings(): Promise<NotificationSettings>;
+  saveNotificationSettings(settings: NotificationSettings): Promise<NotificationSettings>;
+  getXpConfiguration(): Promise<XpConfiguration>;
+  saveXpConfiguration(config: XpConfiguration): Promise<XpConfiguration>;
 }
 
 export class MemStorage implements IStorage {
@@ -757,6 +802,82 @@ export class MemStorage implements IStorage {
     const updatedAchievement = { ...achievement, is_viewed: true };
     this.userAchievements.set(id, updatedAchievement);
     return updatedAchievement;
+  }
+  
+  // Achievement System Configuration Methods
+  
+  // Default achievement thresholds
+  private achievementThresholds: AchievementThresholds = {
+    tasks_completed: 10,
+    customer_health_improved: 5,
+    feedback_collected: 15,
+    playbooks_executed: 3,
+    red_zone_resolved: 8,
+    login_streak: 7
+  };
+  
+  // Default badge configuration
+  private badgeConfig: BadgeConfiguration = {
+    tasks_completed: { icon: 'check-circle', color: '#4CAF50' },
+    customer_health_improved: { icon: 'trending-up', color: '#2196F3' },
+    feedback_collected: { icon: 'message-circle', color: '#9C27B0' },
+    playbooks_executed: { icon: 'book-open', color: '#FF9800' },
+    red_zone_resolved: { icon: 'shield', color: '#F44336' },
+    login_streak: { icon: 'zap', color: '#FFC107' }
+  };
+  
+  // Default notification settings
+  private notificationSettings: NotificationSettings = {
+    enableAchievementNotifications: true,
+    notifyOnLevelUp: true,
+    showBadgesInProfile: true,
+    showAchievementsInDashboard: true,
+  };
+  
+  // Default XP configuration - XP points earned for each achievement type
+  private xpConfig: XpConfiguration = {
+    tasks_completed: 100,
+    customer_health_improved: 200,
+    feedback_collected: 150,
+    playbooks_executed: 250,
+    red_zone_resolved: 300,
+    login_streak: 50
+  };
+  
+  async getAchievementThresholds(): Promise<AchievementThresholds> {
+    return this.achievementThresholds;
+  }
+  
+  async saveAchievementThresholds(thresholds: AchievementThresholds): Promise<AchievementThresholds> {
+    this.achievementThresholds = { ...thresholds };
+    return this.achievementThresholds;
+  }
+  
+  async getBadgeConfiguration(): Promise<BadgeConfiguration> {
+    return this.badgeConfig;
+  }
+  
+  async saveBadgeConfiguration(config: BadgeConfiguration): Promise<BadgeConfiguration> {
+    this.badgeConfig = { ...config };
+    return this.badgeConfig;
+  }
+  
+  async getNotificationSettings(): Promise<NotificationSettings> {
+    return this.notificationSettings;
+  }
+  
+  async saveNotificationSettings(settings: NotificationSettings): Promise<NotificationSettings> {
+    this.notificationSettings = { ...settings };
+    return this.notificationSettings;
+  }
+  
+  async getXpConfiguration(): Promise<XpConfiguration> {
+    return this.xpConfig;
+  }
+  
+  async saveXpConfiguration(config: XpConfiguration): Promise<XpConfiguration> {
+    this.xpConfig = { ...config };
+    return this.xpConfig;
   }
 }
 
