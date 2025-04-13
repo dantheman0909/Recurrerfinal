@@ -27,8 +27,8 @@ export const users = pgTable("users", {
 // After users table is defined, add self-reference 
 // This needs to be done separately to avoid TypeScript circular reference issues
 export const updateUserReferences = (): void => {
-  // Instead of using alter (which is for migrations), we'll set up the relation through relations
-  // The actual self-reference is handled in usersRelations
+  // Relations are already set up properly in usersRelations definition
+  console.log("User references set up successfully.");
 };
 
 // Customers

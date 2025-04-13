@@ -14,5 +14,9 @@ if (!process.env.DATABASE_URL) {
 export const pool = new Pool({ connectionString: process.env.DATABASE_URL });
 export const db = drizzle(pool, { schema });
 
-// Apply user self-reference fix
-schema.updateUserReferences();
+// Apply user self-reference fix with proper error handling
+try {
+  schema.updateUserReferences();
+} catch (error) {
+  console.error("Error setting up user references:", error);
+}
