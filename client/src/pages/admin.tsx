@@ -135,6 +135,9 @@ function DatabaseConfigTab() {
   
   const [sqlQuery, setSqlQuery] = useState("SELECT * FROM customers LIMIT 10");
   const [queryResults, setQueryResults] = useState<any>(null);
+  const [queryPreview, setQueryPreview] = useState<string>("");
+  const [showDeleteDialog, setShowDeleteDialog] = useState<boolean>(false);
+  const [mappingToDelete, setMappingToDelete] = useState<number | null>(null);
   const [isConfigTested, setIsConfigTested] = useState(false);
   const [isConnected, setIsConnected] = useState(false);
   
@@ -454,8 +457,17 @@ function DatabaseConfigTab() {
   
   // Handle deleting a mapping
   const handleDeleteMapping = (id: number) => {
-    if (confirm("Are you sure you want to delete this mapping? This will also delete the corresponding column from the database.")) {
-      deleteFieldMappingMutation.mutate(id);
+    // Set the mapping to delete and show the confirmation dialog
+    setMappingToDelete(id);
+    setShowDeleteDialog(true);
+  };
+  
+  // Handle confirmation of deletion
+  const confirmDeleteMapping = () => {
+    if (mappingToDelete !== null) {
+      deleteFieldMappingMutation.mutate(mappingToDelete);
+      setShowDeleteDialog(false);
+      setMappingToDelete(null);
     }
   };
   
@@ -498,8 +510,36 @@ function DatabaseConfigTab() {
     },
   });
   
+  // Add Dialog component for confirmation of deletion
+  // This will be shown when a user tries to delete a field mapping
+  const renderDeleteDialog = () => {
+    return (
+      <Dialog open={showDeleteDialog} onOpenChange={setShowDeleteDialog}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Confirm Deletion</DialogTitle>
+            <DialogDescription>
+              Are you sure you want to delete this mapping? This will also delete the corresponding column from the database.
+            </DialogDescription>
+          </DialogHeader>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setShowDeleteDialog(false)}>
+              Cancel
+            </Button>
+            <Button variant="destructive" onClick={confirmDeleteMapping}>
+              Delete
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+    );
+  };
+
   return (
     <div className="grid grid-cols-1 gap-6">
+      {/* Render the delete confirmation dialog */}
+      {renderDeleteDialog()}
+      
       <Card>
         <CardHeader>
           <CardTitle>MySQL Database Configuration</CardTitle>
