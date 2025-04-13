@@ -59,8 +59,8 @@ export function HealthDistributionChart({
         </div>
         <CardDescription>By customer segment</CardDescription>
       </CardHeader>
-      <CardContent className="flex-1 h-full pb-6">
-        <div className="h-full w-full">
+      <CardContent className="p-5">
+        <div className="h-[300px]">
           <ResponsiveContainer width="100%" height="100%">
             <AreaChart 
               data={data}
