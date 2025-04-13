@@ -734,7 +734,7 @@ export class MemStorage implements IStorage {
   
   async getUnviewedAchievementsCount(userId: number): Promise<number> {
     return Array.from(this.userAchievements.values())
-      .filter(achievement => achievement.user_id === userId && !achievement.viewed_at)
+      .filter(achievement => achievement.user_id === userId && !achievement.is_viewed)
       .length;
   }
   
@@ -745,7 +745,7 @@ export class MemStorage implements IStorage {
   async createUserAchievement(achievement: InsertUserAchievement): Promise<UserAchievement> {
     const id = this.achievementId++;
     const timestamp = new Date();
-    const newAchievement = { ...achievement, id, earned_at: timestamp, viewed_at: null };
+    const newAchievement = { ...achievement, id, earned_at: timestamp, is_viewed: false };
     this.userAchievements.set(id, newAchievement);
     return newAchievement;
   }
@@ -754,7 +754,7 @@ export class MemStorage implements IStorage {
     const achievement = this.userAchievements.get(id);
     if (!achievement) return undefined;
     
-    const updatedAchievement = { ...achievement, viewed_at: new Date() };
+    const updatedAchievement = { ...achievement, is_viewed: true };
     this.userAchievements.set(id, updatedAchievement);
     return updatedAchievement;
   }

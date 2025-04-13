@@ -1,0 +1,192 @@
+Perfect. Here’s a complete breakdown with:
+	•	✅ Exact API request functions for each object type
+	•	✅ Webhook handler example
+	•	✅ 🔁 Sync engine logic (real-time & hourly, bi-directional)
+
+We’ll assume you’re building this in Node.js (Express) with Axios for requests and a PostgreSQL/MySQL DB or any structured DB for local storage/state tracking.
+
+⸻
+
+🧠 1. CONFIGURATION
+
+.env (example)
+
+HUBSPOT_API_TOKEN=your_private_app_token
+HUBSPOT_BASE_URL=https://api.hubapi.com
+WEBHOOK_SECRET=hubspot_webhook_signature_secret
+
+
+
+⸻
+
+🔌 2. HUBSPOT API REQUEST FUNCTIONS
+
+hubspotClient.js
+
+const axios = require('axios');
+
+const HUBSPOT_BASE_URL = process.env.HUBSPOT_BASE_URL;
+const AUTH_HEADER = {
+  Authorization: `Bearer ${process.env.HUBSPOT_API_TOKEN}`
+};
+
+// Fetch contacts
+async function getContacts(modifiedSince) {
+  const params = {
+    limit: 100,
+    properties: 'firstname,lastname,email,hs_lastmodifieddate'
+  };
+  if (modifiedSince) {
+    params.filter = `hs_lastmodifieddate>="${modifiedSince}"`;
+  }
+  const res = await axios.get(`${HUBSPOT_BASE_URL}/crm/v3/objects/contacts`, {
+    headers: AUTH_HEADER,
+    params
+  });
+  return res.data.results;
+}
+
+// Repeat pattern for other entities
+async function getCompanies() { /* similar to above */ }
+async function getDeals() { /* similar */ }
+async function getTasks() { /* similar */ }
+async function getTickets() { /* similar */ }
+async function getUsers() {
+  const res = await axios.get(`${HUBSPOT_BASE_URL}/settings/v3/users`, {
+    headers: AUTH_HEADER
+  });
+  return res.data.results;
+}
+
+module.exports = {
+  getContacts,
+  getCompanies,
+  getDeals,
+  getTasks,
+  getTickets,
+  getUsers
+};
+
+
+
+⸻
+
+🌐 3. REAL-TIME SYNC: WEBHOOK HANDLER
+
+A. HubSpot Webhook Setup
+
+You’ll need a developer app:
+	•	Subscribe to events like contacts.propertyChange, deals.creation, etc.
+	•	Set https://yourdomain.com/webhooks/hubspot as your endpoint
+
+B. Express Route Example
+
+const crypto = require('crypto');
+const express = require('express');
+const router = express.Router();
+
+// Validate signature
+function validateSignature(req) {
+  const signature = req.headers['x-hubspot-signature'];
+  const body = JSON.stringify(req.body);
+  const computedSignature = crypto
+    .createHmac('sha256', process.env.WEBHOOK_SECRET)
+    .update(body)
+    .digest('hex');
+  return signature === computedSignature;
+}
+
+// Webhook listener
+router.post('/hubspot', (req, res) => {
+  if (!validateSignature(req)) return res.status(403).send('Invalid signature');
+
+  const events = req.body;
+  events.forEach(async event => {
+    const { objectType, objectId, propertyName, propertyValue } = event;
+
+    // Optional: fetch latest details from HubSpot if required
+    // await getContacts() or getDeals()...
+
+    // Update your platform’s DB
+    await syncToLocalPlatform(objectType, objectId, propertyName, propertyValue);
+  });
+
+  res.sendStatus(200);
+});
+
+module.exports = router;
+
+
+
+⸻
+
+🔁 4. HOURLY SYNC ENGINE
+
+syncEngine.js
+
+const { getContacts, getCompanies, getDeals } = require('./hubspotClient');
+const db = require('./db'); // pseudo DB wrapper
+
+// Get last sync timestamp from DB
+async function getLastSyncTime(entity) {
+  return db.get(`sync_timestamp_${entity}`) || null;
+}
+
+// Update timestamp
+async function setLastSyncTime(entity, timestamp) {
+  return db.set(`sync_timestamp_${entity}`, timestamp);
+}
+
+// Main sync logic
+async function hourlySync() {
+  const now = new Date().toISOString();
+
+  const entities = [
+    { name: 'contacts', fetch: getContacts },
+    { name: 'companies', fetch: getCompanies },
+    { name: 'deals', fetch: getDeals }
+  ];
+
+  for (const entity of entities) {
+    const lastSync = await getLastSyncTime(entity.name);
+    const data = await entity.fetch(lastSync);
+    for (const item of data) {
+      await db.upsert(entity.name, item); // your logic
+      // Optional: Push to HubSpot if data has changed on your platform side
+    }
+    await setLastSyncTime(entity.name, now);
+  }
+}
+
+Run as Cron
+
+Set up with Node cron / any scheduler:
+
+const cron = require('node-cron');
+cron.schedule('0 * * * *', hourlySync); // Runs every hour
+
+
+
+⸻
+
+🔄 5. 2-WAY SYNC STRATEGY
+
+Direction	Logic
+HubSpot → Platform	Webhook for real-time + hourly polling for fallback
+Platform → HubSpot	On local change, push to HubSpot using PATCH/POST
+Conflict Handling	Compare hs_lastmodifieddate or use a sync hash before update
+
+
+
+⸻
+
+🛡️ 6. SAFETY MECHANISMS
+	•	Deduplication using hubspot_id or external ID
+	•	Sync logs table to track processed records
+	•	Error & retry queues (e.g., BullMQ or SQS if scale grows)
+	•	Field mapping config between systems
+	•	Rate-limiting guardrails using setTimeout or batching
+
+⸻
+
+Would you like this converted into a ready-to-run GitHub repo template with DB structure and a Postman collection for testing? Or integrated directly into your existing platform architecture like Reelo’s backend?
