@@ -293,27 +293,7 @@ function DatabaseConfigTab() {
             }));
           }
           
-          // Get fields for customer_metrics table
-          const metricsResponse = await fetch('/api/admin/table-fields/customer_metrics');
-          if (metricsResponse.ok) {
-            const metricsFields = await metricsResponse.json();
-            // Update existing table fields state with metrics fields
-            setExistingTableFields(prev => ({
-              ...prev,
-              customer_metrics: metricsFields
-            }));
-          }
-          
-          // Get fields for tasks table
-          const tasksResponse = await fetch('/api/admin/table-fields/tasks');
-          if (tasksResponse.ok) {
-            const tasksFields = await tasksResponse.json();
-            // Update existing table fields state with tasks fields
-            setExistingTableFields(prev => ({
-              ...prev,
-              tasks: tasksFields
-            }));
-          }
+          // Fields are already fetched and set above
         } catch (error) {
           console.error('Error fetching table fields:', error);
         }
@@ -1087,13 +1067,13 @@ function DatabaseConfigTab() {
                                 <CommandList>
                                   <CommandEmpty>No matching fields found. Type to create a new field.</CommandEmpty>
                                   <CommandGroup>
-                                    {availableRecurrerFields.filter(field => 
-                                      // Filter by selected table fields if a table is selected
-                                      field.toLowerCase().includes(fieldSearchTerm.toLowerCase()) && 
-                                      // If we have table-specific fields, filter by them
-                                      (existingTableFields[newMapping.local_table] ? 
-                                        existingTableFields[newMapping.local_table].includes(field) : 
-                                        true)
+                                    {/* Use table-specific fields if available, otherwise use all fields */}
+                                    {(newMapping.local_table && existingTableFields[newMapping.local_table] 
+                                      ? existingTableFields[newMapping.local_table]
+                                      : availableRecurrerFields
+                                    ).filter(field => 
+                                      // Filter by search term
+                                      field.toLowerCase().includes(fieldSearchTerm.toLowerCase())
                                     ).map(field => (
                                       <CommandItem
                                         key={field}
@@ -1110,8 +1090,9 @@ function DatabaseConfigTab() {
                                       </CommandItem>
                                     ))}
                                   </CommandGroup>
-                                  {fieldSearchTerm && !availableRecurrerFields.some(f => 
-                                    f.toLowerCase() === fieldSearchTerm.toLowerCase()
+                                  {fieldSearchTerm && (newMapping.local_table && existingTableFields[newMapping.local_table] 
+                                    ? !existingTableFields[newMapping.local_table].some(f => f.toLowerCase() === fieldSearchTerm.toLowerCase())
+                                    : !availableRecurrerFields.some(f => f.toLowerCase() === fieldSearchTerm.toLowerCase())
                                   ) && (
                                     <CommandGroup heading="Create new field">
                                       <CommandItem
@@ -1131,7 +1112,9 @@ function DatabaseConfigTab() {
                             </PopoverContent>
                           </Popover>
                           <p className="text-xs text-gray-500">
-                            If field doesn't exist, it will be created automatically in the database.
+                            Showing fields from the selected Recurrer table.
+                            {!newMapping.local_table && <span className="block text-yellow-500 mt-1">Select a table to see available fields.</span>}
+                            {fieldSearchTerm && <span className="block mt-1">If field doesn't exist, it will be created automatically.</span>}
                           </p>
                         </div>
                       </div>
