@@ -122,6 +122,7 @@ export const playbookTasks = pgTable("playbook_tasks", {
   assignment_role: userRoleEnum("assignment_role").default('csm'),
   required_fields: text("required_fields").array(), // ['comment', 'recording_link', 'attachment']
   template_message: text("template_message"),
+  condition_field: jsonb("condition_field"), // JSON for conditional logic like {field: "health_status", operator: "equals", value: "at_risk"}
   order: integer("order").notNull(), // For ordering tasks (uses database column "order")
   created_at: timestamp("created_at").defaultNow(),
 });

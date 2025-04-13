@@ -95,10 +95,10 @@ const taskTemplates = [
     task: {
       title: "Schedule Kickoff Call",
       description: "Introduce the team and review customer goals and implementation plan",
-      due_type: "relative",
+      due_type: "relative" as const,
       due_offset: 1,
-      recurrence: "none",
-      assignment_role: "csm",
+      recurrence: "none" as const,
+      assignment_role: "csm" as const,
       required_fields: ["recording_link", "comment"],
       template_message: "Hi {{customer_name}},\n\nI'd like to schedule our kickoff call to discuss your goals and how we can help you achieve success with our platform. Please let me know your availability for this week.\n\nBest regards,\n{{csm_name}}"
     }
@@ -110,10 +110,10 @@ const taskTemplates = [
     task: {
       title: "Monthly Business Review",
       description: "Review monthly metrics and discuss progress against key goals",
-      due_type: "relative",
+      due_type: "relative" as const,
       due_offset: 30,
-      recurrence: "monthly",
-      assignment_role: "csm",
+      recurrence: "monthly" as const,
+      assignment_role: "csm" as const,
       required_fields: ["recording_link", "comment"],
       template_message: "Hi {{customer_name}},\n\nIt's time for our monthly business review. I've prepared an overview of your key metrics and would like to discuss your progress and any challenges you're facing.\n\nBest regards,\n{{csm_name}}"
     }
@@ -125,10 +125,10 @@ const taskTemplates = [
     task: {
       title: "Renewal Discussion",
       description: "Discuss upcoming renewal and ensure customer satisfaction",
-      due_type: "relative",
+      due_type: "relative" as const,
       due_offset: 60,
-      recurrence: "none",
-      assignment_role: "csm",
+      recurrence: "none" as const,
+      assignment_role: "csm" as const,
       required_fields: ["comment"],
       template_message: "Hi {{customer_name}},\n\nYour subscription is coming up for renewal on {{renewal_date}}. I'd like to schedule some time to discuss your experience with our platform and ensure everything is set for a smooth renewal process.\n\nBest regards,\n{{csm_name}}"
     }
@@ -140,10 +140,10 @@ const taskTemplates = [
     task: {
       title: "Customer Health Assessment",
       description: "Assess overall customer health and identify any risks",
-      due_type: "relative",
+      due_type: "relative" as const,
       due_offset: 14,
-      recurrence: "bi-weekly",
-      assignment_role: "csm",
+      recurrence: "bi-weekly" as const,
+      assignment_role: "csm" as const,
       required_fields: ["comment"],
       template_message: "Internal Note: Complete customer health assessment using the health score framework and document any potential risks or concerns."
     }
@@ -155,15 +155,21 @@ const taskTemplates = [
     task: {
       title: "Send Check-in Email",
       description: "Quick email to check in with customer",
-      due_type: "relative",
+      due_type: "relative" as const,
       due_offset: 7,
-      recurrence: "weekly",
-      assignment_role: "csm",
+      recurrence: "weekly" as const,
+      assignment_role: "csm" as const,
       required_fields: ["comment"],
       template_message: "Hi {{customer_name}},\n\nI hope you're doing well! I wanted to check in and see how things are going with your implementation of our platform. Is there anything our team can help with this week?\n\nBest regards,\n{{csm_name}}"
     }
   }
 ];
+
+const conditionSchema = z.object({
+  field: z.string(),
+  operator: z.enum(["equals", "not_equals", "greater_than", "less_than", "contains"]),
+  value: z.union([z.string(), z.number(), z.boolean()]),
+}).optional();
 
 const playbookTaskSchema = z.object({
   title: z.string().min(1, "Task title is required"),
@@ -175,6 +181,7 @@ const playbookTaskSchema = z.object({
   assignment_role: z.enum(["csm", "team_lead", "admin"]),
   required_fields: z.array(z.string()).optional(),
   template_message: z.string().optional(),
+  condition_field: conditionSchema,
   order: z.number(),
 });
 
@@ -199,6 +206,7 @@ const defaultTask: PlaybookTaskFormValues = {
   assignment_role: "csm",
   required_fields: [],
   template_message: "",
+  condition_field: undefined,
   order: 0,
 };
 
@@ -495,10 +503,52 @@ export default function PlaybookWorkflow() {
           <div className="space-y-6">
             <div className="flex justify-between items-center">
               <h3 className="text-lg font-medium">Task Series Builder</h3>
-              <Button onClick={addTask} variant="outline">
-                <Plus className="h-4 w-4 mr-2" />
-                Add Task
-              </Button>
+              <div className="flex gap-2">
+                <Popover>
+                  <PopoverTrigger asChild>
+                    <Button variant="outline" className="border-dashed">
+                      <FilePlus className="h-4 w-4 mr-2" />
+                      Add from Template
+                    </Button>
+                  </PopoverTrigger>
+                  <PopoverContent className="w-80" align="end">
+                    <div className="space-y-4">
+                      <h4 className="font-medium">Select Task Template</h4>
+                      <div className="grid gap-2">
+                        {taskTemplates.map((template) => (
+                          <Button 
+                            key={template.id}
+                            variant="outline"
+                            className="justify-start h-auto py-3 px-4"
+                            onClick={() => {
+                              append({
+                                ...template.task,
+                                order: fields.length
+                              });
+                              toast({
+                                title: "Template Added",
+                                description: `Added "${template.name}" task to your playbook`,
+                              });
+                            }}
+                          >
+                            <div className="flex items-center">
+                              {template.icon}
+                              <div className="text-left">
+                                <p className="font-medium">{template.name}</p>
+                                <p className="text-xs text-gray-500">{template.task.description}</p>
+                              </div>
+                            </div>
+                          </Button>
+                        ))}
+                      </div>
+                    </div>
+                  </PopoverContent>
+                </Popover>
+                <Button onClick={addTask} variant="outline">
+                  <Plus className="h-4 w-4 mr-2" />
+                  Add Blank Task
+                </Button>
+              </div>
             </div>
 
             {fields.length === 0 && (

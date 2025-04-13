@@ -8,6 +8,7 @@ import { addFixedDateColumn } from './add-fixed-date-column';
 import { addRecurrenceColumn } from './add-recurrence-column';
 import { addRemainingColumns } from './add-remaining-columns';
 import { addCreatedAtColumn } from './add-created-at-column';
+import { addConditionFieldColumn } from './add-condition-field-column';
 
 async function runAllMigrations() {
   try {
@@ -21,6 +22,7 @@ async function runAllMigrations() {
     await addRecurrenceColumn();
     await addRemainingColumns();
     await addCreatedAtColumn();
+    await addConditionFieldColumn();
     
     console.log("All migrations completed successfully.");
     return true;
