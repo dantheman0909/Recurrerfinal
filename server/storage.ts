@@ -160,6 +160,29 @@ export interface IStorage {
   createUserAchievement(achievement: InsertUserAchievement): Promise<UserAchievement>;
   markAchievementAsViewed(id: number): Promise<UserAchievement | undefined>;
   
+  // Custom Reports
+  getCustomReports(): Promise<CustomReport[]>;
+  getCustomReport(id: number): Promise<CustomReport | undefined>;
+  createCustomReport(report: InsertCustomReport): Promise<CustomReport>;
+  updateCustomReport(id: number, report: Partial<CustomReport>): Promise<CustomReport | undefined>;
+  deleteCustomReport(id: number): Promise<boolean>;
+  updateCustomReportLastRun(id: number): Promise<CustomReport | undefined>;
+  
+  // Custom Metrics
+  getCustomMetrics(reportId: number): Promise<CustomMetric[]>;
+  getCustomMetric(id: number): Promise<CustomMetric | undefined>;
+  createCustomMetric(metric: InsertCustomMetric): Promise<CustomMetric>;
+  updateCustomMetric(id: number, metric: Partial<CustomMetric>): Promise<CustomMetric | undefined>;
+  deleteCustomMetric(id: number): Promise<boolean>;
+  
+  // Report Schedules
+  getReportSchedules(reportId: number): Promise<ReportSchedule[]>;
+  getReportSchedule(id: number): Promise<ReportSchedule | undefined>;
+  createReportSchedule(schedule: InsertReportSchedule): Promise<ReportSchedule>;
+  updateReportSchedule(id: number, schedule: Partial<ReportSchedule>): Promise<ReportSchedule | undefined>;
+  deleteReportSchedule(id: number): Promise<boolean>;
+  updateReportScheduleLastSent(id: number): Promise<ReportSchedule | undefined>;
+  
   // Achievement System Configuration
   getAchievementThresholds(): Promise<AchievementThresholds>;
   saveAchievementThresholds(thresholds: AchievementThresholds): Promise<AchievementThresholds>;
@@ -185,6 +208,9 @@ export class MemStorage implements IStorage {
   private mysqlSavedQueries: Map<number, MySQLSavedQuery>;
   private notifications: Map<number, Notification>;
   private userAchievements: Map<number, UserAchievement>;
+  private customReports: Map<number, CustomReport>;
+  private customMetrics: Map<number, CustomMetric>;
+  private reportSchedules: Map<number, ReportSchedule>;
   
   private userId: number = 1;
   private customerId: number = 1;
@@ -199,6 +225,9 @@ export class MemStorage implements IStorage {
   private savedQueryId: number = 1;
   private notificationId: number = 1;
   private achievementId: number = 1;
+  private reportId: number = 1;
+  private customMetricId: number = 1;
+  private scheduleId: number = 1;
 
   constructor() {
     this.users = new Map();
@@ -214,6 +243,9 @@ export class MemStorage implements IStorage {
     this.mysqlSavedQueries = new Map();
     this.notifications = new Map();
     this.userAchievements = new Map();
+    this.customReports = new Map();
+    this.customMetrics = new Map();
+    this.reportSchedules = new Map();
     
     // Initialize with mock data
     this.initMockData();
@@ -891,6 +923,178 @@ export class MemStorage implements IStorage {
   async saveXpConfiguration(config: XpConfiguration): Promise<XpConfiguration> {
     this.xpConfig = { ...config };
     return this.xpConfig;
+  }
+
+  // Custom Reports Methods
+  async getCustomReports(): Promise<CustomReport[]> {
+    return Array.from(this.customReports.values());
+  }
+
+  async getCustomReport(id: number): Promise<CustomReport | undefined> {
+    return this.customReports.get(id);
+  }
+
+  async createCustomReport(report: InsertCustomReport): Promise<CustomReport> {
+    const id = this.reportId++;
+    const timestamp = new Date();
+    const newReport = { 
+      ...report, 
+      id, 
+      created_at: timestamp, 
+      updated_at: timestamp, 
+      last_run_at: null 
+    };
+    this.customReports.set(id, newReport);
+    return newReport;
+  }
+
+  async updateCustomReport(id: number, report: Partial<CustomReport>): Promise<CustomReport | undefined> {
+    const existingReport = this.customReports.get(id);
+    if (!existingReport) return undefined;
+    
+    const updatedReport = { 
+      ...existingReport, 
+      ...report, 
+      updated_at: new Date() 
+    };
+    this.customReports.set(id, updatedReport);
+    return updatedReport;
+  }
+
+  async deleteCustomReport(id: number): Promise<boolean> {
+    const exists = this.customReports.has(id);
+    if (exists) {
+      // Delete associated metrics and schedules
+      const metricsToDelete = Array.from(this.customMetrics.values())
+        .filter(metric => metric.report_id === id)
+        .map(metric => metric.id);
+      
+      const schedulesToDelete = Array.from(this.reportSchedules.values())
+        .filter(schedule => schedule.report_id === id)
+        .map(schedule => schedule.id);
+      
+      metricsToDelete.forEach(metricId => this.customMetrics.delete(metricId));
+      schedulesToDelete.forEach(scheduleId => this.reportSchedules.delete(scheduleId));
+      
+      this.customReports.delete(id);
+    }
+    return exists;
+  }
+
+  async updateCustomReportLastRun(id: number): Promise<CustomReport | undefined> {
+    const report = this.customReports.get(id);
+    if (!report) return undefined;
+    
+    const updatedReport = { ...report, last_run_at: new Date() };
+    this.customReports.set(id, updatedReport);
+    return updatedReport;
+  }
+
+  // Custom Metrics Methods
+  async getCustomMetrics(reportId: number): Promise<CustomMetric[]> {
+    return Array.from(this.customMetrics.values())
+      .filter(metric => metric.report_id === reportId);
+  }
+
+  async getCustomMetric(id: number): Promise<CustomMetric | undefined> {
+    return this.customMetrics.get(id);
+  }
+
+  async createCustomMetric(metric: InsertCustomMetric): Promise<CustomMetric> {
+    const id = this.customMetricId++;
+    const timestamp = new Date();
+    const newMetric = { ...metric, id, created_at: timestamp };
+    this.customMetrics.set(id, newMetric);
+    return newMetric;
+  }
+
+  async updateCustomMetric(id: number, metric: Partial<CustomMetric>): Promise<CustomMetric | undefined> {
+    const existingMetric = this.customMetrics.get(id);
+    if (!existingMetric) return undefined;
+    
+    const updatedMetric = { ...existingMetric, ...metric };
+    this.customMetrics.set(id, updatedMetric);
+    return updatedMetric;
+  }
+
+  async deleteCustomMetric(id: number): Promise<boolean> {
+    const exists = this.customMetrics.has(id);
+    if (exists) {
+      this.customMetrics.delete(id);
+    }
+    return exists;
+  }
+
+  // Report Schedules Methods
+  async getReportSchedules(reportId: number): Promise<ReportSchedule[]> {
+    return Array.from(this.reportSchedules.values())
+      .filter(schedule => schedule.report_id === reportId);
+  }
+
+  async getReportSchedule(id: number): Promise<ReportSchedule | undefined> {
+    return this.reportSchedules.get(id);
+  }
+
+  async createReportSchedule(schedule: InsertReportSchedule): Promise<ReportSchedule> {
+    const id = this.scheduleId++;
+    const timestamp = new Date();
+    const newSchedule = { 
+      ...schedule, 
+      id, 
+      created_at: timestamp, 
+      last_sent_at: null,
+      next_scheduled_at: null
+    };
+    this.reportSchedules.set(id, newSchedule);
+    return newSchedule;
+  }
+
+  async updateReportSchedule(id: number, schedule: Partial<ReportSchedule>): Promise<ReportSchedule | undefined> {
+    const existingSchedule = this.reportSchedules.get(id);
+    if (!existingSchedule) return undefined;
+    
+    const updatedSchedule = { ...existingSchedule, ...schedule };
+    this.reportSchedules.set(id, updatedSchedule);
+    return updatedSchedule;
+  }
+
+  async deleteReportSchedule(id: number): Promise<boolean> {
+    const exists = this.reportSchedules.has(id);
+    if (exists) {
+      this.reportSchedules.delete(id);
+    }
+    return exists;
+  }
+
+  async updateReportScheduleLastSent(id: number): Promise<ReportSchedule | undefined> {
+    const schedule = this.reportSchedules.get(id);
+    if (!schedule) return undefined;
+    
+    const now = new Date();
+    // Calculate next scheduled run based on frequency
+    let nextScheduled: Date | null = null;
+    
+    if (schedule.frequency === 'daily') {
+      nextScheduled = new Date(now);
+      nextScheduled.setDate(nextScheduled.getDate() + 1);
+    } else if (schedule.frequency === 'weekly') {
+      nextScheduled = new Date(now);
+      nextScheduled.setDate(nextScheduled.getDate() + 7);
+    } else if (schedule.frequency === 'monthly') {
+      nextScheduled = new Date(now);
+      nextScheduled.setMonth(nextScheduled.getMonth() + 1);
+    } else if (schedule.frequency === 'bi-weekly') {
+      nextScheduled = new Date(now);
+      nextScheduled.setDate(nextScheduled.getDate() + 14);
+    }
+    
+    const updatedSchedule = { 
+      ...schedule, 
+      last_sent_at: now,
+      next_scheduled_at: nextScheduled
+    };
+    this.reportSchedules.set(id, updatedSchedule);
+    return updatedSchedule;
   }
 }
 
@@ -1603,6 +1807,164 @@ export class DatabaseStorage implements IStorage {
     // Will be replaced with actual database queries when tables are created
     this.defaultXpConfig = { ...config };
     return this.defaultXpConfig;
+  }
+
+  // Custom Reports Methods
+  async getCustomReports(): Promise<CustomReport[]> {
+    return await db.select().from(customReports).orderBy(desc(customReports.created_at));
+  }
+
+  async getCustomReport(id: number): Promise<CustomReport | undefined> {
+    const [report] = await db.select().from(customReports).where(eq(customReports.id, id));
+    return report;
+  }
+
+  async createCustomReport(report: InsertCustomReport): Promise<CustomReport> {
+    const [newReport] = await db.insert(customReports).values(report).returning();
+    return newReport;
+  }
+
+  async updateCustomReport(id: number, report: Partial<CustomReport>): Promise<CustomReport | undefined> {
+    const now = new Date();
+    const [updatedReport] = await db
+      .update(customReports)
+      .set({ ...report, updated_at: now })
+      .where(eq(customReports.id, id))
+      .returning();
+    return updatedReport;
+  }
+
+  async deleteCustomReport(id: number): Promise<boolean> {
+    try {
+      // First delete associated metrics
+      await db.delete(customMetrics).where(eq(customMetrics.report_id, id));
+      
+      // Then delete associated schedules
+      await db.delete(reportSchedules).where(eq(reportSchedules.report_id, id));
+      
+      // Finally delete the report
+      const result = await db.delete(customReports).where(eq(customReports.id, id));
+      return !!result;
+    } catch (error) {
+      console.error('Error deleting custom report:', error);
+      return false;
+    }
+  }
+
+  async updateCustomReportLastRun(id: number): Promise<CustomReport | undefined> {
+    const now = new Date();
+    const [updatedReport] = await db
+      .update(customReports)
+      .set({ last_run_at: now })
+      .where(eq(customReports.id, id))
+      .returning();
+    return updatedReport;
+  }
+
+  // Custom Metrics Methods
+  async getCustomMetrics(reportId: number): Promise<CustomMetric[]> {
+    return await db
+      .select()
+      .from(customMetrics)
+      .where(eq(customMetrics.report_id, reportId))
+      .orderBy(customMetrics.created_at);
+  }
+
+  async getCustomMetric(id: number): Promise<CustomMetric | undefined> {
+    const [metric] = await db.select().from(customMetrics).where(eq(customMetrics.id, id));
+    return metric;
+  }
+
+  async createCustomMetric(metric: InsertCustomMetric): Promise<CustomMetric> {
+    const [newMetric] = await db.insert(customMetrics).values(metric).returning();
+    return newMetric;
+  }
+
+  async updateCustomMetric(id: number, metric: Partial<CustomMetric>): Promise<CustomMetric | undefined> {
+    const [updatedMetric] = await db
+      .update(customMetrics)
+      .set(metric)
+      .where(eq(customMetrics.id, id))
+      .returning();
+    return updatedMetric;
+  }
+
+  async deleteCustomMetric(id: number): Promise<boolean> {
+    const result = await db.delete(customMetrics).where(eq(customMetrics.id, id));
+    return !!result;
+  }
+
+  // Report Schedules Methods
+  async getReportSchedules(reportId: number): Promise<ReportSchedule[]> {
+    return await db
+      .select()
+      .from(reportSchedules)
+      .where(eq(reportSchedules.report_id, reportId))
+      .orderBy(reportSchedules.created_at);
+  }
+
+  async getReportSchedule(id: number): Promise<ReportSchedule | undefined> {
+    const [schedule] = await db.select().from(reportSchedules).where(eq(reportSchedules.id, id));
+    return schedule;
+  }
+
+  async createReportSchedule(schedule: InsertReportSchedule): Promise<ReportSchedule> {
+    const [newSchedule] = await db.insert(reportSchedules).values(schedule).returning();
+    return newSchedule;
+  }
+
+  async updateReportSchedule(id: number, schedule: Partial<ReportSchedule>): Promise<ReportSchedule | undefined> {
+    const [updatedSchedule] = await db
+      .update(reportSchedules)
+      .set(schedule)
+      .where(eq(reportSchedules.id, id))
+      .returning();
+    return updatedSchedule;
+  }
+
+  async deleteReportSchedule(id: number): Promise<boolean> {
+    const result = await db.delete(reportSchedules).where(eq(reportSchedules.id, id));
+    return !!result;
+  }
+
+  async updateReportScheduleLastSent(id: number): Promise<ReportSchedule | undefined> {
+    const now = new Date();
+    
+    // Get current schedule to calculate next run
+    const [currentSchedule] = await db
+      .select()
+      .from(reportSchedules)
+      .where(eq(reportSchedules.id, id));
+      
+    if (!currentSchedule) return undefined;
+    
+    // Calculate next scheduled run based on frequency
+    let nextScheduled: Date | null = null;
+    
+    if (currentSchedule.frequency === 'daily') {
+      nextScheduled = new Date(now);
+      nextScheduled.setDate(nextScheduled.getDate() + 1);
+    } else if (currentSchedule.frequency === 'weekly') {
+      nextScheduled = new Date(now);
+      nextScheduled.setDate(nextScheduled.getDate() + 7);
+    } else if (currentSchedule.frequency === 'monthly') {
+      nextScheduled = new Date(now);
+      nextScheduled.setMonth(nextScheduled.getMonth() + 1);
+    } else if (currentSchedule.frequency === 'bi-weekly') {
+      nextScheduled = new Date(now);
+      nextScheduled.setDate(nextScheduled.getDate() + 14);
+    }
+    
+    const [updatedSchedule] = await db
+      .update(reportSchedules)
+      .set({ 
+        last_sent_at: now,
+        next_scheduled_at: nextScheduled
+      })
+      .where(eq(reportSchedules.id, id))
+      .returning();
+      
+    return updatedSchedule;
   }
 }
 
