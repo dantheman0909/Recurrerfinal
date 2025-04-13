@@ -269,6 +269,19 @@ app.get('/api/customers/:id/external-data', getCustomerExternalData);
       } catch (error) {
         console.error('Error creating custom reports tables:', error);
       }
+      
+      try {
+        // Create annotations table for real-time collaboration
+        const createAnnotationsTable = (await import('./create-annotations-table')).default;
+        const annotationsResult = await createAnnotationsTable();
+        if (annotationsResult.success) {
+          log('Annotations table created successfully');
+        } else {
+          console.warn('Annotations table creation warning:', annotationsResult.message);
+        }
+      } catch (error) {
+        console.error('Error creating annotations table:', error);
+      }
     }
   } catch (error) {
     console.error('Error during database initialization:', error);
