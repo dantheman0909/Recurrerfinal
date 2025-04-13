@@ -265,6 +265,8 @@ export const usersRelations = relations(users, ({ one, many }) => ({
   assignedCustomers: many(customers, { relationName: "assigned_customers" }),
   notifications: many(notifications),
   achievements: many(userAchievements),
+  createdAnnotations: many(annotations, { relationName: "created_annotations" }),
+  resolvedAnnotations: many(annotations, { relationName: "resolved_annotations" }),
 }));
 
 export const customersRelations = relations(customers, ({ one, many }) => ({
@@ -354,6 +356,27 @@ export const reportSchedules = pgTable("report_schedules", {
   created_at: timestamp("created_at").defaultNow(),
 });
 
+// Annotations for real-time collaboration
+export const annotationTypeEnum = pgEnum('annotation_type', ['comment', 'highlight', 'suggestion', 'action_item']);
+export const entityTypeEnum = pgEnum('entity_type', ['customer', 'task', 'playbook', 'report', 'metric']);
+
+export const annotations = pgTable("annotations", {
+  id: serial("id").primaryKey(),
+  entity_type: entityTypeEnum("entity_type").notNull(), // What type of object is being annotated
+  entity_id: integer("entity_id").notNull(), // ID of the entity being annotated
+  user_id: integer("user_id").notNull().references(() => users.id), // Who created the annotation
+  type: annotationTypeEnum("type").notNull().default('comment'),
+  content: text("content").notNull(), // The annotation text
+  position_data: jsonb("position_data"), // JSON for UI positioning, highlighting
+  is_resolved: boolean("is_resolved").default(false),
+  parent_id: integer("parent_id"), // For threaded replies to annotations
+  mentioned_user_ids: integer("mentioned_user_ids").array(), // Array of user IDs mentioned
+  created_at: timestamp("created_at").defaultNow(),
+  updated_at: timestamp("updated_at"),
+  resolved_at: timestamp("resolved_at"),
+  resolved_by: integer("resolved_by").references(() => users.id),
+});
+
 // Relations for Custom Reports
 export const customReportsRelations = relations(customReports, ({ one, many }) => ({
   createdBy: one(users, { fields: [customReports.created_by], references: [users.id] }),
@@ -377,6 +400,12 @@ export const userAchievementsRelations = relations(userAchievements, ({ one }) =
   user: one(users, { fields: [userAchievements.user_id], references: [users.id] }),
 }));
 
+// Relations for Annotations
+export const annotationsRelations = relations(annotations, ({ one }) => ({
+  user: one(users, { fields: [annotations.user_id], references: [users.id], relationName: "created_annotations" }),
+  resolvedBy: one(users, { fields: [annotations.resolved_by], references: [users.id], relationName: "resolved_annotations" }),
+}));
+
 // Schemas
 export const insertUserSchema = createInsertSchema(users).omit({ id: true, created_at: true });
 export const insertCustomerSchema = createInsertSchema(customers).omit({ id: true, created_at: true });
@@ -395,6 +424,7 @@ export const insertUserAchievementSchema = createInsertSchema(userAchievements).
 export const insertCustomReportSchema = createInsertSchema(customReports).omit({ id: true, created_at: true, updated_at: true, last_run_at: true });
 export const insertCustomMetricSchema = createInsertSchema(customMetrics).omit({ id: true, created_at: true });
 export const insertReportScheduleSchema = createInsertSchema(reportSchedules).omit({ id: true, created_at: true, last_sent_at: true, next_scheduled_at: true });
+export const insertAnnotationSchema = createInsertSchema(annotations).omit({ id: true, created_at: true, updated_at: true, resolved_at: true });
 
 // Types
 export type User = typeof users.$inferSelect;
@@ -445,3 +475,6 @@ export type InsertCustomMetric = z.infer<typeof insertCustomMetricSchema>;
 
 export type ReportSchedule = typeof reportSchedules.$inferSelect;
 export type InsertReportSchedule = z.infer<typeof insertReportScheduleSchema>;
+
+export type Annotation = typeof annotations.$inferSelect;
+export type InsertAnnotation = z.infer<typeof insertAnnotationSchema>;
