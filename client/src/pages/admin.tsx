@@ -420,6 +420,11 @@ function DatabaseConfigTab() {
         title: "Mapping Saved",
         description: "Field mapping has been saved successfully.",
       });
+      
+      // Add the new mapping to the local state for immediate UI update
+      setMappings(prevMappings => [...prevMappings, data]);
+      
+      // Also refresh from server
       queryClient.invalidateQueries({ queryKey: ['/api/admin/mysql-field-mappings'] });
     },
     onError: (error) => {
@@ -1384,9 +1389,8 @@ function ChargebeeConfigTab() {
       });
       // Immediately update local state to reflect the deletion (for UI responsiveness)
       if (fieldMappings) {
-        const updatedMappings = fieldMappings.filter((mapping: any) => mapping.id !== data.deletedId);
-        // This is a temporary update before the query is refreshed
-        setFieldMappings(updatedMappings);
+        // Let the queryClient refetch handle the update instead of manually updating
+        // This avoids the TypeScript error with setFieldMappings not being defined
       }
       refetchMappings();
     },
