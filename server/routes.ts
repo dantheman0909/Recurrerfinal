@@ -510,6 +510,78 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
   
+  // Run MySQL Query
+  app.post('/api/admin/mysql-query', async (req, res) => {
+    try {
+      // Validate the query input
+      const querySchema = z.object({
+        query: z.string().min(1)
+      });
+      
+      const { query } = querySchema.parse(req.body);
+      
+      // Get the MySQL connection config
+      const config = await storage.getMySQLConfig();
+      
+      if (!config) {
+        return res.status(400).json({ error: 'MySQL configuration not found. Please configure MySQL connection first.' });
+      }
+      
+      // Create a temporary MySQL connection to run the query
+      const mysql = await import('mysql2/promise');
+      
+      try {
+        // Create a connection pool with a timeout
+        const pool = mysql.createPool({
+          host: config.host,
+          port: config.port,
+          user: config.username,
+          password: config.password,
+          database: config.database,
+          waitForConnections: true,
+          connectionLimit: 1,
+          queueLimit: 0,
+          connectTimeout: 5000 // 5 second timeout
+        });
+        
+        // Execute the query with safety checks
+        const safeQuery = query.trim();
+        
+        // Prevent destructive queries in production
+        if (process.env.NODE_ENV === 'production') {
+          const lowerQuery = safeQuery.toLowerCase();
+          if (
+            lowerQuery.includes('drop table') || 
+            lowerQuery.includes('drop database') ||
+            lowerQuery.includes('truncate table')
+          ) {
+            await pool.end();
+            return res.status(403).json({ 
+              error: 'Destructive queries are not allowed in production environment'
+            });
+          }
+        }
+        
+        // Run the query
+        const [results] = await pool.query(safeQuery);
+        await pool.end();
+        
+        res.json(results || []);
+      } catch (dbError) {
+        console.error('MySQL query execution failed:', dbError);
+        res.status(400).json({ 
+          error: `Failed to execute MySQL query: ${dbError.message}` 
+        });
+      }
+    } catch (error) {
+      console.error('MySQL query validation error:', error);
+      res.status(400).json({ 
+        error: "Invalid query format",
+        details: error.message 
+      });
+    }
+  });
+  
   // MySQL Field Mappings
   app.get('/api/admin/mysql-field-mappings', async (req, res) => {
     const mappings = await storage.getMySQLFieldMappings();
