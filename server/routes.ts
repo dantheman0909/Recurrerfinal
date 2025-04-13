@@ -440,6 +440,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   
   app.post('/api/admin/mysql-config', async (req, res) => {
     try {
+      // Create proper schema with all required fields
       const configSchema = z.object({
         host: z.string(),
         port: z.number(),
@@ -451,13 +452,17 @@ export async function registerRoutes(app: Express): Promise<Server> {
         created_by: z.number().optional().default(1)
       });
       
+      // Parse the request body
       const configData = configSchema.parse(req.body);
+      
       // Add last_synced_at field with null value for new configs
       const configWithLastSynced = {
         ...configData,
         last_synced_at: null
       };
       
+      // Create a new config
+      // This will replace any existing config due to the table structure
       const config = await storage.createMySQLConfig(configWithLastSynced);
       res.status(201).json(config);
     } catch (error) {
@@ -698,7 +703,16 @@ export async function registerRoutes(app: Express): Promise<Server> {
       });
       
       const configData = configSchema.parse(req.body);
-      const config = await storage.createChargebeeConfig(configData);
+      
+      // Add last_synced_at field with null value for new configs
+      const configWithLastSynced = {
+        ...configData,
+        last_synced_at: null
+      };
+      
+      // Create a new config
+      // This will replace any existing config due to the table structure
+      const config = await storage.createChargebeeConfig(configWithLastSynced);
       res.status(201).json(config);
     } catch (error) {
       res.status(400).json({ message: 'Invalid Chargebee config data', error });

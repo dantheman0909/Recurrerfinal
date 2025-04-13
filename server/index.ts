@@ -72,9 +72,9 @@ app.get('/api/customers/:id/external-data', getCustomerExternalData);
     // Run database table alterations to ensure schema is up-to-date
     if (process.env.DATABASE_URL) {
       try {
-        // Run Chargebee table alterations
-        const { alterChargebeeTables } = await import('./alter-chargebee-table');
-        const chargebeeResult = await alterChargebeeTables();
+        // Run Chargebee table migrations
+        const { migrateChargebeeTables } = await import('./migrate-chargebee-config');
+        const chargebeeResult = await migrateChargebeeTables();
         if (chargebeeResult.success) {
           log('Chargebee tables updated successfully');
         } else {
@@ -85,9 +85,9 @@ app.get('/api/customers/:id/external-data', getCustomerExternalData);
       }
       
       try {
-        // Run MySQL table alterations
-        const { alterMySQLTables } = await import('./alter-mysql-tables');
-        const mysqlResult = await alterMySQLTables();
+        // Run MySQL table migrations
+        const { migrateMySQLTables } = await import('./migrate-mysql-config');
+        const mysqlResult = await migrateMySQLTables();
         if (mysqlResult.success) {
           log('MySQL tables updated successfully');
         } else {
