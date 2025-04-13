@@ -139,14 +139,23 @@ export default function AchievementsPage() {
     const labels = Object.keys(stats.achievementsByType).map(key => typeLabels[key] || key);
     const data = Object.values(stats.achievementsByType);
     
-    const colors = [
-      'rgba(255, 205, 86, 0.8)',
-      'rgba(75, 192, 192, 0.8)',
-      'rgba(102, 126, 234, 0.8)',
-      'rgba(54, 162, 235, 0.8)',
-      'rgba(255, 99, 132, 0.8)',
-      'rgba(153, 102, 255, 0.8)',
-    ];
+    // Theme-matching gradient colors matching our overall design
+    const colors = {
+      tasks_completed: 'rgba(249, 168, 37, 0.85)',      // amber
+      customer_health_improved: 'rgba(56, 178, 172, 0.85)',  // teal
+      feedback_collected: 'rgba(124, 58, 237, 0.85)',   // violet
+      playbooks_executed: 'rgba(59, 130, 246, 0.85)',   // blue
+      red_zone_resolved: 'rgba(236, 72, 153, 0.85)',    // pink
+      login_streak: 'rgba(139, 92, 246, 0.85)',         // purple
+    };
+    
+    // Use the mapping to get colors in the order of our labels
+    const backgroundColor = labels.map(label => {
+      const key = Object.keys(typeLabels).find(k => typeLabels[k] === label) || '';
+      return colors[key as keyof typeof colors] || 'rgba(107, 114, 128, 0.85)'; // default gray
+    });
+    
+    const borderColor = backgroundColor.map(color => color.replace('0.85', '1'));
     
     return {
       labels,
@@ -154,9 +163,11 @@ export default function AchievementsPage() {
         {
           label: 'Achievements by Type',
           data,
-          backgroundColor: colors.slice(0, data.length),
-          borderColor: colors.slice(0, data.length).map(color => color.replace('0.8', '1')),
+          backgroundColor,
+          borderColor,
           borderWidth: 1,
+          borderRadius: 4,
+          hoverOffset: 4,
         },
       ],
     };

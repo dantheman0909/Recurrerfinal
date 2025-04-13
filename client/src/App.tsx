@@ -10,6 +10,7 @@ import Reports from "@/pages/reports";
 import RedZone from "@/pages/red-zone";
 import Admin from "@/pages/admin";
 import Achievements from "@/pages/achievements";
+import Profile from "@/pages/profile";
 import AppLayout from "@/components/layouts/app-layout";
 
 function App() {
@@ -26,6 +27,7 @@ function App() {
         <Route path="/red-zone" component={RedZone} />
         <Route path="/admin" component={Admin} />
         <Route path="/achievements" component={Achievements} />
+        <Route path="/profile" component={Profile} />
         <Route component={NotFound} />
       </Switch>
     </AppLayout>
