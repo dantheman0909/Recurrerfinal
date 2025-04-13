@@ -1,0 +1,114 @@
+To integrate Chargebee’s API using a read-only API key and retrieve data on customers, subscriptions, invoices, and payments, follow this comprehensive guide.
+
+⸻
+
+🔐 Step 1: Create a Read-Only API Key
+	1.	Log in to your Chargebee admin console. ￼
+	2.	Navigate to Settings → Configure Chargebee → API Keys and Webhooks. ￼
+	3.	Click on the API Keys tab. ￼
+	4.	Select Add API Key. ￼
+	5.	Choose Read-Only Key. ￼
+	6.	Select the desired access level:
+	•	All: Grants read-only access to all API resources.
+	•	Restricted: Allows you to specify access to certain data sets, such as transactional data or the product catalog.
+	7.	Assign a descriptive name to the key (e.g., analytics-readonly-key).
+	8.	Click Create Key and securely store the generated key. ￼
+
+Note: Read-only keys are suitable for data retrieval operations and cannot modify any data.
+
+⸻
+
+🔐 Step 2: Authenticate API Requests
+
+Chargebee uses HTTP Basic Authentication. When making API requests: ￼
+	•	Username: Your API key. ￼
+	•	Password: Leave blank.
+
+Example using curl: ￼
+
+curl https://{site}.chargebee.com/api/v2/customers \
+  -u {api_key}:
+
+Replace {site} with your Chargebee site name and {api_key} with your read-only API key. ￼
+
+⸻
+
+📄 Step 3: Retrieve Data Using API Endpoints
+
+With your read-only API key, you can perform GET requests to access various resources.
+
+1. Customers
+	•	List Customers:
+
+  curl https://{site}.chargebee.com/api/v2/customers \
+    -u {api_key}:
+
+	•	Retrieve a Specific Customer:
+
+  curl https://{site}.chargebee.com/api/v2/customers/{customer_id} \
+    -u {api_key}:
+
+Note: Replace {customer_id} with the actual customer ID.
+
+2. Subscriptions
+	•	List Subscriptions:
+
+  curl https://{site}.chargebee.com/api/v2/subscriptions \
+    -u {api_key}:
+
+	•	Retrieve a Specific Subscription:
+
+  curl https://{site}.chargebee.com/api/v2/subscriptions/{subscription_id} \
+    -u {api_key}:
+
+Note: Replace {subscription_id} with the actual subscription ID.
+
+3. Invoices
+	•	List Invoices:
+
+  curl https://{site}.chargebee.com/api/v2/invoices \
+    -u {api_key}:
+
+	•	Retrieve a Specific Invoice:
+
+  curl https://{site}.chargebee.com/api/v2/invoices/{invoice_id} \
+    -u {api_key}:
+
+Note: Replace {invoice_id} with the actual invoice ID.
+
+4. Payments (Transactions)
+	•	List Transactions:
+
+  curl https://{site}.chargebee.com/api/v2/transactions \
+    -u {api_key}:
+
+	•	Retrieve a Specific Transaction:
+
+  curl https://{site}.chargebee.com/api/v2/transactions/{transaction_id} \
+    -u {api_key}:
+
+Note: Replace {transaction_id} with the actual transaction ID.
+
+⸻
+
+⚙️ Additional Tips
+	•	Pagination: Most list endpoints support pagination. Use limit, offset, or next_offset parameters to navigate through results.
+	•	Filtering: Apply filters to narrow down results. For example, to list active subscriptions:
+
+  curl https://{site}.chargebee.com/api/v2/subscriptions?status[is]=active \
+    -u {api_key}:
+
+	•	Response Format: All responses are in JSON format. ￼
+	•	SDKs: Chargebee offers SDKs in various languages (e.g., Python, Ruby, PHP) to simplify integration.
+
+⸻
+
+🔒 Security Best Practices
+	•	Keep API Keys Secure: Store keys in secure environments and avoid hardcoding them. ￼
+	•	Rotate Keys Regularly: Periodically regenerate API keys to enhance security.
+	•	Monitor Usage: Track API key usage to detect any unauthorized access.
+	•	Use Appropriate Access Levels: Only grant the necessary permissions required for your integration.
+
+⸻
+
+By following this guide, you can effectively integrate Chargebee’s API using a read-only API key to access customer, subscription, invoice, and payment data. Ensure you adhere to best practices to maintain security and efficiency in your integration.
