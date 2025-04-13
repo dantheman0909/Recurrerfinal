@@ -274,9 +274,34 @@ export default function Dashboard() {
               timeframe={timeframe}
             />
           )}
-          {dashboardData?.healthDistribution && (
-            <HealthDistributionChart data={dashboardData.healthDistribution} />
-          )}
+          <HealthDistributionChart 
+            data={[
+              {
+                segment: 'Enterprise',
+                excellent: 48,
+                good: 32,
+                average: 10,
+                at_risk: 6,
+                critical: 4
+              },
+              {
+                segment: 'Mid-Market',
+                excellent: 35,
+                good: 40,
+                average: 15,
+                at_risk: 7,
+                critical: 3
+              },
+              {
+                segment: 'Small Business',
+                excellent: 28,
+                good: 35,
+                average: 22,
+                at_risk: 10,
+                critical: 5
+              }
+            ]}
+          />
         </div>
       </div>
 
