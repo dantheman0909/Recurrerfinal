@@ -12,6 +12,7 @@ export const playbookTriggerEnum = pgEnum('playbook_trigger', ['manual', 'new_cu
 export const dueDateTypeEnum = pgEnum('due_date_type', ['fixed', 'relative']);
 export const recurrenceTypeEnum = pgEnum('recurrence_type', ['none', 'daily', 'weekly', 'monthly', 'bi-weekly']);
 export const accountTypeEnum = pgEnum('account_type', ['starter', 'growth', 'key']);
+export const integrationStatusEnum = pgEnum('integration_status', ['active', 'pending', 'error']);
 
 // Users & Profiles
 export const users = pgTable("users", {
@@ -181,6 +182,17 @@ export const mysqlFieldMappings = pgTable("mysql_field_mappings", {
   created_at: timestamp("created_at").defaultNow(),
 });
 
+// Chargebee Configuration
+export const chargebeeConfig = pgTable("chargebee_config", {
+  id: serial("id").primaryKey(),
+  site: text("site").notNull(),
+  apiKey: text("apiKey").notNull(),
+  status: integrationStatusEnum("status").default('active'),
+  last_synced_at: timestamp("last_synced_at"),
+  created_by: integer("created_by").references(() => users.id),
+  created_at: timestamp("created_at").defaultNow(),
+});
+
 // Relations
 export const usersRelations = relations(users, ({ one, many }) => ({
   teamLead: one(users, { fields: [users.team_lead_id], references: [users.id], relationName: "csm_team_lead" }),
@@ -237,6 +249,9 @@ export const insertPlaybookSchema = createInsertSchema(playbooks).omit({ id: tru
 export const insertPlaybookTaskSchema = createInsertSchema(playbookTasks).omit({ id: true, created_at: true });
 export const insertPlaybookRunSchema = createInsertSchema(playbookRuns).omit({ id: true, started_at: true, completed_at: true });
 export const insertRedZoneAlertSchema = createInsertSchema(redZoneAlerts).omit({ id: true, created_at: true, resolved_at: true });
+export const insertMySQLConfigSchema = createInsertSchema(mysqlConfig).omit({ id: true, created_at: true });
+export const insertMySQLFieldMappingSchema = createInsertSchema(mysqlFieldMappings).omit({ id: true, created_at: true });
+export const insertChargebeeConfigSchema = createInsertSchema(chargebeeConfig).omit({ id: true, created_at: true, last_synced_at: true });
 
 // Types
 export type User = typeof users.$inferSelect;

@@ -563,30 +563,76 @@ function ChargebeeConfigTab() {
   const [isConnected, setIsConnected] = useState(false);
   const { toast } = useToast();
   
+  // Fetch existing Chargebee configuration
+  const { data: existingConfig, isLoading: isLoadingConfig } = useQuery({
+    queryKey: ['/api/admin/chargebee-config'],
+  });
+  
+  // Set form fields if we have existing config
+  React.useEffect(() => {
+    if (existingConfig && Object.keys(existingConfig).length > 0) {
+      setChargebeeConfig({
+        site: existingConfig.site || "",
+        apiKey: existingConfig.apiKey || "",
+      });
+      setIsConnected(true);
+    }
+  }, [existingConfig]);
+  
   const handleConfigChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const { name, value } = e.target;
     setChargebeeConfig(prev => ({ ...prev, [name]: value }));
   };
   
-  const handleTestConnection = () => {
-    // This would typically call an API to test the Chargebee connection
-    setTimeout(() => {
+  const testConnectionMutation = useMutation({
+    mutationFn: async () => {
+      const response = await apiRequest("POST", "/api/admin/chargebee-config/test", chargebeeConfig);
+      return response.json();
+    },
+    onSuccess: (data) => {
       toast({
         title: "Connection Successful",
         description: "Successfully connected to Chargebee.",
       });
       setIsConnected(true);
-    }, 1000);
-  };
+    },
+    onError: (error) => {
+      toast({
+        title: "Connection Failed",
+        description: error.message || "Failed to connect to Chargebee. Check your configuration.",
+        variant: "destructive",
+      });
+      setIsConnected(false);
+    },
+  });
   
-  const handleSaveConfig = () => {
-    // This would typically call an API to save the Chargebee configuration
-    setTimeout(() => {
+  const saveConfigMutation = useMutation({
+    mutationFn: async () => {
+      const response = await apiRequest("POST", "/api/admin/chargebee-config", chargebeeConfig);
+      return response.json();
+    },
+    onSuccess: (data) => {
       toast({
         title: "Configuration Saved",
         description: "Chargebee configuration has been saved successfully.",
       });
-    }, 1000);
+      queryClient.invalidateQueries({ queryKey: ['/api/admin/chargebee-config'] });
+    },
+    onError: (error) => {
+      toast({
+        title: "Save Failed",
+        description: error.message || "Failed to save Chargebee configuration.",
+        variant: "destructive",
+      });
+    },
+  });
+  
+  const handleTestConnection = () => {
+    testConnectionMutation.mutate();
+  };
+  
+  const handleSaveConfig = () => {
+    saveConfigMutation.mutate();
   };
   
   return (
