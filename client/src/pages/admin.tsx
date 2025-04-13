@@ -139,13 +139,15 @@ function DatabaseConfigTab() {
   // State for field mapping form
   const [mappingDialogOpen, setMappingDialogOpen] = useState(false);
   const [newMapping, setNewMapping] = useState({
-    mysql_table: "",
     mysql_field: "",
     local_table: "",
     local_field: "",
     field_type: "text",
     is_key_field: false
   });
+  
+  // Track available MySQL fields from the query
+  const [availableMySQLFields, setAvailableMySQLFields] = useState<string[]>([]);
   
   const { toast } = useToast();
   
@@ -177,6 +179,15 @@ function DatabaseConfigTab() {
       setMappings(existingMappings);
     }
   }, [existingMappings]);
+  
+  // Extract available MySQL fields from query results
+  React.useEffect(() => {
+    if (queryResults && queryResults.length > 0) {
+      // Get all field names from the first result object
+      const fields = Object.keys(queryResults[0]);
+      setAvailableMySQLFields(fields);
+    }
+  }, [queryResults]);
   
   const testConnectionMutation = useMutation({
     mutationFn: async () => {
@@ -334,23 +345,54 @@ function DatabaseConfigTab() {
     setNewMapping(prev => ({ ...prev, [name]: checked }));
   };
   
+  // Delete mapping mutation
+  const deleteFieldMappingMutation = useMutation({
+    mutationFn: async (id: number) => {
+      const response = await apiRequest("DELETE", `/api/admin/mysql-field-mappings/${id}`);
+      return response.json();
+    },
+    onSuccess: (data) => {
+      toast({
+        title: "Mapping Deleted",
+        description: "Field mapping has been deleted successfully. The corresponding column has been removed.",
+      });
+      queryClient.invalidateQueries({ queryKey: ['/api/admin/mysql-field-mappings'] });
+    },
+    onError: (error) => {
+      toast({
+        title: "Delete Failed",
+        description: error.message || "Failed to delete field mapping.",
+        variant: "destructive",
+      });
+    },
+  });
+  
   // Handle submitting the mapping form
   const handleSubmitMapping = () => {
+    // Extract MySQL table name from the query if possible
+    // This is a simple heuristic - a better approach would be server-side extraction
+    let mysql_table = "";
+    const fromMatch = sqlQuery.match(/\bFROM\s+(\w+)/i);
+    if (fromMatch && fromMatch[1]) {
+      mysql_table = fromMatch[1];
+    }
+    
     // Create a mapping object with the correct field names for the API
     const mapping = {
-      mysql_table: newMapping.mysql_table,
+      mysql_table: mysql_table,
       mysql_field: newMapping.mysql_field,
       local_table: newMapping.local_table,
       local_field: newMapping.local_field,
       field_type: newMapping.field_type,
       is_key_field: newMapping.is_key_field,
+      // Flag to tell the server to create a new column if it doesn't exist
+      create_column_if_missing: true
     };
     
     saveFieldMappingMutation.mutate(mapping);
     
     // Reset form and close dialog after submission
     setNewMapping({
-      mysql_table: "",
       mysql_field: "",
       local_table: "",
       local_field: "",
@@ -359,6 +401,13 @@ function DatabaseConfigTab() {
     });
     
     setMappingDialogOpen(false);
+  };
+  
+  // Handle deleting a mapping
+  const handleDeleteMapping = (id: number) => {
+    if (confirm("Are you sure you want to delete this mapping? This will also delete the corresponding column from the database.")) {
+      deleteFieldMappingMutation.mutate(id);
+    }
   };
   
   const handleSaveMapping = (mapping: any) => {
@@ -669,7 +718,7 @@ function DatabaseConfigTab() {
                 </div>
                 
                 {mappings.map((mapping, index) => (
-                  <div key={index} className="grid grid-cols-6 gap-4 items-center">
+                  <div key={index} className="grid grid-cols-6 gap-4 items-center group">
                     <Input value={mapping.mysql_table} disabled />
                     <Input value={mapping.mysql_field} disabled />
                     <Input value={mapping.local_table} disabled />
@@ -691,46 +740,69 @@ function DatabaseConfigTab() {
                        mapping.field_type === 'revenue' ? 'Revenue (₹)' :
                        'Text'}
                     </Badge>
-                    {mapping.is_key_field ? (
-                      <Badge className="bg-yellow-50 text-yellow-700">
-                        <Key className="h-3 w-3 mr-1" />
-                        Primary Key
-                      </Badge>
-                    ) : (
-                      <span className="text-gray-400 text-xs">-</span>
-                    )}
+                    <div className="flex items-center justify-between">
+                      {mapping.is_key_field ? (
+                        <Badge className="bg-yellow-50 text-yellow-700">
+                          <Key className="h-3 w-3 mr-1" />
+                          Primary Key
+                        </Badge>
+                      ) : (
+                        <span className="text-gray-400 text-xs">-</span>
+                      )}
+                      <Button 
+                        variant="ghost" 
+                        size="icon" 
+                        className="opacity-0 group-hover:opacity-100 transition-opacity"
+                        onClick={() => handleDeleteMapping(mapping.id)}
+                        title="Delete this mapping"
+                      >
+                        <Trash2 className="h-4 w-4 text-red-500" />
+                      </Button>
+                    </div>
                   </div>
                 ))}
                 
                 <Dialog open={mappingDialogOpen} onOpenChange={setMappingDialogOpen}>
                   <DialogTrigger asChild>
-                    <Button className="w-full" onClick={() => setMappingDialogOpen(true)}>Add Field Mapping</Button>
+                    <Button 
+                      className="w-full" 
+                      onClick={() => setMappingDialogOpen(true)}
+                      disabled={!queryResults || queryResults.length === 0}
+                    >
+                      Add Field Mapping
+                    </Button>
                   </DialogTrigger>
                   <DialogContent>
                     <DialogHeader>
                       <DialogTitle>Map Database Fields</DialogTitle>
                     </DialogHeader>
                     <div className="grid gap-4 py-4">
-                      <div className="grid grid-cols-2 gap-4">
-                        <div className="grid gap-2">
-                          <Label htmlFor="mysql-table">MySQL Table</Label>
-                          <Input 
-                            id="mysql-table" 
-                            placeholder="e.g., customers" 
-                            value={newMapping.mysql_table}
-                            onChange={(e) => handleMappingChange('mysql_table', e.target.value)}
-                          />
-                        </div>
-                        <div className="grid gap-2">
-                          <Label htmlFor="mysql-field">MySQL Field</Label>
-                          <Input 
-                            id="mysql-field" 
-                            placeholder="e.g., customer_name" 
+                      <div className="grid gap-2">
+                        <Label htmlFor="mysql-field">MySQL Field</Label>
+                        {availableMySQLFields.length > 0 ? (
+                          <Select 
                             value={newMapping.mysql_field}
-                            onChange={(e) => handleMappingChange('mysql_field', e.target.value)}
-                          />
-                        </div>
+                            onValueChange={(value) => handleMappingChange('mysql_field', value)}
+                          >
+                            <SelectTrigger id="mysql-field">
+                              <SelectValue placeholder="Select field from query results" />
+                            </SelectTrigger>
+                            <SelectContent>
+                              {availableMySQLFields.map(field => (
+                                <SelectItem key={field} value={field}>
+                                  {field}
+                                </SelectItem>
+                              ))}
+                            </SelectContent>
+                          </Select>
+                        ) : (
+                          <div className="text-sm text-yellow-600 bg-yellow-50 p-2 rounded border border-yellow-200">
+                            Please run a query first to see available fields from your MySQL database.
+                          </div>
+                        )}
+                        <p className="text-xs text-gray-500">These fields are pulled from your query results.</p>
                       </div>
+                      
                       <div className="grid grid-cols-2 gap-4">
                         <div className="grid gap-2">
                           <Label htmlFor="local-table">Recurrer Table</Label>
@@ -750,22 +822,15 @@ function DatabaseConfigTab() {
                         </div>
                         <div className="grid gap-2">
                           <Label htmlFor="local-field">Recurrer Field</Label>
-                          <Select 
+                          <Input 
+                            id="local-field" 
+                            placeholder="Enter field name (e.g. loyalty_score)" 
                             value={newMapping.local_field}
-                            onValueChange={(value) => handleMappingChange('local_field', value)}
-                          >
-                            <SelectTrigger id="local-field">
-                              <SelectValue placeholder="Select field" />
-                            </SelectTrigger>
-                            <SelectContent>
-                              <SelectItem value="name">Name</SelectItem>
-                              <SelectItem value="industry">Industry</SelectItem>
-                              <SelectItem value="contact_name">Contact Name</SelectItem>
-                              <SelectItem value="contact_email">Contact Email</SelectItem>
-                              <SelectItem value="mrr">MRR</SelectItem>
-                              <SelectItem value="arr">ARR</SelectItem>
-                            </SelectContent>
-                          </Select>
+                            onChange={(e) => handleMappingChange('local_field', e.target.value)}
+                          />
+                          <p className="text-xs text-gray-500">
+                            If field doesn't exist, it will be created automatically in the database.
+                          </p>
                         </div>
                       </div>
                       
@@ -856,7 +921,7 @@ function DatabaseConfigTab() {
                         </Button>
                         <Button 
                           onClick={handleSubmitMapping}
-                          disabled={!newMapping.mysql_table || !newMapping.mysql_field || !newMapping.local_table || !newMapping.local_field}
+                          disabled={!newMapping.mysql_field || !newMapping.local_table || !newMapping.local_field}
                         >
                           Save Mapping
                         </Button>
