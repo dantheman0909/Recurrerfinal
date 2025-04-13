@@ -1,6 +1,7 @@
 import { Card, CardContent, CardFooter } from "@/components/ui/card";
 import { ArrowDown, ArrowUp } from "lucide-react";
 import { cn, formatCurrency } from "@/lib/utils";
+import { HelpTooltip } from "@/components/ui/help-tooltip";
 
 interface StatsCardProps {
   title: string;
@@ -11,6 +12,7 @@ interface StatsCardProps {
   footerText?: string;
   iconBgColor?: string;
   isCurrency?: boolean;
+  helpText?: React.ReactNode;
 }
 
 export function StatsCard({
@@ -21,7 +23,8 @@ export function StatsCard({
   footerLink,
   footerText = "View all",
   iconBgColor = "bg-teal-100",
-  isCurrency = false
+  isCurrency = false,
+  helpText
 }: StatsCardProps) {
   const isPositiveChange = changePercent && changePercent > 0;
   const isNegativeChange = changePercent && changePercent < 0;
@@ -34,8 +37,11 @@ export function StatsCard({
             {icon}
           </div>
           <div className="ml-5 w-0 flex-1">
-            <dt className="text-sm font-medium text-gray-500 truncate">
+            <dt className="text-sm font-medium text-gray-500 truncate flex items-center gap-1">
               {title}
+              {helpText && (
+                <HelpTooltip content={helpText} />
+              )}
             </dt>
             <dd className="flex items-baseline">
               <div className="text-2xl font-semibold text-gray-900">

@@ -14,6 +14,7 @@ import { TaskList } from "@/components/dashboard/task-list";
 import { RedZoneList } from "@/components/dashboard/red-zone-list";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
+import { HelpTooltip } from "@/components/ui/help-tooltip";
 import { MetricTimeframe } from "@shared/types";
 import { formatCurrency } from "@/lib/utils";
 
@@ -197,6 +198,13 @@ export default function Dashboard() {
             footerLink="/tasks"
             footerText="View all tasks"
             iconBgColor="bg-teal-100"
+            helpText={
+              <div>
+                <p className="font-medium mb-1">Open Tasks</p>
+                <p>Number of tasks that are pending or in progress across all customers.</p>
+                <p className="mt-1 italic text-xs">Updates daily based on task statuses and due dates.</p>
+              </div>
+            }
           />
           
           <StatsCard
@@ -207,6 +215,13 @@ export default function Dashboard() {
             footerLink="/reports?filter=campaigns"
             footerText="View all gaps"
             iconBgColor="bg-indigo-100"
+            helpText={
+              <div>
+                <p className="font-medium mb-1">Campaign Gaps</p>
+                <p>Customers who haven't received a campaign in the last 30 days.</p>
+                <p className="mt-1 italic text-xs">Regular communication is essential for maintaining customer engagement.</p>
+              </div>
+            }
           />
           
           <StatsCard
@@ -217,6 +232,13 @@ export default function Dashboard() {
             footerLink="/reports?filter=renewals"
             footerText="View all renewals"
             iconBgColor="bg-yellow-100"
+            helpText={
+              <div>
+                <p className="font-medium mb-1">Renewal Alerts</p>
+                <p>Subscriptions due for renewal in the next 60 days that require attention.</p>
+                <p className="mt-1 italic text-xs">Proactive renewal management can significantly improve retention rates.</p>
+              </div>
+            }
           />
           
           <StatsCard
@@ -227,6 +249,13 @@ export default function Dashboard() {
             footerLink="/red-zone"
             footerText="View red zone accounts"
             iconBgColor="bg-red-100"
+            helpText={
+              <div>
+                <p className="font-medium mb-1">Red Zone Count</p>
+                <p>High-risk customers requiring immediate intervention based on health scores and engagement metrics.</p>
+                <p className="mt-1 italic text-xs">These accounts should be prioritized to prevent potential churn.</p>
+              </div>
+            }
           />
         </div>
       </div>
@@ -248,7 +277,18 @@ export default function Dashboard() {
             </div>
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 mb-6">
               <div className="bg-gray-50 rounded-lg p-4 text-center">
-                <p className="text-sm text-gray-500">Total MRR</p>
+                <p className="text-sm text-gray-500 flex items-center justify-center gap-1">
+                  Total MRR
+                  <HelpTooltip 
+                    content={
+                      <div>
+                        <p className="font-medium mb-1">Monthly Recurring Revenue</p>
+                        <p>Total revenue generated each month from all active subscriptions.</p>
+                        <p className="mt-1 italic text-xs">Key indicator of business health and growth.</p>
+                      </div>
+                    } 
+                  />
+                </p>
                 <p className="text-2xl font-semibold">{formatCurrency(dashboardData?.mrrTotal || 0)}</p>
                 <div className="mt-1 flex items-center justify-center text-sm">
                   <span className={(dashboardData?.mrrChange || 0) >= 0 ? "text-green-600" : "text-red-600"}>
@@ -257,7 +297,18 @@ export default function Dashboard() {
                 </div>
               </div>
               <div className="bg-gray-50 rounded-lg p-4 text-center">
-                <p className="text-sm text-gray-500">Total ARR</p>
+                <p className="text-sm text-gray-500 flex items-center justify-center gap-1">
+                  Total ARR
+                  <HelpTooltip 
+                    content={
+                      <div>
+                        <p className="font-medium mb-1">Annual Recurring Revenue</p>
+                        <p>Total revenue expected over the next 12 months from all active subscriptions.</p>
+                        <p className="mt-1 italic text-xs">Calculated as MRR × 12.</p>
+                      </div>
+                    } 
+                  />
+                </p>
                 <p className="text-2xl font-semibold">{formatCurrency(dashboardData?.arrTotal || 0)}</p>
                 <div className="mt-1 flex items-center justify-center text-sm">
                   <span className={(dashboardData?.arrChange || 0) >= 0 ? "text-green-600" : "text-red-600"}>
@@ -266,11 +317,33 @@ export default function Dashboard() {
                 </div>
               </div>
               <div className="bg-gray-50 rounded-lg p-4 text-center">
-                <p className="text-sm text-gray-500">Avg. Revenue Per Customer</p>
+                <p className="text-sm text-gray-500 flex items-center justify-center gap-1">
+                  Avg. Revenue Per Customer
+                  <HelpTooltip 
+                    content={
+                      <div>
+                        <p className="font-medium mb-1">Average Revenue Per Customer</p>
+                        <p>The average monthly revenue generated per customer.</p>
+                        <p className="mt-1 italic text-xs">Calculated as Total MRR ÷ Number of active customers.</p>
+                      </div>
+                    } 
+                  />
+                </p>
                 <p className="text-2xl font-semibold">{formatCurrency(dashboardData?.revenuePerCustomer || 0)}</p>
               </div>
               <div className="bg-gray-50 rounded-lg p-4 text-center">
-                <p className="text-sm text-gray-500">Growth Rate</p>
+                <p className="text-sm text-gray-500 flex items-center justify-center gap-1">
+                  Growth Rate
+                  <HelpTooltip 
+                    content={
+                      <div>
+                        <p className="font-medium mb-1">Growth Rate</p>
+                        <p>Percentage increase in MRR compared to previous period.</p>
+                        <p className="mt-1 italic text-xs">Positive values indicate growth, negative values indicate contraction.</p>
+                      </div>
+                    } 
+                  />
+                </p>
                 <p className="text-2xl font-semibold">{dashboardData?.growthRate || 0}%</p>
               </div>
             </div>
@@ -282,39 +355,75 @@ export default function Dashboard() {
       <div className="mt-8 px-4 sm:px-6 lg:px-8">
         <div className="grid grid-cols-1 gap-5 lg:grid-cols-2">
           {dashboardData?.monthlyMetrics && (
-            <MonthlyMetricsChart 
-              data={dashboardData.monthlyMetrics} 
-              timeframe={timeframe}
-            />
+            <Card>
+              <CardContent className="p-6">
+                <div className="flex items-center justify-between mb-4">
+                  <h3 className="text-lg font-medium text-gray-900 flex items-center gap-1">
+                    Monthly Key Metrics
+                    <HelpTooltip 
+                      content={
+                        <div>
+                          <p className="font-medium mb-1">Monthly Key Metrics</p>
+                          <p>Trends of important business metrics over time, showing month-by-month performance.</p>
+                          <p className="mt-1 italic text-xs">Helps identify patterns and seasonal trends across your customer base.</p>
+                        </div>
+                      } 
+                    />
+                  </h3>
+                </div>
+                <MonthlyMetricsChart 
+                  data={dashboardData.monthlyMetrics} 
+                  timeframe={timeframe}
+                />
+              </CardContent>
+            </Card>
           )}
-          <HealthDistributionChart 
-            data={[
-              {
-                segment: 'Enterprise',
-                excellent: 48,
-                good: 32,
-                average: 10,
-                at_risk: 6,
-                critical: 4
-              },
-              {
-                segment: 'Mid-Market',
-                excellent: 35,
-                good: 40,
-                average: 15,
-                at_risk: 7,
-                critical: 3
-              },
-              {
-                segment: 'Small Business',
-                excellent: 28,
-                good: 35,
-                average: 22,
-                at_risk: 10,
-                critical: 5
-              }
-            ]}
-          />
+          <Card>
+            <CardContent className="p-6">
+              <div className="flex items-center justify-between mb-4">
+                <h3 className="text-lg font-medium text-gray-900 flex items-center gap-1">
+                  Customer Health Distribution
+                  <HelpTooltip 
+                    content={
+                      <div>
+                        <p className="font-medium mb-1">Customer Health Distribution</p>
+                        <p>Breakdown of customer health across different market segments (Enterprise, Mid-Market, Small Business).</p>
+                        <p className="mt-1 italic text-xs">Higher proportions of "Excellent" and "Good" indicate a healthy customer portfolio.</p>
+                      </div>
+                    } 
+                  />
+                </h3>
+              </div>
+              <HealthDistributionChart 
+                data={[
+                  {
+                    segment: 'Enterprise',
+                    excellent: 48,
+                    good: 32,
+                    average: 10,
+                    at_risk: 6,
+                    critical: 4
+                  },
+                  {
+                    segment: 'Mid-Market',
+                    excellent: 35,
+                    good: 40,
+                    average: 15,
+                    at_risk: 7,
+                    critical: 3
+                  },
+                  {
+                    segment: 'Small Business',
+                    excellent: 28,
+                    good: 35,
+                    average: 22,
+                    at_risk: 10,
+                    critical: 5
+                  }
+                ]}
+              />
+            </CardContent>
+          </Card>
         </div>
       </div>
 
