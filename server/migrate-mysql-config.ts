@@ -1,5 +1,6 @@
 import { pool, db } from './db';
 import { sql } from 'drizzle-orm';
+import { createMySQLSavedQueriesTable } from './create-mysql-saved-queries-table';
 
 /**
  * Migrates MySQL config and field mappings tables to the latest schema
@@ -158,6 +159,18 @@ async function migrateMySQLTables() {
         ALTER TABLE customers
         ADD COLUMN updated_from_mysql_at TIMESTAMP
       `));
+    }
+
+    // Create MySQL saved queries table
+    const checkMySQLSavedQueriesTable = await db.execute(sql.raw(`
+      SELECT EXISTS (
+        SELECT FROM information_schema.tables 
+        WHERE table_name = 'mysql_saved_queries'
+      )
+    `));
+
+    if (!checkMySQLSavedQueriesTable[0]?.exists) {
+      await createMySQLSavedQueriesTable();
     }
     
     console.log('MySQL tables migration completed successfully');

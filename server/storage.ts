@@ -106,6 +106,7 @@ export class MemStorage implements IStorage {
   private customerMetrics: Map<number, CustomerMetric>;
   private mysqlConfigs: Map<number, MySQLConfig>;
   private mysqlFieldMappings: Map<number, MySQLFieldMapping>;
+  private mysqlSavedQueries: Map<number, MySQLSavedQuery>;
   
   private userId: number = 1;
   private customerId: number = 1;
@@ -117,6 +118,7 @@ export class MemStorage implements IStorage {
   private metricId: number = 1;
   private configId: number = 1;
   private mappingId: number = 1;
+  private savedQueryId: number = 1;
 
   constructor() {
     this.users = new Map();
@@ -129,6 +131,7 @@ export class MemStorage implements IStorage {
     this.customerMetrics = new Map();
     this.mysqlConfigs = new Map();
     this.mysqlFieldMappings = new Map();
+    this.mysqlSavedQueries = new Map();
     
     // Initialize with mock data
     this.initMockData();
@@ -549,6 +552,49 @@ export class MemStorage implements IStorage {
     return this.chargebeeFieldMappings.delete(id);
   }
 
+  // MySQL Saved Queries Methods
+  async getMySQLSavedQueries(): Promise<MySQLSavedQuery[]> {
+    return Array.from(this.mysqlSavedQueries.values());
+  }
+
+  async getMySQLSavedQuery(id: number): Promise<MySQLSavedQuery | undefined> {
+    return this.mysqlSavedQueries.get(id);
+  }
+
+  async createMySQLSavedQuery(query: InsertMySQLSavedQuery): Promise<MySQLSavedQuery> {
+    const id = this.savedQueryId++;
+    const timestamp = new Date();
+    const newQuery = { ...query, id, created_at: timestamp, last_run_at: null };
+    this.mysqlSavedQueries.set(id, newQuery);
+    return newQuery;
+  }
+
+  async updateMySQLSavedQuery(id: number, query: Partial<Omit<MySQLSavedQuery, 'id' | 'created_at'>>): Promise<MySQLSavedQuery | undefined> {
+    const existingQuery = this.mysqlSavedQueries.get(id);
+    if (!existingQuery) return undefined;
+    
+    const updatedQuery = { ...existingQuery, ...query };
+    this.mysqlSavedQueries.set(id, updatedQuery);
+    return updatedQuery;
+  }
+
+  async deleteMySQLSavedQuery(id: number): Promise<boolean> {
+    const exists = this.mysqlSavedQueries.has(id);
+    if (exists) {
+      this.mysqlSavedQueries.delete(id);
+    }
+    return exists;
+  }
+
+  async updateMySQLSavedQueryLastRun(id: number): Promise<MySQLSavedQuery | undefined> {
+    const existingQuery = this.mysqlSavedQueries.get(id);
+    if (!existingQuery) return undefined;
+    
+    const updatedQuery = { ...existingQuery, last_run_at: new Date() };
+    this.mysqlSavedQueries.set(id, updatedQuery);
+    return updatedQuery;
+  }
+
   // Dashboard Stats
   async getDashboardStats(timeframe: MetricTimeframe): Promise<any> {
     // Import chart data utility function
@@ -862,6 +908,53 @@ export class DatabaseStorage implements IStorage {
       .delete(mysqlFieldMappings)
       .where(eq(mysqlFieldMappings.id, id));
     return !!result;
+  }
+  
+  // MySQL Saved Queries Methods
+  async getMySQLSavedQueries(): Promise<MySQLSavedQuery[]> {
+    return await db.select().from(mysqlSavedQueries);
+  }
+
+  async getMySQLSavedQuery(id: number): Promise<MySQLSavedQuery | undefined> {
+    const [query] = await db
+      .select()
+      .from(mysqlSavedQueries)
+      .where(eq(mysqlSavedQueries.id, id));
+    return query;
+  }
+
+  async createMySQLSavedQuery(query: InsertMySQLSavedQuery): Promise<MySQLSavedQuery> {
+    const [newQuery] = await db
+      .insert(mysqlSavedQueries)
+      .values(query)
+      .returning();
+    return newQuery;
+  }
+
+  async updateMySQLSavedQuery(id: number, query: Partial<Omit<MySQLSavedQuery, 'id' | 'created_at'>>): Promise<MySQLSavedQuery | undefined> {
+    const [updatedQuery] = await db
+      .update(mysqlSavedQueries)
+      .set(query)
+      .where(eq(mysqlSavedQueries.id, id))
+      .returning();
+    return updatedQuery;
+  }
+
+  async deleteMySQLSavedQuery(id: number): Promise<boolean> {
+    const result = await db
+      .delete(mysqlSavedQueries)
+      .where(eq(mysqlSavedQueries.id, id));
+    return !!result;
+  }
+
+  async updateMySQLSavedQueryLastRun(id: number): Promise<MySQLSavedQuery | undefined> {
+    const now = new Date();
+    const [updatedQuery] = await db
+      .update(mysqlSavedQueries)
+      .set({ last_run_at: now })
+      .where(eq(mysqlSavedQueries.id, id))
+      .returning();
+    return updatedQuery;
   }
   
   // Chargebee Config Methods
