@@ -259,9 +259,13 @@ app.get('/api/customers/:id/external-data', getCustomerExternalData);
       
       try {
         // Create custom reports tables
-        const { createCustomReportsTables } = await import('./create-custom-reports-tables');
-        await createCustomReportsTables();
-        log('Custom reports tables created successfully');
+        const createCustomReportsTables_main = (await import('./create-custom-reports-tables')).default;
+        const customReportsResult = await createCustomReportsTables_main();
+        if (customReportsResult.success) {
+          log('Custom reports tables created successfully');
+        } else {
+          console.warn('Custom reports tables warning:', customReportsResult.error);
+        }
       } catch (error) {
         console.error('Error creating custom reports tables:', error);
       }

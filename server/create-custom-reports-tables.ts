@@ -68,8 +68,19 @@ async function createCustomReportsTables() {
 
 export { createCustomReportsTables };
 
-// Run the function if this file is executed directly
-if (require.main === module) {
+// Export a default function for consistency with other migration modules
+export default async function createCustomReportsTables_main() {
+  try {
+    await createCustomReportsTables();
+    return { success: true };
+  } catch (error) {
+    console.error('Custom reports tables migration failed:', error);
+    return { success: false, error };
+  }
+}
+
+// Self-invoking if file is run directly (for CLI usage)
+if (import.meta.url === `file://${process.argv[1]}`) {
   createCustomReportsTables()
     .then(() => {
       console.log('Custom reports tables migration completed.');
