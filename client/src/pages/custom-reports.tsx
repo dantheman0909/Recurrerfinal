@@ -120,7 +120,8 @@ const createMetricSchema = z.object({
   description: z.string().min(5, "Description must be at least 5 characters"),
   data_source: z.enum(["mysql", "chargebee", "internal"]),
   metric_type: z.enum(["count", "sum", "average", "percent", "custom"]),
-  sql_query: z.string().min(10, "SQL query must be at least 10 characters").optional(),
+  sql_query: z.string().optional(),
+  field_mapping: z.record(z.any()).optional(),
   display_format: z.enum(["number", "currency", "percent", "date"]),
   display_color: z.string().regex(/^#([A-Fa-f0-9]{6}|[A-Fa-f0-9]{3})$/, "Must be a valid hex color"),
   target_value: z.number().optional(),
@@ -295,6 +296,7 @@ export default function CustomReports() {
       data_source: "mysql",
       metric_type: "count",
       sql_query: "",
+      field_mapping: {},
       display_format: "number",
       display_color: "#0D9298",
       target_value: 0,
@@ -356,6 +358,7 @@ export default function CustomReports() {
         data_source: metric.data_source,
         metric_type: metric.metric_type,
         sql_query: metric.sql_query || "",
+        field_mapping: metric.field_mapping || {},
         display_format: metric.display_format,
         display_color: metric.display_color,
         target_value: metric.target_value || 0,
@@ -936,27 +939,163 @@ export default function CustomReports() {
                                   />
                                 </div>
                                 
-                                <FormField
-                                  control={metricForm.control}
-                                  name="sql_query"
-                                  render={({ field }) => (
-                                    <FormItem>
-                                      <FormLabel>SQL Query</FormLabel>
-                                      <FormControl>
-                                        <Textarea 
-                                          placeholder="SELECT COUNT(*) as count FROM users WHERE last_login_at > DATE_SUB(NOW(), INTERVAL 30 DAY)"
-                                          {...field}
-                                          className="font-mono text-sm"
-                                          rows={5}
-                                        />
-                                      </FormControl>
-                                      <FormDescription>
-                                        Enter SQL query to extract data for this metric
-                                      </FormDescription>
-                                      <FormMessage />
-                                    </FormItem>
-                                  )}
-                                />
+                                {metricForm.watch("data_source") === "mysql" && (
+                                  <FormField
+                                    control={metricForm.control}
+                                    name="sql_query"
+                                    render={({ field }) => (
+                                      <FormItem>
+                                        <FormLabel>SQL Query</FormLabel>
+                                        <FormControl>
+                                          <Textarea 
+                                            placeholder="SELECT COUNT(*) as count FROM users WHERE last_login_at > DATE_SUB(NOW(), INTERVAL 30 DAY)"
+                                            {...field}
+                                            className="font-mono text-sm"
+                                            rows={5}
+                                          />
+                                        </FormControl>
+                                        <FormDescription>
+                                          Enter SQL query to extract data for this metric
+                                        </FormDescription>
+                                        <FormMessage />
+                                      </FormItem>
+                                    )}
+                                  />
+                                )}
+                                
+                                {metricForm.watch("data_source") === "chargebee" && (
+                                  <div className="space-y-4">
+                                    <div className="p-4 border rounded-md bg-slate-50">
+                                      <h4 className="font-medium text-sm mb-2">Chargebee Data</h4>
+                                      <div className="grid grid-cols-2 gap-4">
+                                        <div>
+                                          <FormField
+                                            control={metricForm.control}
+                                            name="sql_query"
+                                            render={({ field }) => (
+                                              <FormItem>
+                                                <FormLabel>Data Field</FormLabel>
+                                                <Select 
+                                                  onValueChange={(value) => {
+                                                    field.onChange(value);
+                                                    metricForm.setValue('field_mapping', { field: value });
+                                                  }} 
+                                                  defaultValue={field.value}
+                                                >
+                                                  <FormControl>
+                                                    <SelectTrigger>
+                                                      <SelectValue placeholder="Select data field" />
+                                                    </SelectTrigger>
+                                                  </FormControl>
+                                                  <SelectContent>
+                                                    <SelectItem value="subscriptions">Subscriptions</SelectItem>
+                                                    <SelectItem value="mrr">MRR</SelectItem>
+                                                    <SelectItem value="customers">Customers</SelectItem>
+                                                    <SelectItem value="revenue">Revenue</SelectItem>
+                                                  </SelectContent>
+                                                </Select>
+                                                <FormDescription>
+                                                  Select data to pull from Chargebee
+                                                </FormDescription>
+                                              </FormItem>
+                                            )}
+                                          />
+                                        </div>
+                                        <div>
+                                          <FormField
+                                            control={metricForm.control}
+                                            name="target_value"
+                                            render={({ field }) => (
+                                              <FormItem>
+                                                <FormLabel>Filter Value</FormLabel>
+                                                <FormControl>
+                                                  <Input
+                                                    type="text"
+                                                    placeholder="Filter value"
+                                                    {...field}
+                                                    onChange={(e) => {
+                                                      field.onChange(parseInt(e.target.value) || 0);
+                                                    }}
+                                                  />
+                                                </FormControl>
+                                                <FormDescription>
+                                                  Set threshold value for comparison
+                                                </FormDescription>
+                                              </FormItem>
+                                            )}
+                                          />
+                                        </div>
+                                      </div>
+                                    </div>
+                                  </div>
+                                )}
+                                
+                                {metricForm.watch("data_source") === "internal" && (
+                                  <div className="space-y-4">
+                                    <div className="p-4 border rounded-md bg-slate-50">
+                                      <h4 className="font-medium text-sm mb-2">Internal Data</h4>
+                                      <div className="grid grid-cols-2 gap-4">
+                                        <div>
+                                          <FormField
+                                            control={metricForm.control}
+                                            name="sql_query"
+                                            render={({ field }) => (
+                                              <FormItem>
+                                                <FormLabel>Data Field</FormLabel>
+                                                <Select 
+                                                  onValueChange={(value) => {
+                                                    field.onChange(value);
+                                                    metricForm.setValue('field_mapping', { field: value });
+                                                  }} 
+                                                  defaultValue={field.value}
+                                                >
+                                                  <FormControl>
+                                                    <SelectTrigger>
+                                                      <SelectValue placeholder="Select data field" />
+                                                    </SelectTrigger>
+                                                  </FormControl>
+                                                  <SelectContent>
+                                                    <SelectItem value="customers">Customer Count</SelectItem>
+                                                    <SelectItem value="tasks">Task Completion</SelectItem>
+                                                    <SelectItem value="health_score">Health Scores</SelectItem>
+                                                    <SelectItem value="achievements">Achievements</SelectItem>
+                                                  </SelectContent>
+                                                </Select>
+                                                <FormDescription>
+                                                  Select data from internal system metrics
+                                                </FormDescription>
+                                              </FormItem>
+                                            )}
+                                          />
+                                        </div>
+                                        <div>
+                                          <FormField
+                                            control={metricForm.control}
+                                            name="target_value"
+                                            render={({ field }) => (
+                                              <FormItem>
+                                                <FormLabel>Filter Value</FormLabel>
+                                                <FormControl>
+                                                  <Input
+                                                    type="text"
+                                                    placeholder="Filter value"
+                                                    {...field}
+                                                    onChange={(e) => {
+                                                      field.onChange(parseInt(e.target.value) || 0);
+                                                    }}
+                                                  />
+                                                </FormControl>
+                                                <FormDescription>
+                                                  Set threshold value for comparison
+                                                </FormDescription>
+                                              </FormItem>
+                                            )}
+                                          />
+                                        </div>
+                                      </div>
+                                    </div>
+                                  </div>
+                                )}
                                 
                                 <div className="grid grid-cols-3 gap-4">
                                   <FormField
