@@ -1,6 +1,0 @@
-name,recurrer_id,industry,contact_name,contact_email,contact_phone,csm_id,health_status,mrr,arr,renewal_date,onboarding_stage,timezone,tags,notes
-Acme Industries,rec_123456,Manufacturing,John Smith,john@acme.com,+91 9876543210,1,healthy,54000,648000,2025-12-15,completed,Asia/Kolkata,"enterprise,manufacturing",Enterprise customer with 50+ locations
-Beta Solutions,rec_234567,Technology,Sarah Lee,sarah@beta.com,+91 8765432109,2,at_risk,25000,300000,2025-06-30,in_progress,Asia/Kolkata,"tech,startup",Needs attention for onboarding completion
-Gamma Foods,rec_345678,Food & Beverage,Raj Kumar,raj@gammafoods.com,+91 7654321098,1,healthy,18000,216000,2025-09-10,completed,Asia/Kolkata,"food,retail",Multiple locations in South India
-Delta Services,rec_456789,Professional Services,Priya Patel,priya@deltaservices.com,+91 6543210987,3,at_risk,36000,432000,2025-04-22,completed,Asia/Kolkata,"services,premium",Recent decrease in usage metrics
-Epic Retail,rec_567890,Retail,Arun Gupta,arun@epicretail.com,+91 5432109876,2,red_zone,42000,504000,2025-01-15,completed,Asia/Kolkata,"retail,multi-location",Renewal approaching with payment issues
