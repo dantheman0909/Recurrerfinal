@@ -622,6 +622,49 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
   
+  // MySQL Scheduler Control
+  app.post('/api/admin/mysql-scheduler/:action', async (req, res) => {
+    try {
+      const { action } = req.params;
+      const { mysqlScheduler } = await import('./mysql-scheduler');
+      
+      let result: { success: boolean; message: string; status?: string };
+      
+      switch (action) {
+        case 'start':
+          mysqlScheduler.start();
+          result = { success: true, message: 'MySQL scheduler started', status: 'running' };
+          break;
+        
+        case 'stop':
+          mysqlScheduler.stop();
+          result = { success: true, message: 'MySQL scheduler stopped', status: 'stopped' };
+          break;
+        
+        case 'status':
+          const isRunning = mysqlScheduler.isRunning();
+          result = { 
+            success: true, 
+            message: `MySQL scheduler is ${isRunning ? 'running' : 'stopped'}`,
+            status: isRunning ? 'running' : 'stopped' 
+          };
+          break;
+        
+        default:
+          result = { success: false, message: `Unknown action: ${action}`, status: 'unknown' };
+      }
+      
+      res.json(result);
+    } catch (error) {
+      console.error('MySQL scheduler control error:', error);
+      res.status(500).json({ 
+        success: false, 
+        message: `Error controlling MySQL scheduler: ${error instanceof Error ? error.message : String(error)}`,
+        status: 'error'
+      });
+    }
+  });
+  
   app.post('/api/admin/mysql-field-mappings', async (req, res) => {
     try {
       const mappingSchema = z.object({

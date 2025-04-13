@@ -130,5 +130,17 @@ app.get('/api/customers/:id/external-data', getCustomerExternalData);
     reusePort: true,
   }, () => {
     log(`serving on port ${port}`);
+    
+    // Start the MySQL scheduler
+    try {
+      import('./mysql-scheduler').then(({ mysqlScheduler }) => {
+        mysqlScheduler.start();
+        log('MySQL scheduler started');
+      }).catch(error => {
+        console.error('Error starting MySQL scheduler:', error);
+      });
+    } catch (error) {
+      console.error('Error importing MySQL scheduler:', error);
+    }
   });
 })();
