@@ -1,11 +1,11 @@
 import { 
   users, customers, tasks, taskComments, playbooks, playbookTasks, 
-  redZoneAlerts, customerMetrics, mysqlConfig, mysqlFieldMappings,
+  redZoneAlerts, customerMetrics, mysqlConfig, mysqlFieldMappings, chargebeeConfig,
   type User, type Customer, type Task, type TaskComment, type Playbook, 
   type PlaybookTask, type RedZoneAlert, type CustomerMetric, 
-  type MySQLConfig, type MySQLFieldMapping,
+  type MySQLConfig, type MySQLFieldMapping, type ChargebeeConfig,
   type InsertUser, type InsertCustomer, type InsertTask, type InsertPlaybook,
-  type InsertRedZoneAlert
+  type InsertRedZoneAlert, type InsertChargebeeConfig
 } from "@shared/schema";
 import { db } from "./db";
 import { eq, and, isNull, desc, gte, lt } from "drizzle-orm";
@@ -452,6 +452,23 @@ export class MemStorage implements IStorage {
     this.mysqlFieldMappings.set(id, newMapping);
     return newMapping;
   }
+  
+  // Chargebee Config Methods
+  private chargebeeConfigs: Map<number, ChargebeeConfig> = new Map();
+  private chargebeeConfigId: number = 1;
+  
+  async getChargebeeConfig(): Promise<ChargebeeConfig | undefined> {
+    const configs = Array.from(this.chargebeeConfigs.values());
+    return configs.length > 0 ? configs[0] : undefined;
+  }
+
+  async createChargebeeConfig(config: Omit<ChargebeeConfig, 'id' | 'created_at' | 'last_synced_at'>): Promise<ChargebeeConfig> {
+    const id = this.chargebeeConfigId++;
+    const timestamp = new Date();
+    const newConfig = { ...config, id, created_at: timestamp, last_synced_at: null, status: 'active' };
+    this.chargebeeConfigs.set(id, newConfig);
+    return newConfig;
+  }
 
   // Dashboard Stats
   async getDashboardStats(timeframe: MetricTimeframe): Promise<any> {
@@ -750,6 +767,17 @@ export class DatabaseStorage implements IStorage {
   async createMySQLFieldMapping(mapping: Omit<MySQLFieldMapping, 'id' | 'created_at'>): Promise<MySQLFieldMapping> {
     const [newMapping] = await db.insert(mysqlFieldMappings).values(mapping).returning();
     return newMapping;
+  }
+  
+  // Chargebee Config Methods
+  async getChargebeeConfig(): Promise<ChargebeeConfig | undefined> {
+    const [config] = await db.select().from(chargebeeConfig);
+    return config;
+  }
+
+  async createChargebeeConfig(config: Omit<ChargebeeConfig, 'id' | 'created_at' | 'last_synced_at'>): Promise<ChargebeeConfig> {
+    const [newConfig] = await db.insert(chargebeeConfig).values(config).returning();
+    return newConfig;
   }
 
   // Dashboard Stats
