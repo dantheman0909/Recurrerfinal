@@ -1270,11 +1270,17 @@ function ChargebeeConfigTab() {
       const response = await apiRequest("DELETE", `/api/admin/chargebee-field-mappings/${id}`);
       return response.json();
     },
-    onSuccess: () => {
+    onSuccess: (data) => {
       toast({
         title: "Mapping Deleted",
         description: "Field mapping has been deleted successfully.",
       });
+      // Immediately update local state to reflect the deletion (for UI responsiveness)
+      if (fieldMappings) {
+        const updatedMappings = fieldMappings.filter((mapping: any) => mapping.id !== data.deletedId);
+        // This is a temporary update before the query is refreshed
+        setFieldMappings(updatedMappings);
+      }
       refetchMappings();
     },
     onError: (error) => {
