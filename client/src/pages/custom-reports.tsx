@@ -145,7 +145,7 @@ const createScheduleSchema = z.object({
 export default function CustomReports() {
   const [selectedReportId, setSelectedReportId] = useState<number | null>(null);
   const [selectedMetricId, setSelectedMetricId] = useState<number | null>(null);
-  const [openDialog, setOpenDialog] = useState<'report' | 'metric' | 'editMetric' | 'schedule' | null>(null);
+  const [openDialog, setOpenDialog] = useState<'report' | 'metric' | 'editMetric' | 'schedule' | 'deleteMetricConfirm' | 'deleteReportConfirm' | null>(null);
   const { toast } = useToast();
   const queryClient = useQueryClient();
 
@@ -396,13 +396,20 @@ export default function CustomReports() {
   // Handle deleting a metric
   const deleteMetric = (metricId: number) => {
     if (!selectedReportId) return;
+    setSelectedMetricId(metricId);
+    setOpenDialog('deleteMetricConfirm');
+  };
+  
+  // Confirm and delete the metric
+  const confirmDeleteMetric = () => {
+    if (!selectedReportId || !selectedMetricId) return;
     
-    if (window.confirm("Are you sure you want to delete this metric? This action cannot be undone.")) {
-      deleteMetricMutation.mutate({ 
-        reportId: selectedReportId, 
-        metricId: metricId 
-      });
-    }
+    deleteMetricMutation.mutate({ 
+      reportId: selectedReportId, 
+      metricId: selectedMetricId 
+    });
+    
+    setOpenDialog(null);
   };
 
   // Handle schedule form submission
@@ -423,10 +430,16 @@ export default function CustomReports() {
 
   // Handle deleting a report
   const deleteReport = (reportId: number) => {
-    // Use Dialog instead of browser confirm
-    if (window.confirm("Are you sure you want to delete this report? This action cannot be undone.")) {
-      deleteReportMutation.mutate(reportId);
-    }
+    setSelectedReportId(reportId);
+    setOpenDialog('deleteReportConfirm');
+  };
+  
+  // Confirm report deletion
+  const confirmDeleteReport = () => {
+    if (!selectedReportId) return;
+    
+    deleteReportMutation.mutate(selectedReportId);
+    setOpenDialog(null);
   };
   
   // Edit metric function
