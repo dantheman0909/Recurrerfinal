@@ -209,6 +209,14 @@ function DatabaseConfigTab() {
     }
   }, [existingMappings]);
   
+  // Load the last executed query from local storage when component mounts
+  React.useEffect(() => {
+    const lastQuery = localStorage.getItem('mysql_last_executed_query');
+    if (lastQuery) {
+      setSqlQuery(lastQuery);
+    }
+  }, []);
+  
   // Extract available MySQL fields from query results
   React.useEffect(() => {
     if (queryResults && queryResults.length > 0) {
@@ -367,6 +375,8 @@ function DatabaseConfigTab() {
   };
   
   const handleRunQuery = () => {
+    // Store the last executed query in localStorage
+    localStorage.setItem('mysql_last_executed_query', sqlQuery);
     runQueryMutation.mutate();
   };
   
@@ -392,6 +402,9 @@ function DatabaseConfigTab() {
         title: "Mapping Deleted",
         description: "Field mapping has been deleted successfully. The corresponding column has been removed.",
       });
+      // Immediately update local state to reflect the deletion
+      setMappings(prevMappings => prevMappings.filter(mapping => mapping.id !== data.deletedId));
+      // Also refresh from server
       queryClient.invalidateQueries({ queryKey: ['/api/admin/mysql-field-mappings'] });
     },
     onError: (error) => {
