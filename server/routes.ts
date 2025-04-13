@@ -498,6 +498,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
         site: z.string(),
         apiKey: z.string(),
         status: z.enum(['active', 'pending', 'error']).optional().default('active'),
+        sync_frequency: z.number().optional().default(24), // Default sync every 24 hours
         created_by: z.number().optional().default(1)
       });
       
@@ -539,6 +540,124 @@ export async function registerRoutes(app: Express): Promise<Server> {
         message: 'Chargebee connection failed', 
         errorMessage: error.message || 'Unknown error' 
       });
+    }
+  });
+
+  // Chargebee Field Mappings endpoints
+  app.get('/api/admin/chargebee-field-mappings', async (req, res) => {
+    try {
+      const mappings = await storage.getChargebeeFieldMappings();
+      res.json(mappings);
+    } catch (error) {
+      console.error('Error getting Chargebee field mappings:', error);
+      res.status(500).json({ message: 'Failed to fetch field mappings' });
+    }
+  });
+
+  app.post('/api/admin/chargebee-field-mappings', async (req, res) => {
+    try {
+      const mappingSchema = z.object({
+        chargebee_entity: z.string(),
+        chargebee_field: z.string(),
+        local_table: z.string(),
+        local_field: z.string(),
+        is_key_field: z.boolean().optional().default(false),
+        created_by: z.number().optional().default(1)
+      });
+      
+      const mappingData = mappingSchema.parse(req.body);
+      const mapping = await storage.createChargebeeFieldMapping(mappingData);
+      res.status(201).json(mapping);
+    } catch (error) {
+      res.status(400).json({ message: 'Invalid mapping data', error });
+    }
+  });
+
+  app.put('/api/admin/chargebee-field-mappings/:id', async (req, res) => {
+    try {
+      const id = parseInt(req.params.id);
+      const mappingSchema = z.object({
+        chargebee_entity: z.string(),
+        chargebee_field: z.string(),
+        local_table: z.string(),
+        local_field: z.string(),
+        is_key_field: z.boolean().optional()
+      });
+      
+      const mappingData = mappingSchema.parse(req.body);
+      const mapping = await storage.updateChargebeeFieldMapping(id, mappingData);
+      
+      if (!mapping) {
+        return res.status(404).json({ message: 'Field mapping not found' });
+      }
+      
+      res.json(mapping);
+    } catch (error) {
+      res.status(400).json({ message: 'Invalid mapping data', error });
+    }
+  });
+
+  app.delete('/api/admin/chargebee-field-mappings/:id', async (req, res) => {
+    try {
+      const id = parseInt(req.params.id);
+      const success = await storage.deleteChargebeeFieldMapping(id);
+      
+      if (!success) {
+        return res.status(404).json({ message: 'Field mapping not found' });
+      }
+      
+      res.json({ success });
+    } catch (error) {
+      res.status(500).json({ message: 'Failed to delete field mapping', error });
+    }
+  });
+
+  // Get available fields for mapping from Chargebee
+  app.get('/api/admin/chargebee-available-fields', async (req, res) => {
+    try {
+      // Define the structure of the different entity types in Chargebee
+      const availableFields = {
+        customer: [
+          { name: 'id', description: 'Customer ID' },
+          { name: 'first_name', description: 'First Name' },
+          { name: 'last_name', description: 'Last Name' },
+          { name: 'email', description: 'Email Address' },
+          { name: 'company', description: 'Company Name' },
+          { name: 'created_at', description: 'Creation Date' },
+          { name: 'updated_at', description: 'Last Updated Date' }
+        ],
+        subscription: [
+          { name: 'id', description: 'Subscription ID' },
+          { name: 'customer_id', description: 'Customer ID' },
+          { name: 'status', description: 'Status (active, cancelled, etc)' },
+          { name: 'plan_id', description: 'Plan ID' },
+          { name: 'plan_amount', description: 'Plan Amount' },
+          { name: 'currency_code', description: 'Currency Code' },
+          { name: 'next_billing_at', description: 'Next Billing Date' },
+          { name: 'created_at', description: 'Creation Date' },
+          { name: 'started_at', description: 'Start Date' },
+          { name: 'updated_at', description: 'Last Updated Date' },
+          { name: 'billing_period', description: 'Billing Period' },
+          { name: 'billing_period_unit', description: 'Billing Period Unit (month, year)' }
+        ],
+        invoice: [
+          { name: 'id', description: 'Invoice ID' },
+          { name: 'subscription_id', description: 'Subscription ID' },
+          { name: 'customer_id', description: 'Customer ID' },
+          { name: 'amount', description: 'Amount' },
+          { name: 'amount_paid', description: 'Amount Paid' },
+          { name: 'amount_due', description: 'Amount Due' },
+          { name: 'status', description: 'Status' },
+          { name: 'date', description: 'Invoice Date' },
+          { name: 'due_date', description: 'Due Date' },
+          { name: 'paid_at', description: 'Paid Date' },
+          { name: 'total', description: 'Total Amount' }
+        ]
+      };
+      
+      res.json(availableFields);
+    } catch (error) {
+      res.status(500).json({ message: 'Failed to get available fields', error });
     }
   });
 

@@ -1,11 +1,11 @@
 import { 
   users, customers, tasks, taskComments, playbooks, playbookTasks, 
-  redZoneAlerts, customerMetrics, mysqlConfig, mysqlFieldMappings, chargebeeConfig,
+  redZoneAlerts, customerMetrics, mysqlConfig, mysqlFieldMappings, chargebeeConfig, chargebeeFieldMappings,
   type User, type Customer, type Task, type TaskComment, type Playbook, 
   type PlaybookTask, type RedZoneAlert, type CustomerMetric, 
-  type MySQLConfig, type MySQLFieldMapping, type ChargebeeConfig,
+  type MySQLConfig, type MySQLFieldMapping, type ChargebeeConfig, type ChargebeeFieldMapping,
   type InsertUser, type InsertCustomer, type InsertTask, type InsertPlaybook,
-  type InsertRedZoneAlert, type InsertChargebeeConfig
+  type InsertRedZoneAlert, type InsertChargebeeConfig, type InsertChargebeeFieldMapping
 } from "@shared/schema";
 import { db } from "./db";
 import { eq, and, isNull, desc, gte, lt } from "drizzle-orm";
@@ -469,6 +469,47 @@ export class MemStorage implements IStorage {
     this.chargebeeConfigs.set(id, newConfig);
     return newConfig;
   }
+  
+  // Chargebee Field Mappings Methods
+  private chargebeeFieldMappings: Map<number, ChargebeeFieldMapping> = new Map();
+  private chargebeeFieldMappingId: number = 1;
+  
+  async getChargebeeFieldMappings(): Promise<ChargebeeFieldMapping[]> {
+    return Array.from(this.chargebeeFieldMappings.values());
+  }
+  
+  async getChargebeeFieldMappingsByEntity(entity: string): Promise<ChargebeeFieldMapping[]> {
+    return Array.from(this.chargebeeFieldMappings.values())
+      .filter(mapping => mapping.chargebee_entity === entity);
+  }
+  
+  async getChargebeeFieldMapping(id: number): Promise<ChargebeeFieldMapping | undefined> {
+    return this.chargebeeFieldMappings.get(id);
+  }
+  
+  async createChargebeeFieldMapping(mapping: Omit<ChargebeeFieldMapping, 'id' | 'created_at'>): Promise<ChargebeeFieldMapping> {
+    const id = this.chargebeeFieldMappingId++;
+    const timestamp = new Date();
+    const newMapping = { ...mapping, id, created_at: timestamp };
+    this.chargebeeFieldMappings.set(id, newMapping);
+    return newMapping;
+  }
+  
+  async updateChargebeeFieldMapping(id: number, mapping: Partial<Omit<ChargebeeFieldMapping, 'id' | 'created_at'>>): Promise<ChargebeeFieldMapping | undefined> {
+    const existingMapping = this.chargebeeFieldMappings.get(id);
+    
+    if (!existingMapping) {
+      return undefined;
+    }
+    
+    const updatedMapping = { ...existingMapping, ...mapping };
+    this.chargebeeFieldMappings.set(id, updatedMapping);
+    return updatedMapping;
+  }
+  
+  async deleteChargebeeFieldMapping(id: number): Promise<boolean> {
+    return this.chargebeeFieldMappings.delete(id);
+  }
 
   // Dashboard Stats
   async getDashboardStats(timeframe: MetricTimeframe): Promise<any> {
@@ -778,6 +819,50 @@ export class DatabaseStorage implements IStorage {
   async createChargebeeConfig(config: Omit<ChargebeeConfig, 'id' | 'created_at' | 'last_synced_at'>): Promise<ChargebeeConfig> {
     const [newConfig] = await db.insert(chargebeeConfig).values(config).returning();
     return newConfig;
+  }
+  
+  // Chargebee Field Mappings
+  async getChargebeeFieldMappings(): Promise<ChargebeeFieldMapping[]> {
+    return await db.select().from(chargebeeFieldMappings);
+  }
+  
+  async getChargebeeFieldMappingsByEntity(entity: string): Promise<ChargebeeFieldMapping[]> {
+    return await db
+      .select()
+      .from(chargebeeFieldMappings)
+      .where(eq(chargebeeFieldMappings.chargebee_entity, entity));
+  }
+  
+  async getChargebeeFieldMapping(id: number): Promise<ChargebeeFieldMapping | undefined> {
+    const [mapping] = await db
+      .select()
+      .from(chargebeeFieldMappings)
+      .where(eq(chargebeeFieldMappings.id, id));
+    return mapping;
+  }
+  
+  async createChargebeeFieldMapping(mapping: Omit<ChargebeeFieldMapping, 'id' | 'created_at'>): Promise<ChargebeeFieldMapping> {
+    const [newMapping] = await db
+      .insert(chargebeeFieldMappings)
+      .values(mapping)
+      .returning();
+    return newMapping;
+  }
+  
+  async updateChargebeeFieldMapping(id: number, mapping: Partial<Omit<ChargebeeFieldMapping, 'id' | 'created_at'>>): Promise<ChargebeeFieldMapping | undefined> {
+    const [updatedMapping] = await db
+      .update(chargebeeFieldMappings)
+      .set(mapping)
+      .where(eq(chargebeeFieldMappings.id, id))
+      .returning();
+    return updatedMapping;
+  }
+  
+  async deleteChargebeeFieldMapping(id: number): Promise<boolean> {
+    const result = await db
+      .delete(chargebeeFieldMappings)
+      .where(eq(chargebeeFieldMappings.id, id));
+    return result.count > 0;
   }
 
   // Dashboard Stats
