@@ -24,14 +24,9 @@ router.post('/api/auth/login', async (req, res) => {
       return res.status(400).json({ error: 'Username and password are required' });
     }
     
-    const { db } = await dbManager.getDatabaseConnection();
-    
     // For now, just perform a simple check and simulate login
     // This should be replaced with proper authentication
-    const [user] = await db.execute(
-      'SELECT * FROM users WHERE username = $1 LIMIT 1',
-      [username]
-    );
+    const user = await dbApi.getUserByUsername(username);
     
     if (!user) {
       return res.status(401).json({ error: 'Invalid username or password' });
@@ -67,19 +62,20 @@ router.post('/api/auth/logout', (req, res) => {
 
 router.get('/api/users/me', requireAuth, async (req, res) => {
   try {
-    const { db } = await dbManager.getDatabaseConnection();
-    
-    const [user] = await db.execute(
-      'SELECT id, username, email, role FROM users WHERE id = $1',
-      [req.session.userId]
-    );
+    const user = await dbApi.getUserById(req.session.userId);
     
     if (!user) {
       req.session.destroy();
       return res.status(401).json({ error: 'User not found' });
     }
     
-    res.json(user);
+    // Only return safe user data
+    res.json({
+      id: user.id,
+      username: user.username,
+      email: user.email,
+      role: user.role
+    });
     
   } catch (err) {
     console.error('Get current user error:', err);
@@ -90,14 +86,8 @@ router.get('/api/users/me', requireAuth, async (req, res) => {
 // Customer API routes
 router.get('/api/customers', requireAuth, async (req, res) => {
   try {
-    const { db } = await dbManager.getDatabaseConnection();
-    
-    const customers = await db.execute(
-      'SELECT * FROM customers ORDER BY name ASC'
-    );
-    
+    const customers = await dbApi.getCustomers();
     res.json(customers);
-    
   } catch (err) {
     console.error('Get customers error:', err);
     res.status(500).json({ error: 'Internal server error', message: err.message });

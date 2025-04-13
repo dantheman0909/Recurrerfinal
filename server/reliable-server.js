@@ -298,6 +298,16 @@ async function init() {
     // Start the HTTP server
     await startServer();
     
+    // Initialize data synchronization
+    try {
+      const dataSync = require('./reliable-data-sync');
+      dataSync.init();
+      log('Data synchronization initialized');
+    } catch (err) {
+      log(`Failed to initialize data synchronization: ${err.message}`, 'error');
+      // Continue anyway, it's not critical
+    }
+    
   } catch (err) {
     log(`Failed to initialize: ${err.message}`, 'error');
     
