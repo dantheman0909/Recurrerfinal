@@ -27,6 +27,7 @@ export interface IStorage {
   getCustomer(id: number): Promise<Customer | undefined>;
   createCustomer(customer: InsertCustomer): Promise<Customer>;
   updateCustomer(id: number, customer: Partial<Customer>): Promise<Customer | undefined>;
+  getCustomerTableFields(): Promise<string[]>;
   
   // Tasks
   getTasks(): Promise<Task[]>;
@@ -308,6 +309,26 @@ export class MemStorage implements IStorage {
     const updatedCustomer = { ...existingCustomer, ...customer };
     this.customers.set(id, updatedCustomer);
     return updatedCustomer;
+  }
+  
+  async getCustomerTableFields(): Promise<string[]> {
+    // Return field names from the customers schema
+    // This implementation is just for memory storage
+    return [
+      'id', 'name', 'recurrer_id', 'industry', 'logo_url', 'contact_name', 
+      'contact_email', 'contact_phone', 'onboarded_at', 'renewal_date', 
+      'mrr', 'arr', 'currency_code', 'health_status', 'created_at', 'assigned_csm',
+      'chargebee_customer_id', 'chargebee_subscription_id', 'mysql_company_id',
+      'active_stores', 'growth_subscription_count', 'loyalty_active_store_count', 
+      'loyalty_inactive_store_count', 'loyalty_active_channels', 'loyalty_channel_credits',
+      'negative_feedback_alert_inactive', 'less_than_300_bills', 'active_auto_campaigns_count',
+      'unique_customers_captured', 'revenue_1_year', 'customers_with_min_one_visit',
+      'customers_with_min_two_visit', 'customers_without_min_visits',
+      'percentage_of_inactive_customers', 'negative_feedbacks_count',
+      'campaigns_sent_last_90_days', 'bills_received_last_30_days',
+      'customers_acquired_last_30_days', 'loyalty_type', 'loyalty_reward',
+      'updated_from_mysql_at'
+    ];
   }
 
   // Task Methods
