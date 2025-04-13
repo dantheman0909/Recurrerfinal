@@ -212,16 +212,28 @@ function DatabaseConfigTab() {
   const runQueryMutation = useMutation({
     mutationFn: async () => {
       const response = await apiRequest("POST", "/api/admin/mysql-query", {
-        query: sqlQuery
+        query: sqlQuery,
+        preview: true // This is a preview query that will be limited to 10 rows
       });
       return response.json();
     },
     onSuccess: (data) => {
-      setQueryResults(data);
-      toast({
-        title: "Query Executed",
-        description: `Query returned ${data.length || 0} results.`,
-      });
+      // Handle the new response format that includes metadata
+      if (data.isPreview && data.results) {
+        setQueryResults(data.results);
+        const resultCount = data.results.length || 0;
+        toast({
+          title: "Query Executed",
+          description: `Query preview showing ${resultCount} results (limited to 10 rows for preview).`,
+        });
+      } else {
+        // Handle legacy format for backward compatibility
+        setQueryResults(data);
+        toast({
+          title: "Query Executed",
+          description: `Query returned ${data.length || 0} results.`,
+        });
+      }
     },
     onError: (error) => {
       toast({
@@ -397,6 +409,7 @@ function DatabaseConfigTab() {
               <CardTitle>Run SQL Query</CardTitle>
               <CardDescription>
                 Test a query to see what data is available in your MySQL database
+                <span className="block text-xs text-gray-500 mt-1">Query results are limited to 10 rows for preview purposes</span>
               </CardDescription>
             </CardHeader>
             <CardContent>

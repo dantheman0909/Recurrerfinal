@@ -529,10 +529,11 @@ export async function registerRoutes(app: Express): Promise<Server> {
     try {
       // Validate the query input
       const querySchema = z.object({
-        query: z.string().min(1)
+        query: z.string().min(1),
+        preview: z.boolean().optional().default(true) // Flag to indicate if this is a preview (default: true)
       });
       
-      const { query } = querySchema.parse(req.body);
+      const { query, preview } = querySchema.parse(req.body);
       
       // Get the MySQL connection config
       const config = await storage.getMySQLConfig();
@@ -559,7 +560,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
         });
         
         // Execute the query with safety checks
-        const safeQuery = query.trim();
+        let safeQuery = query.trim();
         
         // Prevent destructive queries in production
         if (process.env.NODE_ENV === 'production') {
@@ -576,9 +577,37 @@ export async function registerRoutes(app: Express): Promise<Server> {
           }
         }
         
+        // For preview queries, enforce a LIMIT 10 if not already present
+        // This only affects UI preview and not actual data synchronization
+        if (preview) {
+          const lowerQuery = safeQuery.toLowerCase();
+          
+          // Check if the query already has a LIMIT clause
+          if (!lowerQuery.includes('limit')) {
+            // For SELECT queries, add LIMIT 10
+            if (lowerQuery.trim().startsWith('select')) {
+              safeQuery = `${safeQuery} LIMIT 10`;
+            }
+          }
+          
+          console.log(`Preview query with limit: ${safeQuery}`);
+        } else {
+          console.log(`Full data query: ${safeQuery}`);
+        }
+        
         // Run the query
         const [results] = await pool.query(safeQuery);
         await pool.end();
+        
+        // Add metadata to indicate this is a preview with limited rows
+        if (preview) {
+          return res.json({
+            results: results || [],
+            isPreview: true,
+            previewLimit: 10,
+            originalQuery: query.trim()
+          });
+        }
         
         res.json(results || []);
       } catch (dbError) {
