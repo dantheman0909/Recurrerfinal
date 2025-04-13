@@ -17,10 +17,11 @@ import {
   Calendar, 
   Download, 
   Filter, 
-  PieChart as PieChartIcon, 
-  RefreshCw 
+  PieChart as PieChartIcon,
+  RefreshCw
 } from "lucide-react";
 import { GradientChart } from "@/components/ui/gradient-chart";
+import { RefreshButton } from "@/components/ui/refresh-button";
 import { MetricTimeframe } from "@shared/types";
 import { cn, formatINR } from "@/lib/utils";
 
@@ -100,10 +101,17 @@ export default function Reports() {
                 </SelectContent>
               </Select>
               
-              <Button variant="outline">
-                <RefreshCw className="h-4 w-4 mr-2" />
+              <RefreshButton
+                variant="outline"
+                onRefresh={async () => {
+                  // Simulate data refresh with a delay
+                  return new Promise((resolve) => setTimeout(resolve, 1000));
+                }}
+                successMessage="Report data refreshed successfully"
+                errorMessage="Failed to refresh report data"
+              >
                 Refresh
-              </Button>
+              </RefreshButton>
               
               <Button variant="outline">
                 <Download className="h-4 w-4 mr-2" />
