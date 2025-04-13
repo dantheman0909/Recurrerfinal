@@ -461,6 +461,23 @@ export class MemStorage implements IStorage {
     return newMapping;
   }
   
+  async updateMySQLFieldMapping(id: number, mapping: Partial<Omit<MySQLFieldMapping, 'id' | 'created_at'>>): Promise<MySQLFieldMapping | undefined> {
+    const existingMapping = this.mysqlFieldMappings.get(id);
+    if (!existingMapping) return undefined;
+    
+    const updatedMapping = { ...existingMapping, ...mapping };
+    this.mysqlFieldMappings.set(id, updatedMapping);
+    return updatedMapping;
+  }
+  
+  async deleteMySQLFieldMapping(id: number): Promise<boolean> {
+    const exists = this.mysqlFieldMappings.has(id);
+    if (exists) {
+      this.mysqlFieldMappings.delete(id);
+    }
+    return exists;
+  }
+  
   // Chargebee Config Methods
   private chargebeeConfigs: Map<number, ChargebeeConfig> = new Map();
   private chargebeeConfigId: number = 1;
@@ -816,6 +833,22 @@ export class DatabaseStorage implements IStorage {
   async createMySQLFieldMapping(mapping: Omit<MySQLFieldMapping, 'id' | 'created_at'>): Promise<MySQLFieldMapping> {
     const [newMapping] = await db.insert(mysqlFieldMappings).values(mapping).returning();
     return newMapping;
+  }
+  
+  async updateMySQLFieldMapping(id: number, mapping: Partial<Omit<MySQLFieldMapping, 'id' | 'created_at'>>): Promise<MySQLFieldMapping | undefined> {
+    const [updatedMapping] = await db
+      .update(mysqlFieldMappings)
+      .set(mapping)
+      .where(eq(mysqlFieldMappings.id, id))
+      .returning();
+    return updatedMapping;
+  }
+  
+  async deleteMySQLFieldMapping(id: number): Promise<boolean> {
+    const result = await db
+      .delete(mysqlFieldMappings)
+      .where(eq(mysqlFieldMappings.id, id));
+    return !!result;
   }
   
   // Chargebee Config Methods

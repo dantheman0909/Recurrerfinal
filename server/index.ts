@@ -68,6 +68,39 @@ app.get('/api/mysql/companies/:id', getMySQLCompany);
 app.get('/api/customers/:id/external-data', getCustomerExternalData);
 
 (async () => {
+  try {
+    // Run database table alterations to ensure schema is up-to-date
+    if (process.env.DATABASE_URL) {
+      try {
+        // Run Chargebee table alterations
+        const { alterChargebeeTables } = await import('./alter-chargebee-table');
+        const chargebeeResult = await alterChargebeeTables();
+        if (chargebeeResult.success) {
+          log('Chargebee tables updated successfully');
+        } else {
+          console.warn('Chargebee tables update warning:', chargebeeResult.error);
+        }
+      } catch (error) {
+        console.error('Error updating Chargebee tables:', error);
+      }
+      
+      try {
+        // Run MySQL table alterations
+        const { alterMySQLTables } = await import('./alter-mysql-tables');
+        const mysqlResult = await alterMySQLTables();
+        if (mysqlResult.success) {
+          log('MySQL tables updated successfully');
+        } else {
+          console.warn('MySQL tables update warning:', mysqlResult.error);
+        }
+      } catch (error) {
+        console.error('Error updating MySQL tables:', error);
+      }
+    }
+  } catch (error) {
+    console.error('Error during database initialization:', error);
+  }
+  
   const server = await registerRoutes(app);
 
   app.use((err: any, _req: Request, res: Response, _next: NextFunction) => {

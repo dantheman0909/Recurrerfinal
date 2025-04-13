@@ -452,7 +452,13 @@ export async function registerRoutes(app: Express): Promise<Server> {
       });
       
       const configData = configSchema.parse(req.body);
-      const config = await storage.createMySQLConfig(configData);
+      // Add last_synced_at field with null value for new configs
+      const configWithLastSynced = {
+        ...configData,
+        last_synced_at: null
+      };
+      
+      const config = await storage.createMySQLConfig(configWithLastSynced);
       res.status(201).json(config);
     } catch (error) {
       res.status(400).json({ message: 'Invalid MySQL config data', error });
@@ -586,8 +592,28 @@ export async function registerRoutes(app: Express): Promise<Server> {
   
   // MySQL Field Mappings
   app.get('/api/admin/mysql-field-mappings', async (req, res) => {
-    const mappings = await storage.getMySQLFieldMappings();
-    res.json(mappings);
+    try {
+      const mappings = await storage.getMySQLFieldMappings();
+      res.json(mappings);
+    } catch (error) {
+      console.error('Error getting MySQL field mappings:', error);
+      res.status(500).json({ message: 'Failed to fetch field mappings', error: (error as Error).message });
+    }
+  });
+  
+  // MySQL Data Sync
+  app.post('/api/admin/mysql-sync', async (req, res) => {
+    try {
+      const { mysqlSyncService } = await import('./mysql-sync-service');
+      const result = await mysqlSyncService.synchronizeData();
+      res.json(result);
+    } catch (error) {
+      console.error('MySQL sync error:', error);
+      res.status(500).json({ 
+        success: false, 
+        message: `Error synchronizing MySQL data: ${error instanceof Error ? error.message : String(error)}` 
+      });
+    }
   });
   
   app.post('/api/admin/mysql-field-mappings', async (req, res) => {
