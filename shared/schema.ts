@@ -13,6 +13,8 @@ export const dueDateTypeEnum = pgEnum('due_date_type', ['fixed', 'relative']);
 export const recurrenceTypeEnum = pgEnum('recurrence_type', ['none', 'daily', 'weekly', 'monthly', 'bi-weekly']);
 export const accountTypeEnum = pgEnum('account_type', ['starter', 'growth', 'key']);
 export const integrationStatusEnum = pgEnum('integration_status', ['active', 'pending', 'error']);
+export const notificationTypeEnum = pgEnum('notification_type', ['task_assigned', 'task_due_soon', 'task_overdue', 'red_zone_alert', 'customer_renewal', 'system_notification', 'achievement_earned']);
+export const achievementTypeEnum = pgEnum('achievement_type', ['tasks_completed', 'customer_health_improved', 'feedback_collected', 'playbooks_executed', 'red_zone_resolved', 'login_streak']);
 
 // Users & Profiles
 export const users = pgTable("users", {
@@ -225,6 +227,34 @@ export const chargebeeFieldMappings = pgTable("chargebee_field_mappings", {
   created_at: timestamp("created_at").defaultNow(),
 });
 
+// Notifications
+export const notifications = pgTable("notifications", {
+  id: serial("id").primaryKey(),
+  user_id: integer("user_id").notNull().references(() => users.id),
+  type: notificationTypeEnum("type").notNull(),
+  title: text("title").notNull(),
+  message: text("message").notNull(),
+  link: text("link"), // Optional link to navigate to when notification is clicked
+  is_read: boolean("is_read").default(false),
+  created_at: timestamp("created_at").defaultNow(),
+  related_id: integer("related_id"), // ID of related entity (task, alert, etc.)
+  related_type: text("related_type"), // Type of related entity ('task', 'customer', etc.)
+});
+
+// User Achievements
+export const userAchievements = pgTable("user_achievements", {
+  id: serial("id").primaryKey(), 
+  user_id: integer("user_id").notNull().references(() => users.id),
+  achievement_type: achievementTypeEnum("achievement_type").notNull(),
+  achievement_title: text("achievement_title").notNull(),
+  achievement_description: text("achievement_description").notNull(),
+  badge_icon: text("badge_icon").notNull(), // Icon name or path
+  xp_earned: integer("xp_earned").default(0),
+  level_unlocked: integer("level_unlocked"),
+  earned_at: timestamp("earned_at").defaultNow(),
+  is_viewed: boolean("is_viewed").default(false),
+});
+
 // Relations
 export const usersRelations = relations(users, ({ one, many }) => ({
   teamLead: one(users, { fields: [users.team_lead_id], references: [users.id], relationName: "csm_team_lead" }),
@@ -233,6 +263,8 @@ export const usersRelations = relations(users, ({ one, many }) => ({
   createdTasks: many(tasks, { relationName: "created_tasks" }),
   createdPlaybooks: many(playbooks),
   assignedCustomers: many(customers, { relationName: "assigned_customers" }),
+  notifications: many(notifications),
+  achievements: many(userAchievements),
 }));
 
 export const customersRelations = relations(customers, ({ one, many }) => ({
@@ -273,6 +305,14 @@ export const customerMetricsRelations = relations(customerMetrics, ({ one }) => 
   customer: one(customers, { fields: [customerMetrics.customer_id], references: [customers.id] }),
 }));
 
+export const notificationsRelations = relations(notifications, ({ one }) => ({
+  user: one(users, { fields: [notifications.user_id], references: [users.id] }),
+}));
+
+export const userAchievementsRelations = relations(userAchievements, ({ one }) => ({
+  user: one(users, { fields: [userAchievements.user_id], references: [users.id] }),
+}));
+
 // Schemas
 export const insertUserSchema = createInsertSchema(users).omit({ id: true, created_at: true });
 export const insertCustomerSchema = createInsertSchema(customers).omit({ id: true, created_at: true });
@@ -286,6 +326,8 @@ export const insertMySQLFieldMappingSchema = createInsertSchema(mysqlFieldMappin
 export const insertMySQLSavedQuerySchema = createInsertSchema(mysqlSavedQueries).omit({ id: true, created_at: true, last_run_at: true });
 export const insertChargebeeConfigSchema = createInsertSchema(chargebeeConfig).omit({ id: true, created_at: true, last_synced_at: true });
 export const insertChargebeeFieldMappingSchema = createInsertSchema(chargebeeFieldMappings).omit({ id: true, created_at: true });
+export const insertNotificationSchema = createInsertSchema(notifications).omit({ id: true, created_at: true });
+export const insertUserAchievementSchema = createInsertSchema(userAchievements).omit({ id: true, earned_at: true });
 
 // Types
 export type User = typeof users.$inferSelect;
@@ -321,3 +363,9 @@ export type ChargebeeConfig = typeof chargebeeConfig.$inferSelect;
 export type InsertChargebeeConfig = z.infer<typeof insertChargebeeConfigSchema>;
 export type ChargebeeFieldMapping = typeof chargebeeFieldMappings.$inferSelect;
 export type InsertChargebeeFieldMapping = z.infer<typeof insertChargebeeFieldMappingSchema>;
+
+export type Notification = typeof notifications.$inferSelect;
+export type InsertNotification = z.infer<typeof insertNotificationSchema>;
+
+export type UserAchievement = typeof userAchievements.$inferSelect;
+export type InsertUserAchievement = z.infer<typeof insertUserAchievementSchema>;
