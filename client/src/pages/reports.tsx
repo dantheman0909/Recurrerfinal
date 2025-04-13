@@ -189,10 +189,10 @@ export default function Reports() {
                 <CardContent>
                   <div className="h-80">
                     <ResponsiveContainer width="100%" height="100%">
-                      <BarChart data={mockTaskCompletionData} layout="vertical">
+                      <BarChart data={mockTaskCompletionData}>
                         <CartesianGrid strokeDasharray="3 3" horizontal={true} vertical={false} />
-                        <XAxis type="number" domain={[0, 100]} />
-                        <YAxis type="category" dataKey="name" />
+                        <XAxis dataKey="name" />
+                        <YAxis domain={[0, 100]} label={{ value: '%', position: 'insideLeft', offset: -5 }} />
                         <Tooltip 
                           formatter={(value) => [`${value}%`, 'Completion Rate']}
                           contentStyle={{ 
@@ -208,14 +208,14 @@ export default function Reports() {
                           stackId="a" 
                           fill="#0D9298" 
                           name="Complete"
-                          radius={[0, 4, 4, 0]}
+                          radius={[4, 4, 0, 0]}
                         />
                         <Bar 
                           dataKey="incomplete" 
                           stackId="a" 
                           fill="#E5E7EB" 
                           name="Incomplete"
-                          radius={[0, 4, 4, 0]}
+                          radius={[4, 4, 0, 0]}
                         />
                       </BarChart>
                     </ResponsiveContainer>
@@ -251,10 +251,10 @@ export default function Reports() {
                 <CardContent>
                   <div className="h-80">
                     <ResponsiveContainer width="100%" height="100%">
-                      <BarChart data={mockTaskCompletionData} layout="vertical">
+                      <BarChart data={mockTaskCompletionData}>
                         <CartesianGrid strokeDasharray="3 3" horizontal={true} vertical={false} />
-                        <XAxis type="number" domain={[0, 100]} />
-                        <YAxis type="category" dataKey="name" />
+                        <XAxis dataKey="name" />
+                        <YAxis domain={[0, 100]} label={{ value: '%', position: 'insideLeft', offset: -5 }} />
                         <Tooltip 
                           formatter={(value) => [`${value}%`, 'Completion Rate']}
                           contentStyle={{ 
@@ -270,14 +270,14 @@ export default function Reports() {
                           stackId="a" 
                           fill="#0D9298" 
                           name="Complete"
-                          radius={[0, 4, 4, 0]}
+                          radius={[4, 4, 0, 0]}
                         />
                         <Bar 
                           dataKey="incomplete" 
                           stackId="a" 
                           fill="#E5E7EB" 
                           name="Incomplete"
-                          radius={[0, 4, 4, 0]}
+                          radius={[4, 4, 0, 0]}
                         />
                       </BarChart>
                     </ResponsiveContainer>
@@ -400,21 +400,62 @@ export default function Reports() {
           </TabsContent>
           
           <TabsContent value="nps">
-            <Card>
-              <CardHeader>
-                <CardTitle>NPS Score Trends</CardTitle>
-                <CardDescription>Net Promoter Score trends over time</CardDescription>
-              </CardHeader>
-              <CardContent>
-                <div className="h-80">
-                  <GradientChart 
-                    data={mockNpsData} 
-                    height={300} 
-                    showGrid={true} 
+            <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
+              <Card>
+                <CardHeader>
+                  <CardTitle>NPS Scores</CardTitle>
+                  <CardDescription>Average NPS score over time</CardDescription>
+                </CardHeader>
+                <CardContent>
+                  <div className="h-80">
+                    <GradientChart 
+                      data={mockNpsData} 
+                      height={300} 
+                      showGrid={true}
+                    />
+                  </div>
+                </CardContent>
+              </Card>
+              
+              <Card>
+                <CardHeader>
+                  <CardTitle>Customer Feedback Summary</CardTitle>
+                  <CardDescription>Recent customer feedback activity</CardDescription>
+                </CardHeader>
+                <CardContent className="space-y-4">
+                  <FeedbackItem 
+                    customer="ABC Corp"
+                    feedback="The new campaign builder is amazing! Makes it so much easier to set up our messages."
+                    date="2 days ago"
+                    sentiment="positive"
                   />
-                </div>
-              </CardContent>
-            </Card>
+                  <FeedbackItem 
+                    customer="XYZ Solutions"
+                    feedback="Would like to see more data export options in the reporting section."
+                    date="3 days ago"
+                    sentiment="neutral"
+                  />
+                  <FeedbackItem 
+                    customer="123 Industries"
+                    feedback="Our team found the onboarding process to be very intuitive."
+                    date="1 week ago"
+                    sentiment="positive"
+                  />
+                  <FeedbackItem 
+                    customer="Tech Partners"
+                    feedback="Having issues with the contact sync feature, need urgent assistance."
+                    date="2 weeks ago"
+                    sentiment="negative"
+                  />
+                  <FeedbackItem 
+                    customer="Global Foods"
+                    feedback="Love the QR code analytics, it's helping us track campaigns effectively."
+                    date="3 weeks ago"
+                    sentiment="positive"
+                  />
+                </CardContent>
+              </Card>
+            </div>
           </TabsContent>
         </Tabs>
       </div>
@@ -430,27 +471,48 @@ interface MetricCardProps {
 }
 
 function MetricCard({ title, value, change, description }: MetricCardProps) {
-  const isPositive = change > 0;
-  
   return (
     <Card>
-      <CardContent className="p-6">
+      <CardContent className="pt-6">
         <div className="flex justify-between items-start">
           <div>
-            <h3 className="text-lg font-medium text-gray-900">{title}</h3>
-            <p className="text-sm text-gray-500 mt-1">{description}</p>
+            <p className="text-sm font-medium text-gray-500">{title}</p>
+            <p className="mt-2 text-3xl font-semibold text-gray-900">{value}</p>
           </div>
-          <Badge 
-            variant="outline" 
-            className={cn(
-              isPositive ? "bg-green-50 text-green-700 border-green-200" : "bg-red-50 text-red-700 border-red-200"
-            )}
-          >
-            {isPositive ? "+" : ""}{change}%
+          <Badge variant={change >= 0 ? "default" : "destructive"} className="flex items-center">
+            {change >= 0 ? "+" : ""}{change}%
           </Badge>
         </div>
-        <p className="text-3xl font-bold text-gray-900 mt-3">{value}</p>
+        <p className="mt-2 text-sm text-gray-500">{description}</p>
       </CardContent>
     </Card>
+  );
+}
+
+interface FeedbackItemProps {
+  customer: string;
+  feedback: string;
+  date: string;
+  sentiment: "positive" | "negative" | "neutral";
+}
+
+function FeedbackItem({ customer, feedback, date, sentiment }: FeedbackItemProps) {
+  const sentimentColor = {
+    positive: "bg-green-100 text-green-800",
+    negative: "bg-red-100 text-red-800",
+    neutral: "bg-gray-100 text-gray-800",
+  };
+  
+  return (
+    <div className="border rounded-lg p-3">
+      <div className="flex justify-between items-start">
+        <p className="font-medium">{customer}</p>
+        <Badge className={cn(sentimentColor[sentiment])}>
+          {sentiment.charAt(0).toUpperCase() + sentiment.slice(1)}
+        </Badge>
+      </div>
+      <p className="mt-1 text-sm text-gray-700">{feedback}</p>
+      <p className="mt-2 text-xs text-gray-500">{date}</p>
+    </div>
   );
 }
