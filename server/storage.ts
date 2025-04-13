@@ -28,6 +28,7 @@ export interface IStorage {
   createCustomer(customer: InsertCustomer): Promise<Customer>;
   updateCustomer(id: number, customer: Partial<Customer>): Promise<Customer | undefined>;
   getCustomerTableFields(): Promise<string[]>;
+  getTableFields(tableName: string): Promise<string[]>;
   
   // Tasks
   getTasks(): Promise<Task[]>;
@@ -329,6 +330,25 @@ export class MemStorage implements IStorage {
       'customers_acquired_last_30_days', 'loyalty_type', 'loyalty_reward',
       'updated_from_mysql_at'
     ];
+  }
+  
+  async getTableFields(tableName: string): Promise<string[]> {
+    // Return field names based on the table name
+    switch (tableName) {
+      case 'customers':
+        return this.getCustomerTableFields();
+      case 'customer_metrics':
+        return [
+          'id', 'customer_id', 'metric_type', 'value', 'percent', 'date', 'created_at'
+        ];
+      case 'tasks':
+        return [
+          'id', 'title', 'description', 'status', 'customer_id', 'due_date',
+          'assigned_to', 'priority', 'created_at', 'created_by'
+        ];
+      default:
+        return [];
+    }
   }
 
   // Task Methods
@@ -698,6 +718,22 @@ export class DatabaseStorage implements IStorage {
     
     // Filter out any non-string properties (like methods)
     return columns.filter(key => typeof key === 'string' && key !== 'name');
+  }
+  
+  async getTableFields(tableName: string): Promise<string[]> {
+    // Return field names based on the table name using Drizzle's schema information
+    switch (tableName) {
+      case 'customers':
+        return this.getCustomerTableFields();
+      case 'customer_metrics':
+        const metricColumns = Object.keys(customerMetrics);
+        return metricColumns.filter(key => typeof key === 'string' && key !== 'name');
+      case 'tasks':
+        const taskColumns = Object.keys(tasks);
+        return taskColumns.filter(key => typeof key === 'string' && key !== 'name');
+      default:
+        return [];
+    }
   }
 
   // Task Methods
