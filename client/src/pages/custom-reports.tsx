@@ -974,7 +974,7 @@ export default function CustomReports() {
                                             field.onChange(value);
                                             // Reset SQL query when data source changes
                                             metricForm.setValue("sql_query", "");
-                                            metricForm.setValue("field_mapping", null);
+                                            metricForm.setValue("field_mapping", {});
                                           }} 
                                           defaultValue={field.value}
                                         >
@@ -1764,15 +1764,18 @@ export default function CustomReports() {
                           <FormItem>
                             <FormLabel>Display Color</FormLabel>
                             <FormControl>
-                              <div className="flex items-center">
+                              <div className="flex items-center space-x-2">
                                 <div 
-                                  className="w-6 h-6 mr-2 rounded-full border border-gray-300" 
+                                  className="w-8 h-8 rounded-full border border-gray-300" 
                                   style={{ backgroundColor: field.value }}
                                 />
                                 <Input 
                                   type="color"
+                                  className="w-auto h-8 p-0 border-0"
                                   value={field.value}
-                                  onChange={field.onChange}
+                                  onChange={(e) => {
+                                    field.onChange(e.target.value);
+                                  }}
                                 />
                               </div>
                             </FormControl>
