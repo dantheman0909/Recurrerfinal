@@ -147,7 +147,7 @@ export default function CustomReports() {
   });
 
   // Get metrics for selected report
-  const { data: metrics = [], isLoading: isLoadingMetrics } = useQuery({
+  const { data: metrics = [], isLoading: isLoadingMetrics, refetch: refetchMetrics } = useQuery({
     queryKey: ['/api/custom-reports', selectedReportId, 'metrics'],
     enabled: !!selectedReportId
   });
@@ -274,6 +274,55 @@ export default function CustomReports() {
       });
     }
   });
+  
+  // Update metric mutation
+  const updateMetricMutation = useMutation({
+    mutationFn: ({ reportId, metricId, metric }: { reportId: number, metricId: number, metric: z.infer<typeof createMetricSchema> }) => 
+      apiRequest(`/api/custom-reports/${reportId}/metrics/${metricId}`, {
+        method: 'PUT',
+        data: metric
+      }),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['/api/custom-reports', selectedReportId, 'metrics'] });
+      toast({
+        title: "Success",
+        description: "Metric updated successfully",
+      });
+      setOpenDialog(null);
+      setSelectedMetricId(null);
+    },
+    onError: (error) => {
+      toast({
+        title: "Error",
+        description: "Failed to update metric. Please try again.",
+        variant: "destructive",
+      });
+    }
+  });
+  
+  // Delete metric mutation
+  const deleteMetricMutation = useMutation({
+    mutationFn: ({ reportId, metricId }: { reportId: number, metricId: number }) => 
+      apiRequest(`/api/custom-reports/${reportId}/metrics/${metricId}`, {
+        method: 'DELETE'
+      }),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['/api/custom-reports', selectedReportId, 'metrics'] });
+      toast({
+        title: "Success",
+        description: "Metric deleted successfully",
+      });
+      setOpenDialog(null);
+      setSelectedMetricId(null);
+    },
+    onError: (error) => {
+      toast({
+        title: "Error",
+        description: "Failed to delete metric. Please try again.",
+        variant: "destructive",
+      });
+    }
+  });
 
   // Form for creating a new report
   const reportForm = useForm<z.infer<typeof createReportSchema>>({
@@ -322,7 +371,30 @@ export default function CustomReports() {
   // Handle metric form submission
   const onMetricSubmit = (values: z.infer<typeof createMetricSchema>) => {
     if (!selectedReportId) return;
-    createMetricMutation.mutate({ reportId: selectedReportId, metric: values });
+    
+    if (selectedMetricId) {
+      // Update existing metric
+      updateMetricMutation.mutate({ 
+        reportId: selectedReportId, 
+        metricId: selectedMetricId,
+        metric: values 
+      });
+    } else {
+      // Create new metric
+      createMetricMutation.mutate({ reportId: selectedReportId, metric: values });
+    }
+  };
+  
+  // Handle deleting a metric
+  const deleteMetric = (metricId: number) => {
+    if (!selectedReportId) return;
+    
+    if (window.confirm("Are you sure you want to delete this metric? This action cannot be undone.")) {
+      deleteMetricMutation.mutate({ 
+        reportId: selectedReportId, 
+        metricId: metricId 
+      });
+    }
   };
 
   // Handle schedule form submission
@@ -343,7 +415,8 @@ export default function CustomReports() {
 
   // Handle deleting a report
   const deleteReport = (reportId: number) => {
-    if (confirm("Are you sure you want to delete this report? This action cannot be undone.")) {
+    // Use Dialog instead of browser confirm
+    if (window.confirm("Are you sure you want to delete this report? This action cannot be undone.")) {
       deleteReportMutation.mutate(reportId);
     }
   };
@@ -1134,7 +1207,11 @@ export default function CustomReports() {
                                               className="w-6 h-6 mr-2 rounded-full border border-gray-300" 
                                               style={{ backgroundColor: field.value }}
                                             />
-                                            <Input {...field} />
+                                            <Input 
+                                              type="color"
+                                              value={field.value}
+                                              onChange={field.onChange}
+                                            />
                                           </div>
                                         </FormControl>
                                         <FormMessage />
