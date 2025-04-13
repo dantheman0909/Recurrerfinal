@@ -123,6 +123,8 @@ function DatabaseConfigTab() {
     username: "",
     password: "",
     database: "",
+    sync_frequency: "24",
+    is_scheduled: true
   });
   
   const [sqlQuery, setSqlQuery] = useState("SELECT * FROM customers LIMIT 10");
@@ -168,6 +170,8 @@ function DatabaseConfigTab() {
         username: existingConfig.username || "",
         password: existingConfig.password || "",
         database: existingConfig.database || "",
+        sync_frequency: existingConfig.sync_frequency?.toString() || "24",
+        is_scheduled: existingConfig.is_scheduled === false ? false : true
       });
       setIsConnected(true);
     }
@@ -574,6 +578,42 @@ function DatabaseConfigTab() {
             </CardHeader>
             <CardContent>
               <div className="space-y-4">
+                {existingSavedQueries && existingSavedQueries.length > 0 && (
+                  <div className="grid gap-2">
+                    <Label htmlFor="saved-query">Saved Queries</Label>
+                    <Select 
+                      value={selectedSavedQuery || ""} 
+                      onValueChange={(value) => {
+                        if (value) {
+                          setSelectedSavedQuery(value);
+                          // Find and set the query from the saved queries
+                          const selectedQuery = existingSavedQueries.find((q: any) => q.id.toString() === value);
+                          if (selectedQuery) {
+                            setSqlQuery(selectedQuery.query);
+                          }
+                        } else {
+                          setSelectedSavedQuery(null);
+                        }
+                      }}
+                    >
+                      <SelectTrigger id="saved-query">
+                        <SelectValue placeholder="Select a saved query or create a new one" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="">-- Create new query --</SelectItem>
+                        {existingSavedQueries.map((query: any) => (
+                          <SelectItem key={query.id} value={query.id.toString()}>
+                            {query.name} {query.is_active && "(Active)"}
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                    <p className="text-xs text-gray-500">
+                      Select a previously saved query or create a new one
+                    </p>
+                  </div>
+                )}
+                
                 <div className="grid gap-2">
                   <Label htmlFor="sql-query">SQL Query</Label>
                   <Textarea 
@@ -583,6 +623,44 @@ function DatabaseConfigTab() {
                     onChange={(e) => setSqlQuery(e.target.value)}
                     placeholder="SELECT * FROM customers LIMIT 10"
                   />
+                </div>
+                
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  <div className="grid gap-2">
+                    <Label htmlFor="sync_frequency">Sync Frequency (hours)</Label>
+                    <Input 
+                      id="sync_frequency" 
+                      name="sync_frequency"
+                      type="number"
+                      min="1"
+                      max="168"
+                      value={mysqlConfig.sync_frequency}
+                      onChange={handleConfigChange}
+                    />
+                    <p className="text-xs text-gray-500">
+                      How often to sync data from MySQL (1-168 hours)
+                    </p>
+                  </div>
+                  
+                  <div className="grid gap-2">
+                    <Label className="mb-2">Schedule Sync</Label>
+                    <div className="flex items-center space-x-2">
+                      <Switch
+                        id="is_scheduled"
+                        name="is_scheduled"
+                        checked={mysqlConfig.is_scheduled}
+                        onCheckedChange={(checked) => {
+                          setMysqlConfig(prev => ({...prev, is_scheduled: checked}));
+                        }}
+                      />
+                      <Label htmlFor="is_scheduled" className="cursor-pointer">
+                        {mysqlConfig.is_scheduled ? 'Automatic sync enabled' : 'Automatic sync disabled'}
+                      </Label>
+                    </div>
+                    <p className="text-xs text-gray-500">
+                      Toggle automatic data synchronization
+                    </p>
+                  </div>
                 </div>
                 
                 <div className="flex justify-end space-x-2">
