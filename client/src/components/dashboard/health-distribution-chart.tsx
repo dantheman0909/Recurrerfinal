@@ -91,11 +91,33 @@ export function HealthDistributionChart({
                     .join(' ');
                 }}
               />
-              <Bar dataKey="excellent" stackId="a" fill="#10B981" name="Excellent" radius={[0, 4, 4, 0]} />
-              <Bar dataKey="good" stackId="a" fill="#0D9298" name="Good" radius={[0, 0, 0, 0]} />
-              <Bar dataKey="average" stackId="a" fill="#F59E0B" name="Average" radius={[0, 0, 0, 0]} />
-              <Bar dataKey="at_risk" stackId="a" fill="#F97316" name="At Risk" radius={[0, 0, 0, 0]} />
-              <Bar dataKey="critical" stackId="a" fill="#EF4444" name="Critical" radius={[0, 0, 0, 0]} />
+              <defs>
+                <linearGradient id="excellentGradient" x1="0" y1="0" x2="0" y2="1">
+                  <stop offset="5%" stopColor="#10B981" stopOpacity={0.9}/>
+                  <stop offset="95%" stopColor="#10B981" stopOpacity={0.7}/>
+                </linearGradient>
+                <linearGradient id="goodGradient" x1="0" y1="0" x2="0" y2="1">
+                  <stop offset="5%" stopColor="#0D9298" stopOpacity={0.9}/>
+                  <stop offset="95%" stopColor="#0D9298" stopOpacity={0.7}/>
+                </linearGradient>
+                <linearGradient id="averageGradient" x1="0" y1="0" x2="0" y2="1">
+                  <stop offset="5%" stopColor="#F59E0B" stopOpacity={0.9}/>
+                  <stop offset="95%" stopColor="#F59E0B" stopOpacity={0.7}/>
+                </linearGradient>
+                <linearGradient id="atRiskGradient" x1="0" y1="0" x2="0" y2="1">
+                  <stop offset="5%" stopColor="#F97316" stopOpacity={0.9}/>
+                  <stop offset="95%" stopColor="#F97316" stopOpacity={0.7}/>
+                </linearGradient>
+                <linearGradient id="criticalGradient" x1="0" y1="0" x2="0" y2="1">
+                  <stop offset="5%" stopColor="#EF4444" stopOpacity={0.9}/>
+                  <stop offset="95%" stopColor="#EF4444" stopOpacity={0.7}/>
+                </linearGradient>
+              </defs>
+              <Bar dataKey="excellent" stackId="a" fill="url(#excellentGradient)" name="Excellent" radius={[0, 4, 4, 0]} />
+              <Bar dataKey="good" stackId="a" fill="url(#goodGradient)" name="Good" radius={[0, 0, 0, 0]} />
+              <Bar dataKey="average" stackId="a" fill="url(#averageGradient)" name="Average" radius={[0, 0, 0, 0]} />
+              <Bar dataKey="at_risk" stackId="a" fill="url(#atRiskGradient)" name="At Risk" radius={[0, 0, 0, 0]} />
+              <Bar dataKey="critical" stackId="a" fill="url(#criticalGradient)" name="Critical" radius={[0, 0, 0, 0]} />
             </BarChart>
           </ResponsiveContainer>
         </div>
