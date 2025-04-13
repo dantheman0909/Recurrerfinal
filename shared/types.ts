@@ -1,120 +1,64 @@
-// Shared type definitions for the application
+export type UserRole = 'admin' | 'team_lead' | 'csm';
 
-// Chart data types
+export type TaskStatus = 'pending' | 'in_progress' | 'completed' | 'overdue';
+
+export type AccountHealth = 'healthy' | 'at_risk' | 'red_zone';
+
+export type AlertSeverity = 'critical' | 'high_risk' | 'attention_needed';
+
+export type MetricTimeframe = 'weekly' | 'monthly' | 'quarterly' | 'yearly';
+
+export type RecurrencePattern = 'daily' | 'weekly' | 'bi-weekly' | 'monthly';
+
+export interface CustomerFinancials {
+  mrr: number;
+  arr: number;
+  changePercent: number;
+}
+
+export interface MetricData {
+  label: string;
+  value: number;
+}
+
 export interface ChartData {
   labels: string[];
-  datasets: ChartDataset[];
+  values: number[];
 }
 
-export interface ChartDataset {
-  label?: string;
-  data: number[];
-  backgroundColor?: string | string[];
-  borderColor?: string | string[];
-  borderWidth?: number;
-  fill?: boolean;
-  tension?: number;
-  pointBackgroundColor?: string | string[];
-  pointRadius?: number;
-  pointHoverRadius?: number;
-}
-
-// Dashboard types
 export interface DashboardStats {
   openTasks: number;
-  openTasksTrend: number;
+  openTasksChange: number;
   campaignGaps: number;
-  campaignGapsTrend: number;
+  campaignGapsChange: number;
   renewalAlerts: number;
-  renewalAlertsTrend: number;
+  renewalAlertsChange: number;
   redZoneCount: number;
-  redZoneCountTrend: number;
+  redZoneCountChange: number;
 }
 
-export interface ActivityItem {
-  id: string;
-  user: {
-    id: string;
-    name: string;
-    avatar: string;
-  };
-  action: string;
-  target: {
-    type: 'customer' | 'task' | 'playbook' | 'event' | 'other';
-    name: string;
-  };
-  time: string;
-  category: 'Onboarding' | 'Meeting' | 'Red Zone' | 'Campaign' | 'Task' | 'Other';
+export interface CustomerHealthDistribution {
+  healthy: number;
+  atRisk: number;
+  redZone: number;
 }
 
-export interface UpcomingTask {
-  id: string;
-  title: string;
-  dueDate: string;
-  customer: {
-    id: string;
-    name: string;
-  };
+export interface MonthlyMetrics {
+  months: string[];
+  values: number[];
 }
 
-// Customer types
-export interface CustomerListItem {
-  id: number;
-  name: string;
-  industry: string;
-  status: string;
-  arr: number;
-  mrr: number;
-  assignedTo: {
-    id: string;
-    name: string;
-    avatar: string;
-  };
-  inRedZone: boolean;
-  redZoneReasons?: string[];
+export interface GoogleAuthConfig {
+  clientId: string;
+  redirectUri: string;
 }
 
-// Task Management types
-export interface TaskListItem {
-  id: number;
-  title: string;
-  status: 'not_started' | 'in_progress' | 'completed' | 'blocked';
-  dueDate: string;
-  customer: {
-    id: number;
-    name: string;
-  };
-  assignedTo: {
-    id: string;
-    name: string;
-    avatar: string;
-  };
-  recurrence: 'none' | 'daily' | 'weekly' | 'bi_weekly' | 'monthly' | 'quarterly';
+export interface ChargebeeConfig {
+  apiKey: string;
+  site: string;
 }
 
-// Playbook types
-export interface PlaybookListItem {
-  id: number;
-  name: string;
-  description: string;
-  triggerType: string;
-  taskCount: number;
-  isActive: boolean;
-  createdBy: {
-    id: string;
-    name: string;
-  };
-}
-
-// Red Zone types
-export interface RedZoneReason {
-  id: string;
-  label: string;
-  description: string;
-}
-
-// MySQL Configuration types
-export interface MySQLConnectionParams {
+export interface MySQLConnectionConfig {
   host: string;
   port: number;
   username: string;
@@ -123,8 +67,20 @@ export interface MySQLConnectionParams {
 }
 
 export interface FieldMapping {
-  mysqlField: string;
-  platformField: string;
   mysqlTable: string;
-  transformationType?: string;
+  mysqlField: string;
+  localTable: string;
+  localField: string;
+}
+
+export type PlaybookTriggerType = 
+  | 'manual'
+  | 'new_customer' 
+  | 'usage_drop' 
+  | 'renewal_approaching'
+  | 'custom_event';
+
+export interface PlaybookTriggerConfig {
+  days?: number;
+  healthStatus?: AccountHealth;
 }

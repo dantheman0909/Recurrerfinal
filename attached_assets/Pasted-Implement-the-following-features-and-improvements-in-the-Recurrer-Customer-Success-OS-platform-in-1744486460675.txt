@@ -1,0 +1,27 @@
+Implement the following features and improvements in the Recurrer – Customer Success OS platform, integrating them fully into the existing tech stack and UI/UX structure.
+
+All monetary values across the platform must display in Indian Rupees. Create a shared utility function called formatINR using Intl.NumberFormat with the en-IN locale. Replace all hardcoded currency displays across Dashboard, Customer 360, Reports, Tasks, Playbooks, and Chargebee plan views with this utility.
+
+Update UI logic to gracefully handle cases where no users exist. If user list is empty (e.g., CSMs, TLs), show a message: “No users available. Please add them from Admin panel.” Ensure all user-dependent features use this check.
+
+Fix the sample CSV download link on the Admin panel. Place a file named customer-import-sample.csv inside /public/sample/. Update the link component to use an anchor tag with the download attribute pointing to /sample/customer-import-sample.csv.
+
+Ensure MySQL configuration is functional using stored secrets: MYSQL_HOST, MYSQL_PORT, MYSQL_USERNAME, MYSQL_PASSWORD, and MYSQL_DATABASE. Allow the admin to enter a SQL query and hit a “Preview Data” button. On submit, call POST /api/mysql/preview with the raw SQL string. Display a preview table with results or a validation error message if the query is invalid. Enable this within the Admin settings UI.
+
+Validate that Chargebee integration works. Use the existing API key (CHARGEBEE_API_KEY) to fetch customer, subscription, and invoice data. Link records using customer_id and subscription_id from MySQL into customer profiles in Recurrer. Display Chargebee subscription details in Customer 360, Reports, and Renewal Insights. Show fallback messaging if Chargebee data is unavailable.
+
+Hide all import-related controls and sections from the Customer 360 view. Restrict import functionality to Admin users only within the Admin panel.
+
+Enhance the Reports module with custom metrics, filters, and visualizations. Metrics must include: onboarding completion rate (21/30 days), customers with vs. without campaigns in last 30 days, referral conversion rate, MRR, ARR, churn rate, NPS scores, and renewal conversion. Enable filters by timeframe (weekly, monthly, quarterly), customer type (Starter, Growth, Key), location count, and CSM/TL. Visualizations must use gradient-filled bar, area, and pie charts. Support CSV export for any report view.
+
+Add deep playbook automation capabilities with conditional logic support. In the Playbook builder, allow admins to define trigger types: manual, new customer added, renewal within X days, usage threshold from MySQL, or campaign inactivity. For usage-based triggers, fetch data directly from MySQL using external_mysql_id. Usage metrics must include: less_than_300_bills, customers_without_min_visits, percentage_of_inactive_customers, active_auto_campaigns_count, and total_revenue_last_1_year_per_growth_subscription_per_month. Admin must be able to define conditional rules (e.g., if less_than_300_bills = true or active_auto_campaigns_count < 1) that determine when the playbook activates. Backend must evaluate these rules daily and auto-create tasks for matching customers.
+
+For campaign activity triggers, determine campaign engagement using MySQL field campaigns_sent_last_90_days and updated_at. A campaign activity playbook should trigger for customers who have not sent any campaigns in the last 30 days. Add this as a selectable condition in the Playbook builder UI. In the backend, evaluate this by checking if campaigns_sent_last_90_days = 0 and updated_at is within the last 30 days.
+
+Add Gmail and Google Calendar OAuth integration via Supabase. Use Google provider with scopes https://www.googleapis.com/auth/gmail.readonly and https://www.googleapis.com/auth/calendar. After connecting, store tokens in integration_tokens. Fetch last 5 Gmail threads and calendar events and display them inside Customer 360 under Communication History. Link relevant emails to tasks if initiated via Playbook.
+
+Include contextual tooltips explaining key metrics across the dashboard, reports, and customer views. Tooltips must appear on hover, using a clean styling system consistent with Tailwind. Examples: “MRR: Monthly recurring revenue, pulled from Chargebee or fallback to INR field” or “Onboarding: % of customers who completed their onboarding tasks within SLA”.
+
+Add animated loading skeletons to all dashboard components, customer cards, and metric widgets. Use Tailwind-based skeletons or react-loading-skeleton to replace blank states during data loading. Loading states must visually align with the platform’s clean and modern aesthetic. Ensure transitions between loading and loaded states are smooth.
+
+Ensure all the above functionality is integrated within the existing file structure and component model of the platform. Let me know if additional API contracts, example queries, or data mocks are needed.

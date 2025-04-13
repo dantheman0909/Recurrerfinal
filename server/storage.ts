@@ -1,158 +1,97 @@
-import {
-  users,
-  customers,
-  tasks,
-  taskComments,
-  playbooks,
-  playbookTasks,
-  redZoneAccounts,
-  calendarEvents,
-  emailThreads,
-  integrationTokens,
-  mysqlConfig,
-  mysqlFieldMappings,
-  reportMetrics,
-  type User,
-  type InsertUser,
-  type Customer,
-  type InsertCustomer,
-  type Task,
-  type InsertTask,
-  type TaskComment,
-  type InsertTaskComment,
-  type Playbook,
-  type InsertPlaybook,
-  type PlaybookTask,
-  type InsertPlaybookTask,
-  type RedZoneAccount,
-  type InsertRedZoneAccount,
-  type CalendarEvent,
-  type InsertCalendarEvent,
-  type EmailThread,
-  type InsertEmailThread,
-  type IntegrationToken,
-  type InsertIntegrationToken,
-  type MysqlConfig,
-  type InsertMysqlConfig,
-  type MysqlFieldMapping,
-  type InsertMysqlFieldMapping,
-  type ReportMetric,
-  type InsertReportMetric,
+import { 
+  users, customers, tasks, taskComments, playbooks, playbookTasks, 
+  redZoneAlerts, customerMetrics, mysqlConfig, mysqlFieldMappings,
+  type User, type Customer, type Task, type TaskComment, type Playbook, 
+  type PlaybookTask, type RedZoneAlert, type CustomerMetric, 
+  type MySQLConfig, type MySQLFieldMapping,
+  type InsertUser, type InsertCustomer, type InsertTask, type InsertPlaybook,
+  type InsertRedZoneAlert
 } from "@shared/schema";
 import { db } from "./db";
-import { eq, and, gte, desc, like, isNull } from "drizzle-orm";
+import { eq, and, isNull, desc, gte, lt } from "drizzle-orm";
+import { AccountHealth, MetricTimeframe } from "@shared/types";
+import { generateTimeseriesData } from "./utils/chart-data";
 
-// Storage interface for the application
 export interface IStorage {
-  // User methods
-  getUser(id: string): Promise<User | undefined>;
+  // Users
+  getUser(id: number): Promise<User | undefined>;
   getUserByEmail(email: string): Promise<User | undefined>;
   createUser(user: InsertUser): Promise<User>;
-  updateUser(id: string, data: Partial<User>): Promise<User | undefined>;
+  updateUser(id: number, user: Partial<User>): Promise<User | undefined>;
   
-  // Customer methods
+  // Customers
   getCustomers(): Promise<Customer[]>;
   getCustomer(id: number): Promise<Customer | undefined>;
   createCustomer(customer: InsertCustomer): Promise<Customer>;
-  updateCustomer(id: number, data: Partial<Customer>): Promise<Customer | undefined>;
+  updateCustomer(id: number, customer: Partial<Customer>): Promise<Customer | undefined>;
   
-  // Task methods
+  // Tasks
   getTasks(): Promise<Task[]>;
-  getTask(id: number): Promise<Task | undefined>;
-  getTasksByUser(userId: string): Promise<Task[]>;
   getTasksByCustomer(customerId: number): Promise<Task[]>;
-  getUpcomingTasks(limit?: number): Promise<Task[]>;
+  getTasksByAssignee(userId: number): Promise<Task[]>;
+  getTask(id: number): Promise<Task | undefined>;
   createTask(task: InsertTask): Promise<Task>;
-  updateTask(id: number, data: Partial<Task>): Promise<Task | undefined>;
+  updateTask(id: number, task: Partial<Task>): Promise<Task | undefined>;
   
   // Task Comments
   getTaskComments(taskId: number): Promise<TaskComment[]>;
-  createTaskComment(comment: InsertTaskComment): Promise<TaskComment>;
+  createTaskComment(taskId: number, userId: number, comment: string): Promise<TaskComment>;
   
-  // Playbook methods
+  // Playbooks
   getPlaybooks(): Promise<Playbook[]>;
   getPlaybook(id: number): Promise<Playbook | undefined>;
   createPlaybook(playbook: InsertPlaybook): Promise<Playbook>;
-  updatePlaybook(id: number, data: Partial<Playbook>): Promise<Playbook | undefined>;
+  updatePlaybook(id: number, playbook: Partial<Playbook>): Promise<Playbook | undefined>;
   
-  // PlaybookTask methods
+  // Playbook Tasks
   getPlaybookTasks(playbookId: number): Promise<PlaybookTask[]>;
-  createPlaybookTask(task: InsertPlaybookTask): Promise<PlaybookTask>;
-  updatePlaybookTask(id: number, data: Partial<PlaybookTask>): Promise<PlaybookTask | undefined>;
+  createPlaybookTask(playbookId: number, task: Omit<PlaybookTask, 'id' | 'playbook_id'>): Promise<PlaybookTask>;
+  updatePlaybookTask(id: number, task: Partial<PlaybookTask>): Promise<PlaybookTask | undefined>;
   
-  // Red Zone methods
-  getRedZoneAccounts(): Promise<RedZoneAccount[]>;
-  getRedZoneAccount(id: number): Promise<RedZoneAccount | undefined>;
-  getRedZoneByCustomer(customerId: number): Promise<RedZoneAccount | undefined>;
-  createRedZoneAccount(redZone: InsertRedZoneAccount): Promise<RedZoneAccount>;
-  resolveRedZoneAccount(id: number): Promise<RedZoneAccount | undefined>;
+  // Red Zone Alerts
+  getRedZoneAlerts(): Promise<RedZoneAlert[]>;
+  getRedZoneAlertsByCustomer(customerId: number): Promise<RedZoneAlert[]>;
+  createRedZoneAlert(alert: InsertRedZoneAlert): Promise<RedZoneAlert>;
+  resolveRedZoneAlert(id: number): Promise<RedZoneAlert | undefined>;
   
-  // Calendar Event methods
-  getCalendarEvents(): Promise<CalendarEvent[]>;
-  getCalendarEventsByCustomer(customerId: number): Promise<CalendarEvent[]>;
-  createCalendarEvent(event: InsertCalendarEvent): Promise<CalendarEvent>;
+  // Customer Metrics
+  getCustomerMetrics(customerId: number): Promise<CustomerMetric[]>;
+  createCustomerMetric(customerId: number, metricType: string, value: number, percent?: number): Promise<CustomerMetric>;
   
-  // Email Thread methods
-  getEmailThreadsByCustomer(customerId: number): Promise<EmailThread[]>;
-  createEmailThread(thread: InsertEmailThread): Promise<EmailThread>;
-  
-  // Integration Token methods
-  getIntegrationToken(userId: string, provider: string): Promise<IntegrationToken | undefined>;
-  createIntegrationToken(token: InsertIntegrationToken): Promise<IntegrationToken>;
-  updateIntegrationToken(id: number, data: Partial<IntegrationToken>): Promise<IntegrationToken | undefined>;
-  
-  // MySQL Config methods
-  getMysqlConfig(): Promise<MysqlConfig | undefined>;
-  createMysqlConfig(config: InsertMysqlConfig): Promise<MysqlConfig>;
-  updateMysqlConfig(id: number, data: Partial<MysqlConfig>): Promise<MysqlConfig | undefined>;
+  // MySQL Configuration
+  getMySQLConfig(): Promise<MySQLConfig | undefined>;
+  createMySQLConfig(config: Omit<MySQLConfig, 'id' | 'created_at'>): Promise<MySQLConfig>;
   
   // MySQL Field Mappings
-  getMysqlFieldMappings(): Promise<MysqlFieldMapping[]>;
-  createMysqlFieldMapping(mapping: InsertMysqlFieldMapping): Promise<MysqlFieldMapping>;
-  updateMysqlFieldMapping(id: number, data: Partial<MysqlFieldMapping>): Promise<MysqlFieldMapping | undefined>;
+  getMySQLFieldMappings(): Promise<MySQLFieldMapping[]>;
+  createMySQLFieldMapping(mapping: Omit<MySQLFieldMapping, 'id' | 'created_at'>): Promise<MySQLFieldMapping>;
   
-  // Report Metrics
-  getReportMetrics(metricName: string, startDate?: Date, endDate?: Date): Promise<ReportMetric[]>;
-  createReportMetric(metric: InsertReportMetric): Promise<ReportMetric>;
-  
-  // Dashboard methods
-  getDashboardStats(): Promise<{
-    openTasks: number;
-    campaignGaps: number;
-    renewalAlerts: number;
-    redZoneCount: number;
-  }>;
-  getRecentActivity(limit?: number): Promise<any[]>;
+  // Dashboard
+  getDashboardStats(timeframe: MetricTimeframe): Promise<any>;
 }
 
 export class MemStorage implements IStorage {
-  private users: Map<string, User>;
+  private users: Map<number, User>;
   private customers: Map<number, Customer>;
   private tasks: Map<number, Task>;
   private taskComments: Map<number, TaskComment>;
   private playbooks: Map<number, Playbook>;
   private playbookTasks: Map<number, PlaybookTask>;
-  private redZoneAccounts: Map<number, RedZoneAccount>;
-  private calendarEvents: Map<number, CalendarEvent>;
-  private emailThreads: Map<number, EmailThread>;
-  private integrationTokens: Map<number, IntegrationToken>;
-  private mysqlConfigs: Map<number, MysqlConfig>;
-  private mysqlFieldMappings: Map<number, MysqlFieldMapping>;
-  private reportMetrics: Map<number, ReportMetric>;
+  private redZoneAlerts: Map<number, RedZoneAlert>;
+  private customerMetrics: Map<number, CustomerMetric>;
+  private mysqlConfigs: Map<number, MySQLConfig>;
+  private mysqlFieldMappings: Map<number, MySQLFieldMapping>;
   
-  // Counters for generating IDs
-  private customerIdCounter: number;
-  private taskIdCounter: number;
-  private taskCommentIdCounter: number;
-  private playbookIdCounter: number;
-  private playbookTaskIdCounter: number;
-  private redZoneIdCounter: number;
-  private calendarEventIdCounter: number;
-  private emailThreadIdCounter: number;
-  private integrationTokenIdCounter: number;
-  private mysqlConfigIdCounter: number;
-  private mysqlFieldMappingIdCounter: number;
-  private reportMetricIdCounter: number;
+  private userId: number = 1;
+  private customerId: number = 1;
+  private taskId: number = 1;
+  private commentId: number = 1;
+  private playbookId: number = 1;
+  private playbookTaskId: number = 1;
+  private alertId: number = 1;
+  private metricId: number = 1;
+  private configId: number = 1;
+  private mappingId: number = 1;
 
   constructor() {
     this.users = new Map();
@@ -161,395 +100,163 @@ export class MemStorage implements IStorage {
     this.taskComments = new Map();
     this.playbooks = new Map();
     this.playbookTasks = new Map();
-    this.redZoneAccounts = new Map();
-    this.calendarEvents = new Map();
-    this.emailThreads = new Map();
-    this.integrationTokens = new Map();
+    this.redZoneAlerts = new Map();
+    this.customerMetrics = new Map();
     this.mysqlConfigs = new Map();
     this.mysqlFieldMappings = new Map();
-    this.reportMetrics = new Map();
-    
-    this.customerIdCounter = 1;
-    this.taskIdCounter = 1;
-    this.taskCommentIdCounter = 1;
-    this.playbookIdCounter = 1;
-    this.playbookTaskIdCounter = 1;
-    this.redZoneIdCounter = 1;
-    this.calendarEventIdCounter = 1;
-    this.emailThreadIdCounter = 1;
-    this.integrationTokenIdCounter = 1;
-    this.mysqlConfigIdCounter = 1;
-    this.mysqlFieldMappingIdCounter = 1;
-    this.reportMetricIdCounter = 1;
     
     // Initialize with mock data
-    this.initializeMockData();
+    this.initMockData();
   }
 
-  // Initialize mock data for use when no database is connected
-  private initializeMockData() {
-    // Create mock users
-    const users = [
-      {
-        id: "user-1",
-        email: "admin@recurrer.com",
-        fullName: "Alex Morgan",
-        avatarUrl: null,
-        role: "admin",
-        createdAt: new Date(),
-      },
-      {
-        id: "user-2",
-        email: "lead@recurrer.com",
-        fullName: "Sara Johnson",
-        avatarUrl: null,
-        role: "team_lead",
-        createdAt: new Date(),
-      },
-      {
-        id: "user-3",
-        email: "csm@recurrer.com",
-        fullName: "Michael Chen",
-        avatarUrl: null,
-        role: "csm",
-        createdAt: new Date(),
-      },
-    ] as User[];
-
-    users.forEach(user => this.users.set(user.id, user));
-
-    // Create mock customers
-    const customers = [
-      {
-        id: this.customerIdCounter++,
-        name: "Acme Corp",
-        industry: "Technology",
-        website: "https://acme.example.com",
-        status: "active",
-        arr: 120000,
-        mrr: 10000,
-        onboardingStartDate: new Date("2023-01-15"),
-        onboardingCompletionDate: new Date("2023-02-10"),
-        renewalDate: new Date("2024-01-15"),
-        campaignStats: {
-          sent: 24,
-          opened: 18,
-          clicked: 12,
-          lastSentDate: "2023-06-20",
-        },
-        lastReviewMeeting: new Date("2023-06-01"),
-        npsScore: 8,
-        dataTaggingPercentage: 85,
-        addOnRevenue: 2500,
-        createdAt: new Date("2023-01-15"),
-        updatedAt: new Date("2023-06-22"),
-        assignedToUserId: "user-3",
-        externalIds: { "chargebee": "cust_acme123" },
-        inRedZone: false,
-      },
-      {
-        id: this.customerIdCounter++,
-        name: "TechStart Inc",
-        industry: "Software",
-        website: "https://techstart.example.com",
-        status: "active",
-        arr: 95000,
-        mrr: 7916.67,
-        onboardingStartDate: new Date("2023-03-10"),
-        onboardingCompletionDate: new Date("2023-04-05"),
-        renewalDate: new Date("2024-03-10"),
-        campaignStats: {
-          sent: 12,
-          opened: 9,
-          clicked: 6,
-          lastSentDate: "2023-06-10",
-        },
-        lastReviewMeeting: new Date("2023-05-15"),
-        npsScore: 9,
-        dataTaggingPercentage: 92,
-        addOnRevenue: 1800,
-        createdAt: new Date("2023-03-10"),
-        updatedAt: new Date("2023-06-12"),
-        assignedToUserId: "user-3",
-        externalIds: { "chargebee": "cust_tech456" },
-        inRedZone: false,
-      },
-      {
-        id: this.customerIdCounter++,
-        name: "GlobalTech",
-        industry: "Technology",
-        website: "https://globaltech.example.com",
-        status: "active",
-        arr: 200000,
-        mrr: 16666.67,
-        onboardingStartDate: new Date("2022-11-20"),
-        onboardingCompletionDate: new Date("2022-12-15"),
-        renewalDate: new Date("2023-11-20"),
-        campaignStats: {
-          sent: 36,
-          opened: 24,
-          clicked: 15,
-          lastSentDate: "2023-02-20", // No campaigns in last 60+ days
-        },
-        lastReviewMeeting: null, // No review meetings
-        npsScore: 4, // Low NPS
-        dataTaggingPercentage: 40, // Low data tagging
-        addOnRevenue: 5000,
-        createdAt: new Date("2022-11-20"),
-        updatedAt: new Date("2023-06-21"),
-        assignedToUserId: "user-2",
-        externalIds: { "chargebee": "cust_glob789" },
-        inRedZone: true,
-      },
-      {
-        id: this.customerIdCounter++,
-        name: "SmartSolutions Inc",
-        industry: "Consulting",
-        website: "https://smartsolutions.example.com",
-        status: "active",
-        arr: 150000,
-        mrr: 12500,
-        onboardingStartDate: new Date("2023-02-01"),
-        onboardingCompletionDate: new Date("2023-02-25"),
-        renewalDate: new Date("2024-02-01"),
-        campaignStats: {
-          sent: 18,
-          opened: 15,
-          clicked: 10,
-          lastSentDate: "2023-06-15",
-        },
-        lastReviewMeeting: new Date("2023-05-20"),
-        npsScore: 8,
-        dataTaggingPercentage: 88,
-        addOnRevenue: 3200,
-        createdAt: new Date("2023-02-01"),
-        updatedAt: new Date("2023-06-16"),
-        assignedToUserId: "user-2",
-        externalIds: { "chargebee": "cust_smart101" },
-        inRedZone: false,
-      },
-    ] as Customer[];
-
-    customers.forEach(customer => this.customers.set(customer.id, customer));
-
-    // Create mock tasks
-    const tasks = [
-      {
-        id: this.taskIdCounter++,
-        title: "Schedule quarterly review",
-        description: "Set up the quarterly business review meeting",
-        status: "not_started",
-        dueDate: new Date("2023-07-15"),
-        relativeDueDays: null,
-        recurrence: "quarterly",
-        assignedToUserId: "user-3",
-        customerId: 1, // Acme Corp
-        playbookId: null,
-        createdAt: new Date("2023-06-20"),
-        updatedAt: new Date("2023-06-20"),
-        createdByUserId: "user-2",
-      },
-      {
-        id: this.taskIdCounter++,
-        title: "Send monthly campaign",
-        description: "Prepare and send the monthly newsletter campaign",
-        status: "not_started",
-        dueDate: new Date("2023-07-10"),
-        relativeDueDays: null,
-        recurrence: "monthly",
-        assignedToUserId: "user-3",
-        customerId: 2, // TechStart Inc
-        playbookId: 1,
-        createdAt: new Date("2023-06-22"),
-        updatedAt: new Date("2023-06-22"),
-        createdByUserId: "user-2",
-      },
-      {
-        id: this.taskIdCounter++,
-        title: "Check QR setup status",
-        description: "Verify that QR codes are properly set up and working",
-        status: "not_started",
-        dueDate: new Date("2023-07-12"),
-        relativeDueDays: null,
-        recurrence: "none",
-        assignedToUserId: "user-2",
-        customerId: 4, // SmartSolutions Inc
-        playbookId: null,
-        createdAt: new Date("2023-06-21"),
-        updatedAt: new Date("2023-06-21"),
-        createdByUserId: "user-1",
-      },
-      {
-        id: this.taskIdCounter++,
-        title: "Update data tagging documentation",
-        description: "Review and update the data tagging documentation",
-        status: "in_progress",
-        dueDate: new Date("2023-07-14"),
-        relativeDueDays: null,
-        recurrence: "none",
-        assignedToUserId: "user-2",
-        customerId: 3, // GlobalTech
-        playbookId: null,
-        createdAt: new Date("2023-06-18"),
-        updatedAt: new Date("2023-06-21"),
-        createdByUserId: "user-1",
-      },
-    ] as Task[];
-
-    tasks.forEach(task => this.tasks.set(task.id, task));
-
-    // Create mock playbooks
-    const playbooks = [
-      {
-        id: this.playbookIdCounter++,
-        name: "Onboarding Process",
-        description: "Standard onboarding workflow for new customers",
-        triggerConfig: {
-          triggerType: "time",
-          conditions: {
-            startAfter: "signup",
-          },
-        },
-        isActive: true,
-        createdAt: new Date("2023-01-01"),
-        updatedAt: new Date("2023-04-15"),
-        createdByUserId: "user-1",
-      },
-      {
-        id: this.playbookIdCounter++,
-        name: "Quarterly Business Review",
-        description: "Tasks for preparing and conducting QBRs",
-        triggerConfig: {
-          triggerType: "renewal",
-          conditions: {
-            daysBeforeRenewal: 90,
-          },
-        },
-        isActive: true,
-        createdAt: new Date("2023-02-10"),
-        updatedAt: new Date("2023-05-20"),
-        createdByUserId: "user-1",
-      },
-      {
-        id: this.playbookIdCounter++,
-        name: "Health Check",
-        description: "Regular health check workflow",
-        triggerConfig: {
-          triggerType: "time",
-          conditions: {
-            recurEvery: "month",
-          },
-        },
-        isActive: true,
-        createdAt: new Date("2023-03-05"),
-        updatedAt: new Date("2023-05-25"),
-        createdByUserId: "user-2",
-      },
-    ] as Playbook[];
-
-    playbooks.forEach(playbook => this.playbooks.set(playbook.id, playbook));
-
-    // Create mock playbook tasks
-    const playbookTasks = [
-      {
-        id: this.playbookTaskIdCounter++,
-        playbookId: 1,
-        title: "Welcome Email",
-        description: "Send welcome email to new customer",
-        relativeDueDays: 1,
-        recurrence: "none",
-        sortOrder: 1,
-      },
-      {
-        id: this.playbookTaskIdCounter++,
-        playbookId: 1,
-        title: "Initial Setup Call",
-        description: "Schedule and conduct initial setup call",
-        relativeDueDays: 3,
-        recurrence: "none",
-        sortOrder: 2,
-      },
-      {
-        id: this.playbookTaskIdCounter++,
-        playbookId: 1,
-        title: "Configure Account Settings",
-        description: "Help customer configure their account settings",
-        relativeDueDays: 5,
-        recurrence: "none",
-        sortOrder: 3,
-      },
-      {
-        id: this.playbookTaskIdCounter++,
-        playbookId: 2,
-        title: "Prepare QBR Document",
-        description: "Gather metrics and create QBR document",
-        relativeDueDays: 10,
-        recurrence: "none",
-        sortOrder: 1,
-      },
-      {
-        id: this.playbookTaskIdCounter++,
-        playbookId: 2,
-        title: "Schedule QBR Meeting",
-        description: "Coordinate with customer for QBR meeting time",
-        relativeDueDays: 7,
-        recurrence: "none",
-        sortOrder: 2,
-      },
-    ] as PlaybookTask[];
-
-    playbookTasks.forEach(task => this.playbookTasks.set(task.id, task));
-
-    // Create mock red zone accounts
-    const redZoneAccounts = [
-      {
-        id: this.redZoneIdCounter++,
-        customerId: 3, // GlobalTech
-        reasons: [
-          "no_campaign_60_days",
-          "no_review_meetings",
-          "low_nps",
-          "low_data_tagging",
-        ],
-        createdAt: new Date("2023-06-01"),
-        resolvedAt: null,
-      },
-    ] as RedZoneAccount[];
-
-    redZoneAccounts.forEach(account => this.redZoneAccounts.set(account.id, account));
+  private initMockData() {
+    // Mock Users
+    const user1 = this.createUser({
+      email: 'sarah.johnson@recurrer.io',
+      name: 'Sarah Johnson',
+      role: 'team_lead',
+      avatar_url: ''
+    });
+    
+    const user2 = this.createUser({
+      email: 'alex.wong@recurrer.io',
+      name: 'Alex Wong',
+      role: 'csm',
+      avatar_url: ''
+    });
+    
+    this.createUser({
+      email: 'morgan.stanley@recurrer.io',
+      name: 'Morgan Stanley',
+      role: 'csm',
+      avatar_url: ''
+    });
+    
+    // Mock Customers
+    const customer1 = this.createCustomer({
+      name: 'Acme Technologies',
+      industry: 'Technology',
+      contact_name: 'John Doe',
+      contact_email: 'john@acmetech.com',
+      contact_phone: '(555) 123-4567',
+      onboarded_at: new Date('2023-01-15'),
+      renewal_date: new Date('2024-01-15'),
+      mrr: 5000,
+      arr: 60000,
+      health_status: 'red_zone'
+    });
+    
+    const customer2 = this.createCustomer({
+      name: 'Global Foods Chain',
+      industry: 'Retail',
+      contact_name: 'Jane Smith',
+      contact_email: 'jane@globalfoods.com',
+      contact_phone: '(555) 987-6543',
+      onboarded_at: new Date('2022-11-10'),
+      renewal_date: new Date('2023-11-10'),
+      mrr: 8000,
+      arr: 96000,
+      health_status: 'red_zone'
+    });
+    
+    this.createCustomer({
+      name: 'Tech Solutions Inc',
+      industry: 'Software',
+      contact_name: 'Mike Johnson',
+      contact_email: 'mike@techsolutions.com',
+      contact_phone: '(555) 456-7890',
+      onboarded_at: new Date('2023-01-03'),
+      renewal_date: new Date('2024-01-03'),
+      mrr: 3500,
+      arr: 42000,
+      health_status: 'at_risk'
+    });
+    
+    // Tasks
+    this.createTask({
+      title: 'Review onboarding progress for Acme Corp',
+      description: 'Check if all onboarding steps have been completed',
+      status: 'in_progress',
+      due_date: new Date('2023-01-23'),
+      customer_id: customer1.id,
+      assigned_to: user1.id,
+      created_by: user1.id
+    });
+    
+    this.createTask({
+      title: 'Schedule quarterly review with XYZ Tech',
+      description: 'Set up a meeting to review Q1 performance',
+      status: 'pending',
+      due_date: new Date('2023-01-30'),
+      customer_id: 3,
+      assigned_to: user2.id,
+      created_by: user1.id
+    });
+    
+    this.createTask({
+      title: 'Setup loyalty campaign for Global Foods',
+      description: 'Configure and launch the new loyalty program',
+      status: 'overdue',
+      due_date: new Date('2023-01-15'),
+      customer_id: customer2.id,
+      assigned_to: 3,
+      created_by: user1.id
+    });
+    
+    // Red Zone Alerts
+    this.createRedZoneAlert({
+      customer_id: customer1.id,
+      reason: 'No campaigns sent in 90+ days',
+      severity: 'critical'
+    });
+    
+    this.createRedZoneAlert({
+      customer_id: customer2.id,
+      reason: 'No QR/loyalty setup completed',
+      severity: 'high_risk'
+    });
+    
+    this.createRedZoneAlert({
+      customer_id: 3,
+      reason: 'Delayed onboarding (27 days)',
+      severity: 'attention_needed'
+    });
+    
+    // Customer Metrics
+    for (let i = 1; i <= 3; i++) {
+      this.createCustomerMetric(i, 'onboarding_completion', Math.floor(Math.random() * 100));
+      this.createCustomerMetric(i, 'nps_score', Math.floor(Math.random() * 10));
+      this.createCustomerMetric(i, 'data_tagging', Math.floor(Math.random() * 100));
+    }
   }
 
-  // User methods
-  async getUser(id: string): Promise<User | undefined> {
+  // User Methods
+  async getUser(id: number): Promise<User | undefined> {
     return this.users.get(id);
   }
 
   async getUserByEmail(email: string): Promise<User | undefined> {
-    for (const user of this.users.values()) {
-      if (user.email === email) {
-        return user;
-      }
-    }
-    return undefined;
+    return Array.from(this.users.values()).find(user => user.email === email);
   }
 
   async createUser(user: InsertUser): Promise<User> {
-    const id = `user-${Date.now()}`;
-    const newUser = { ...user, id, createdAt: new Date() } as User;
+    const id = this.userId++;
+    const timestamp = new Date();
+    const newUser = { ...user, id, created_at: timestamp };
     this.users.set(id, newUser);
     return newUser;
   }
 
-  async updateUser(id: string, data: Partial<User>): Promise<User | undefined> {
-    const user = this.users.get(id);
-    if (!user) return undefined;
+  async updateUser(id: number, user: Partial<User>): Promise<User | undefined> {
+    const existingUser = this.users.get(id);
+    if (!existingUser) return undefined;
     
-    const updatedUser = { ...user, ...data };
+    const updatedUser = { ...existingUser, ...user };
     this.users.set(id, updatedUser);
     return updatedUser;
   }
 
-  // Customer methods
+  // Customer Methods
   async getCustomers(): Promise<Customer[]> {
     return Array.from(this.customers.values());
   }
@@ -559,113 +266,70 @@ export class MemStorage implements IStorage {
   }
 
   async createCustomer(customer: InsertCustomer): Promise<Customer> {
-    const id = this.customerIdCounter++;
-    const now = new Date();
-    const newCustomer = { 
-      ...customer, 
-      id, 
-      createdAt: now, 
-      updatedAt: now 
-    } as Customer;
-    
+    const id = this.customerId++;
+    const timestamp = new Date();
+    const newCustomer = { ...customer, id, created_at: timestamp };
     this.customers.set(id, newCustomer);
     return newCustomer;
   }
 
-  async updateCustomer(id: number, data: Partial<Customer>): Promise<Customer | undefined> {
-    const customer = this.customers.get(id);
-    if (!customer) return undefined;
+  async updateCustomer(id: number, customer: Partial<Customer>): Promise<Customer | undefined> {
+    const existingCustomer = this.customers.get(id);
+    if (!existingCustomer) return undefined;
     
-    const updatedCustomer = { 
-      ...customer, 
-      ...data, 
-      updatedAt: new Date() 
-    };
-    
+    const updatedCustomer = { ...existingCustomer, ...customer };
     this.customers.set(id, updatedCustomer);
     return updatedCustomer;
   }
 
-  // Task methods
+  // Task Methods
   async getTasks(): Promise<Task[]> {
     return Array.from(this.tasks.values());
+  }
+
+  async getTasksByCustomer(customerId: number): Promise<Task[]> {
+    return Array.from(this.tasks.values()).filter(task => task.customer_id === customerId);
+  }
+
+  async getTasksByAssignee(userId: number): Promise<Task[]> {
+    return Array.from(this.tasks.values()).filter(task => task.assigned_to === userId);
   }
 
   async getTask(id: number): Promise<Task | undefined> {
     return this.tasks.get(id);
   }
 
-  async getTasksByUser(userId: string): Promise<Task[]> {
-    return Array.from(this.tasks.values()).filter(
-      task => task.assignedToUserId === userId
-    );
-  }
-
-  async getTasksByCustomer(customerId: number): Promise<Task[]> {
-    return Array.from(this.tasks.values()).filter(
-      task => task.customerId === customerId
-    );
-  }
-
-  async getUpcomingTasks(limit = 5): Promise<Task[]> {
-    return Array.from(this.tasks.values())
-      .filter(task => task.status !== "completed")
-      .sort((a, b) => {
-        if (!a.dueDate) return 1;
-        if (!b.dueDate) return -1;
-        return a.dueDate.getTime() - b.dueDate.getTime();
-      })
-      .slice(0, limit);
-  }
-
   async createTask(task: InsertTask): Promise<Task> {
-    const id = this.taskIdCounter++;
-    const now = new Date();
-    const newTask = { 
-      ...task, 
-      id, 
-      createdAt: now, 
-      updatedAt: now 
-    } as Task;
-    
+    const id = this.taskId++;
+    const timestamp = new Date();
+    const newTask = { ...task, id, created_at: timestamp };
     this.tasks.set(id, newTask);
     return newTask;
   }
 
-  async updateTask(id: number, data: Partial<Task>): Promise<Task | undefined> {
-    const task = this.tasks.get(id);
-    if (!task) return undefined;
+  async updateTask(id: number, task: Partial<Task>): Promise<Task | undefined> {
+    const existingTask = this.tasks.get(id);
+    if (!existingTask) return undefined;
     
-    const updatedTask = { 
-      ...task, 
-      ...data, 
-      updatedAt: new Date() 
-    };
-    
+    const updatedTask = { ...existingTask, ...task };
     this.tasks.set(id, updatedTask);
     return updatedTask;
   }
 
-  // Task Comments
+  // Task Comment Methods
   async getTaskComments(taskId: number): Promise<TaskComment[]> {
-    return Array.from(this.taskComments.values())
-      .filter(comment => comment.taskId === taskId)
-      .sort((a, b) => a.createdAt.getTime() - b.createdAt.getTime());
+    return Array.from(this.taskComments.values()).filter(comment => comment.task_id === taskId);
   }
 
-  async createTaskComment(comment: InsertTaskComment): Promise<TaskComment> {
-    const id = this.taskCommentIdCounter++;
-    const newComment = { 
-      ...comment, 
-      id, 
-      createdAt: new Date() 
-    } as TaskComment;
-    
+  async createTaskComment(taskId: number, userId: number, comment: string): Promise<TaskComment> {
+    const id = this.commentId++;
+    const timestamp = new Date();
+    const newComment = { id, task_id: taskId, user_id: userId, comment, created_at: timestamp };
     this.taskComments.set(id, newComment);
     return newComment;
   }
 
-  // Playbook methods
+  // Playbook Methods
   async getPlaybooks(): Promise<Playbook[]> {
     return Array.from(this.playbooks.values());
   }
@@ -675,370 +339,151 @@ export class MemStorage implements IStorage {
   }
 
   async createPlaybook(playbook: InsertPlaybook): Promise<Playbook> {
-    const id = this.playbookIdCounter++;
-    const now = new Date();
-    const newPlaybook = { 
-      ...playbook, 
-      id, 
-      createdAt: now, 
-      updatedAt: now 
-    } as Playbook;
-    
+    const id = this.playbookId++;
+    const timestamp = new Date();
+    const newPlaybook = { ...playbook, id, created_at: timestamp };
     this.playbooks.set(id, newPlaybook);
     return newPlaybook;
   }
 
-  async updatePlaybook(id: number, data: Partial<Playbook>): Promise<Playbook | undefined> {
-    const playbook = this.playbooks.get(id);
-    if (!playbook) return undefined;
+  async updatePlaybook(id: number, playbook: Partial<Playbook>): Promise<Playbook | undefined> {
+    const existingPlaybook = this.playbooks.get(id);
+    if (!existingPlaybook) return undefined;
     
-    const updatedPlaybook = { 
-      ...playbook, 
-      ...data, 
-      updatedAt: new Date() 
-    };
-    
+    const updatedPlaybook = { ...existingPlaybook, ...playbook };
     this.playbooks.set(id, updatedPlaybook);
     return updatedPlaybook;
   }
 
-  // PlaybookTask methods
+  // Playbook Task Methods
   async getPlaybookTasks(playbookId: number): Promise<PlaybookTask[]> {
-    return Array.from(this.playbookTasks.values())
-      .filter(task => task.playbookId === playbookId)
-      .sort((a, b) => a.sortOrder - b.sortOrder);
+    return Array.from(this.playbookTasks.values()).filter(task => task.playbook_id === playbookId);
   }
 
-  async createPlaybookTask(task: InsertPlaybookTask): Promise<PlaybookTask> {
-    const id = this.playbookTaskIdCounter++;
-    const newTask = { ...task, id } as PlaybookTask;
-    
+  async createPlaybookTask(playbookId: number, task: Omit<PlaybookTask, 'id' | 'playbook_id'>): Promise<PlaybookTask> {
+    const id = this.playbookTaskId++;
+    const newTask = { ...task, id, playbook_id: playbookId };
     this.playbookTasks.set(id, newTask);
     return newTask;
   }
 
-  async updatePlaybookTask(id: number, data: Partial<PlaybookTask>): Promise<PlaybookTask | undefined> {
-    const task = this.playbookTasks.get(id);
-    if (!task) return undefined;
+  async updatePlaybookTask(id: number, task: Partial<PlaybookTask>): Promise<PlaybookTask | undefined> {
+    const existingTask = this.playbookTasks.get(id);
+    if (!existingTask) return undefined;
     
-    const updatedTask = { ...task, ...data };
+    const updatedTask = { ...existingTask, ...task };
     this.playbookTasks.set(id, updatedTask);
     return updatedTask;
   }
 
-  // Red Zone methods
-  async getRedZoneAccounts(): Promise<RedZoneAccount[]> {
-    return Array.from(this.redZoneAccounts.values())
-      .filter(account => !account.resolvedAt);
+  // Red Zone Alert Methods
+  async getRedZoneAlerts(): Promise<RedZoneAlert[]> {
+    return Array.from(this.redZoneAlerts.values()).filter(alert => !alert.resolved_at);
   }
 
-  async getRedZoneAccount(id: number): Promise<RedZoneAccount | undefined> {
-    return this.redZoneAccounts.get(id);
+  async getRedZoneAlertsByCustomer(customerId: number): Promise<RedZoneAlert[]> {
+    return Array.from(this.redZoneAlerts.values()).filter(alert => alert.customer_id === customerId && !alert.resolved_at);
   }
 
-  async getRedZoneByCustomer(customerId: number): Promise<RedZoneAccount | undefined> {
-    for (const account of this.redZoneAccounts.values()) {
-      if (account.customerId === customerId && !account.resolvedAt) {
-        return account;
-      }
-    }
-    return undefined;
+  async createRedZoneAlert(alert: InsertRedZoneAlert): Promise<RedZoneAlert> {
+    const id = this.alertId++;
+    const timestamp = new Date();
+    const newAlert = { ...alert, id, created_at: timestamp, resolved_at: null };
+    this.redZoneAlerts.set(id, newAlert);
+    return newAlert;
   }
 
-  async createRedZoneAccount(redZone: InsertRedZoneAccount): Promise<RedZoneAccount> {
-    const id = this.redZoneIdCounter++;
-    const newRedZone = { 
-      ...redZone, 
+  async resolveRedZoneAlert(id: number): Promise<RedZoneAlert | undefined> {
+    const existingAlert = this.redZoneAlerts.get(id);
+    if (!existingAlert) return undefined;
+    
+    const resolvedAlert = { ...existingAlert, resolved_at: new Date() };
+    this.redZoneAlerts.set(id, resolvedAlert);
+    return resolvedAlert;
+  }
+
+  // Customer Metric Methods
+  async getCustomerMetrics(customerId: number): Promise<CustomerMetric[]> {
+    return Array.from(this.customerMetrics.values()).filter(metric => metric.customer_id === customerId);
+  }
+
+  async createCustomerMetric(customerId: number, metricType: string, value: number, percent?: number): Promise<CustomerMetric> {
+    const id = this.metricId++;
+    const timestamp = new Date();
+    const newMetric = { 
       id, 
-      createdAt: new Date(), 
-      resolvedAt: null 
-    } as RedZoneAccount;
-    
-    this.redZoneAccounts.set(id, newRedZone);
-    return newRedZone;
-  }
-
-  async resolveRedZoneAccount(id: number): Promise<RedZoneAccount | undefined> {
-    const redZone = this.redZoneAccounts.get(id);
-    if (!redZone) return undefined;
-    
-    const resolvedRedZone = { 
-      ...redZone, 
-      resolvedAt: new Date() 
+      customer_id: customerId, 
+      metric_type: metricType, 
+      metric_value: value, 
+      metric_percent: percent || null, 
+      recorded_at: timestamp 
     };
-    
-    this.redZoneAccounts.set(id, resolvedRedZone);
-    return resolvedRedZone;
+    this.customerMetrics.set(id, newMetric);
+    return newMetric;
   }
 
-  // Calendar Event methods
-  async getCalendarEvents(): Promise<CalendarEvent[]> {
-    return Array.from(this.calendarEvents.values());
+  // MySQL Config Methods
+  async getMySQLConfig(): Promise<MySQLConfig | undefined> {
+    const configs = Array.from(this.mysqlConfigs.values());
+    return configs.length > 0 ? configs[0] : undefined;
   }
 
-  async getCalendarEventsByCustomer(customerId: number): Promise<CalendarEvent[]> {
-    return Array.from(this.calendarEvents.values())
-      .filter(event => event.customerId === customerId);
-  }
-
-  async createCalendarEvent(event: InsertCalendarEvent): Promise<CalendarEvent> {
-    const id = this.calendarEventIdCounter++;
-    const newEvent = { ...event, id } as CalendarEvent;
-    
-    this.calendarEvents.set(id, newEvent);
-    return newEvent;
-  }
-
-  // Email Thread methods
-  async getEmailThreadsByCustomer(customerId: number): Promise<EmailThread[]> {
-    return Array.from(this.emailThreads.values())
-      .filter(thread => thread.customerId === customerId);
-  }
-
-  async createEmailThread(thread: InsertEmailThread): Promise<EmailThread> {
-    const id = this.emailThreadIdCounter++;
-    const newThread = { ...thread, id } as EmailThread;
-    
-    this.emailThreads.set(id, newThread);
-    return newThread;
-  }
-
-  // Integration Token methods
-  async getIntegrationToken(userId: string, provider: string): Promise<IntegrationToken | undefined> {
-    for (const token of this.integrationTokens.values()) {
-      if (token.userId === userId && token.provider === provider) {
-        return token;
-      }
-    }
-    return undefined;
-  }
-
-  async createIntegrationToken(token: InsertIntegrationToken): Promise<IntegrationToken> {
-    const id = this.integrationTokenIdCounter++;
-    const now = new Date();
-    const newToken = { 
-      ...token, 
-      id, 
-      createdAt: now, 
-      updatedAt: now 
-    } as IntegrationToken;
-    
-    this.integrationTokens.set(id, newToken);
-    return newToken;
-  }
-
-  async updateIntegrationToken(id: number, data: Partial<IntegrationToken>): Promise<IntegrationToken | undefined> {
-    const token = this.integrationTokens.get(id);
-    if (!token) return undefined;
-    
-    const updatedToken = { 
-      ...token, 
-      ...data, 
-      updatedAt: new Date() 
-    };
-    
-    this.integrationTokens.set(id, updatedToken);
-    return updatedToken;
-  }
-
-  // MySQL Config methods
-  async getMysqlConfig(): Promise<MysqlConfig | undefined> {
-    for (const config of this.mysqlConfigs.values()) {
-      if (config.isActive) {
-        return config;
-      }
-    }
-    return undefined;
-  }
-
-  async createMysqlConfig(config: InsertMysqlConfig): Promise<MysqlConfig> {
-    const id = this.mysqlConfigIdCounter++;
-    const now = new Date();
-    const newConfig = { 
-      ...config, 
-      id, 
-      createdAt: now, 
-      updatedAt: now,
-      lastSyncAt: null
-    } as MysqlConfig;
-    
+  async createMySQLConfig(config: Omit<MySQLConfig, 'id' | 'created_at'>): Promise<MySQLConfig> {
+    const id = this.configId++;
+    const timestamp = new Date();
+    const newConfig = { ...config, id, created_at: timestamp };
     this.mysqlConfigs.set(id, newConfig);
     return newConfig;
   }
 
-  async updateMysqlConfig(id: number, data: Partial<MysqlConfig>): Promise<MysqlConfig | undefined> {
-    const config = this.mysqlConfigs.get(id);
-    if (!config) return undefined;
-    
-    const updatedConfig = { 
-      ...config, 
-      ...data, 
-      updatedAt: new Date() 
-    };
-    
-    this.mysqlConfigs.set(id, updatedConfig);
-    return updatedConfig;
+  // MySQL Field Mapping Methods
+  async getMySQLFieldMappings(): Promise<MySQLFieldMapping[]> {
+    return Array.from(this.mysqlFieldMappings.values());
   }
 
-  // MySQL Field Mappings
-  async getMysqlFieldMappings(): Promise<MysqlFieldMapping[]> {
-    return Array.from(this.mysqlFieldMappings.values())
-      .filter(mapping => mapping.isActive);
-  }
-
-  async createMysqlFieldMapping(mapping: InsertMysqlFieldMapping): Promise<MysqlFieldMapping> {
-    const id = this.mysqlFieldMappingIdCounter++;
-    const newMapping = { ...mapping, id } as MysqlFieldMapping;
-    
+  async createMySQLFieldMapping(mapping: Omit<MySQLFieldMapping, 'id' | 'created_at'>): Promise<MySQLFieldMapping> {
+    const id = this.mappingId++;
+    const timestamp = new Date();
+    const newMapping = { ...mapping, id, created_at: timestamp };
     this.mysqlFieldMappings.set(id, newMapping);
     return newMapping;
   }
 
-  async updateMysqlFieldMapping(id: number, data: Partial<MysqlFieldMapping>): Promise<MysqlFieldMapping | undefined> {
-    const mapping = this.mysqlFieldMappings.get(id);
-    if (!mapping) return undefined;
+  // Dashboard Stats
+  async getDashboardStats(timeframe: MetricTimeframe): Promise<any> {
+    // Import chart data utility function
+    const { generateTimeseriesData } = require('./utils/chart-data');
     
-    const updatedMapping = { ...mapping, ...data };
-    this.mysqlFieldMappings.set(id, updatedMapping);
-    return updatedMapping;
-  }
-
-  // Report Metrics
-  async getReportMetrics(metricName: string, startDate?: Date, endDate?: Date): Promise<ReportMetric[]> {
-    return Array.from(this.reportMetrics.values())
-      .filter(metric => {
-        if (metric.metricName !== metricName) return false;
-        if (startDate && metric.metricDate < startDate) return false;
-        if (endDate && metric.metricDate > endDate) return false;
-        return true;
-      });
-  }
-
-  async createReportMetric(metric: InsertReportMetric): Promise<ReportMetric> {
-    const id = this.reportMetricIdCounter++;
-    const newMetric = { 
-      ...metric, 
-      id, 
-      createdAt: new Date() 
-    } as ReportMetric;
-    
-    this.reportMetrics.set(id, newMetric);
-    return newMetric;
-  }
-
-  // Dashboard methods
-  async getDashboardStats(): Promise<{
-    openTasks: number;
-    campaignGaps: number;
-    renewalAlerts: number;
-    redZoneCount: number;
-  }> {
-    const openTasks = Array.from(this.tasks.values())
-      .filter(task => task.status !== "completed").length;
-    
-    const now = new Date();
-    const sixtyDaysAgo = new Date(now);
-    sixtyDaysAgo.setDate(sixtyDaysAgo.getDate() - 60);
-    
-    const campaignGaps = Array.from(this.customers.values())
-      .filter(customer => {
-        if (!customer.campaignStats?.lastSentDate) return true;
-        const lastSent = new Date(customer.campaignStats.lastSentDate);
-        return lastSent < sixtyDaysAgo;
-      }).length;
-    
-    const thirtyDaysFromNow = new Date(now);
-    thirtyDaysFromNow.setDate(thirtyDaysFromNow.getDate() + 30);
-    
-    const renewalAlerts = Array.from(this.customers.values())
-      .filter(customer => {
-        if (!customer.renewalDate) return false;
-        return customer.renewalDate <= thirtyDaysFromNow;
-      }).length;
-    
-    const redZoneCount = Array.from(this.customers.values())
-      .filter(customer => customer.inRedZone).length;
-    
+    // Mock dashboard stats
     return {
-      openTasks,
-      campaignGaps,
-      renewalAlerts,
-      redZoneCount,
+      openTasks: 36,
+      openTasksChange: 12,
+      campaignGaps: 14,
+      campaignGapsChange: -5,
+      renewalAlerts: 8,
+      renewalAlertsChange: 4,
+      redZoneCount: 12,
+      redZoneCountChange: -8,
+      healthDistribution: {
+        healthy: 65,
+        atRisk: 23,
+        redZone: 12
+      },
+      monthlyMetrics: generateTimeseriesData(timeframe)
     };
-  }
-
-  async getRecentActivity(limit = 5): Promise<any[]> {
-    // This is a simplified version since we don't have a dedicated activity log
-    // In a real app, we'd have an activity log table
-    const activities = [
-      {
-        id: "act-1",
-        userId: "user-2",
-        action: "completed onboarding for",
-        targetType: "customer",
-        targetId: 1,
-        targetName: "Acme Corp",
-        timestamp: new Date("2023-07-09T12:00:00Z"),
-        category: "Onboarding",
-      },
-      {
-        id: "act-2",
-        userId: "user-3",
-        action: "scheduled a review meeting with",
-        targetType: "customer",
-        targetId: 2,
-        targetName: "TechStart Inc",
-        timestamp: new Date("2023-07-09T11:00:00Z"),
-        category: "Meeting",
-      },
-      {
-        id: "act-3",
-        userId: "user-2",
-        action: "marked",
-        targetType: "customer",
-        targetId: 3,
-        targetName: "GlobalTech",
-        timestamp: new Date("2023-07-09T09:00:00Z"),
-        category: "Red Zone",
-      },
-      {
-        id: "act-4",
-        userId: "user-1",
-        action: "sent a campaign to",
-        targetType: "customer",
-        targetId: 4,
-        targetName: "SmartSolutions Inc",
-        timestamp: new Date("2023-07-09T07:00:00Z"),
-        category: "Campaign",
-      },
-    ];
-    
-    return activities
-      .sort((a, b) => b.timestamp.getTime() - a.timestamp.getTime())
-      .slice(0, limit)
-      .map(activity => {
-        const user = this.users.get(activity.userId);
-        return {
-          ...activity,
-          user: {
-            id: user?.id || "",
-            name: user?.fullName || "Unknown User",
-            avatar: user?.avatarUrl || "",
-          },
-        };
-      });
   }
 }
 
 export class DatabaseStorage implements IStorage {
-  async getUser(id: string): Promise<User | undefined> {
+  // User Methods
+  async getUser(id: number): Promise<User | undefined> {
     const [user] = await db.select().from(users).where(eq(users.id, id));
-    return user || undefined;
+    return user;
   }
 
   async getUserByEmail(email: string): Promise<User | undefined> {
     const [user] = await db.select().from(users).where(eq(users.email, email));
-    return user || undefined;
+    return user;
   }
 
   async createUser(user: InsertUser): Promise<User> {
@@ -1046,82 +491,55 @@ export class DatabaseStorage implements IStorage {
     return newUser;
   }
 
-  async updateUser(id: string, data: Partial<User>): Promise<User | undefined> {
+  async updateUser(id: number, user: Partial<User>): Promise<User | undefined> {
     const [updatedUser] = await db
       .update(users)
-      .set(data)
+      .set(user)
       .where(eq(users.id, id))
       .returning();
-    return updatedUser || undefined;
+    return updatedUser;
   }
 
+  // Customer Methods
   async getCustomers(): Promise<Customer[]> {
     return await db.select().from(customers);
   }
 
   async getCustomer(id: number): Promise<Customer | undefined> {
-    const [customer] = await db
-      .select()
-      .from(customers)
-      .where(eq(customers.id, id));
-    return customer || undefined;
+    const [customer] = await db.select().from(customers).where(eq(customers.id, id));
+    return customer;
   }
 
   async createCustomer(customer: InsertCustomer): Promise<Customer> {
-    const [newCustomer] = await db
-      .insert(customers)
-      .values(customer)
-      .returning();
+    const [newCustomer] = await db.insert(customers).values(customer).returning();
     return newCustomer;
   }
 
-  async updateCustomer(
-    id: number,
-    data: Partial<Customer>
-  ): Promise<Customer | undefined> {
+  async updateCustomer(id: number, customer: Partial<Customer>): Promise<Customer | undefined> {
     const [updatedCustomer] = await db
       .update(customers)
-      .set(data)
+      .set(customer)
       .where(eq(customers.id, id))
       .returning();
-    return updatedCustomer || undefined;
+    return updatedCustomer;
   }
 
+  // Task Methods
   async getTasks(): Promise<Task[]> {
     return await db.select().from(tasks);
   }
 
+  async getTasksByCustomer(customerId: number): Promise<Task[]> {
+    return await db.select().from(tasks).where(eq(tasks.customer_id, customerId));
+  }
+
+  async getTasksByAssignee(userId: number): Promise<Task[]> {
+    return await db.select().from(tasks).where(eq(tasks.assigned_to, userId));
+  }
+
   async getTask(id: number): Promise<Task | undefined> {
     const [task] = await db.select().from(tasks).where(eq(tasks.id, id));
-    return task || undefined;
-  }
-
-  async getTasksByUser(userId: string): Promise<Task[]> {
-    return await db
-      .select()
-      .from(tasks)
-      .where(eq(tasks.assignedToUserId, userId));
-  }
-
-  async getTasksByCustomer(customerId: number): Promise<Task[]> {
-    return await db
-      .select()
-      .from(tasks)
-      .where(eq(tasks.customerId, customerId));
-  }
-
-  async getUpcomingTasks(limit = 5): Promise<Task[]> {
-    return await db
-      .select()
-      .from(tasks)
-      .where(
-        and(
-          gte(tasks.dueDate, new Date()),
-          eq(tasks.status, "not_started")
-        )
-      )
-      .orderBy(tasks.dueDate)
-      .limit(limit);
+    return task;
   }
 
   async createTask(task: InsertTask): Promise<Task> {
@@ -1129,399 +547,289 @@ export class DatabaseStorage implements IStorage {
     return newTask;
   }
 
-  async updateTask(
-    id: number,
-    data: Partial<Task>
-  ): Promise<Task | undefined> {
+  async updateTask(id: number, task: Partial<Task>): Promise<Task | undefined> {
     const [updatedTask] = await db
       .update(tasks)
-      .set(data)
+      .set(task)
       .where(eq(tasks.id, id))
       .returning();
-    return updatedTask || undefined;
+    return updatedTask;
   }
 
+  // Task Comment Methods
   async getTaskComments(taskId: number): Promise<TaskComment[]> {
     return await db
       .select()
       .from(taskComments)
-      .where(eq(taskComments.taskId, taskId))
-      .orderBy(taskComments.createdAt);
+      .where(eq(taskComments.task_id, taskId))
+      .orderBy(taskComments.created_at);
   }
 
-  async createTaskComment(comment: InsertTaskComment): Promise<TaskComment> {
+  async createTaskComment(taskId: number, userId: number, comment: string): Promise<TaskComment> {
     const [newComment] = await db
       .insert(taskComments)
-      .values(comment)
+      .values({
+        task_id: taskId,
+        user_id: userId,
+        comment
+      })
       .returning();
     return newComment;
   }
 
+  // Playbook Methods
   async getPlaybooks(): Promise<Playbook[]> {
-    return await db.select().from(playbooks);
+    // Explicitly select only essential columns to avoid errors with missing columns
+    return await db.select({
+      id: playbooks.id,
+      name: playbooks.name,
+      description: playbooks.description,
+      trigger_type: playbooks.trigger_type,
+      target_segments: playbooks.target_segments,
+      filters: playbooks.filters,
+      active: playbooks.active,
+      created_by: playbooks.created_by,
+      created_at: playbooks.created_at
+    }).from(playbooks);
   }
 
   async getPlaybook(id: number): Promise<Playbook | undefined> {
-    const [playbook] = await db
-      .select()
-      .from(playbooks)
-      .where(eq(playbooks.id, id));
-    return playbook || undefined;
+    const [playbook] = await db.select({
+      id: playbooks.id,
+      name: playbooks.name,
+      description: playbooks.description,
+      trigger_type: playbooks.trigger_type,
+      target_segments: playbooks.target_segments,
+      filters: playbooks.filters,
+      active: playbooks.active,
+      created_by: playbooks.created_by,
+      created_at: playbooks.created_at
+    })
+    .from(playbooks)
+    .where(eq(playbooks.id, id));
+    
+    return playbook;
   }
 
   async createPlaybook(playbook: InsertPlaybook): Promise<Playbook> {
-    const [newPlaybook] = await db
-      .insert(playbooks)
-      .values(playbook)
-      .returning();
+    const [newPlaybook] = await db.insert(playbooks).values(playbook).returning();
     return newPlaybook;
   }
 
-  async updatePlaybook(
-    id: number,
-    data: Partial<Playbook>
-  ): Promise<Playbook | undefined> {
+  async updatePlaybook(id: number, playbook: Partial<Playbook>): Promise<Playbook | undefined> {
     const [updatedPlaybook] = await db
       .update(playbooks)
-      .set(data)
+      .set(playbook)
       .where(eq(playbooks.id, id))
       .returning();
-    return updatedPlaybook || undefined;
+    return updatedPlaybook;
   }
 
+  // Playbook Task Methods
   async getPlaybookTasks(playbookId: number): Promise<PlaybookTask[]> {
     return await db
-      .select()
+      .select({
+        id: playbookTasks.id,
+        playbook_id: playbookTasks.playbook_id,
+        title: playbookTasks.title,
+        description: playbookTasks.description,
+        due_type: playbookTasks.due_type,
+        due_offset: playbookTasks.due_offset,
+        fixed_date: playbookTasks.fixed_date,
+        recurrence: playbookTasks.recurrence,
+        assignment_role: playbookTasks.assignment_role,
+        required_fields: playbookTasks.required_fields,
+        template_message: playbookTasks.template_message,
+        order: playbookTasks.order,
+        created_at: playbookTasks.created_at
+      })
       .from(playbookTasks)
-      .where(eq(playbookTasks.playbookId, playbookId))
-      .orderBy(playbookTasks.sortOrder);
+      .where(eq(playbookTasks.playbook_id, playbookId))
+      .orderBy(playbookTasks.order);
   }
 
-  async createPlaybookTask(task: InsertPlaybookTask): Promise<PlaybookTask> {
+  async createPlaybookTask(playbookId: number, task: Omit<PlaybookTask, 'id' | 'playbook_id'>): Promise<PlaybookTask> {
     const [newTask] = await db
       .insert(playbookTasks)
-      .values(task)
+      .values({
+        ...task,
+        playbook_id: playbookId
+      })
       .returning();
     return newTask;
   }
 
-  async updatePlaybookTask(
-    id: number,
-    data: Partial<PlaybookTask>
-  ): Promise<PlaybookTask | undefined> {
+  async updatePlaybookTask(id: number, task: Partial<PlaybookTask>): Promise<PlaybookTask | undefined> {
     const [updatedTask] = await db
       .update(playbookTasks)
-      .set(data)
+      .set(task)
       .where(eq(playbookTasks.id, id))
       .returning();
-    return updatedTask || undefined;
+    return updatedTask;
   }
 
-  async getRedZoneAccounts(): Promise<RedZoneAccount[]> {
+  // Red Zone Alert Methods
+  async getRedZoneAlerts(): Promise<RedZoneAlert[]> {
     return await db
       .select()
-      .from(redZoneAccounts)
-      .where(isNull(redZoneAccounts.resolvedAt));
+      .from(redZoneAlerts)
+      .where(isNull(redZoneAlerts.resolved_at))
+      .orderBy(desc(redZoneAlerts.created_at));
   }
 
-  async getRedZoneAccount(id: number): Promise<RedZoneAccount | undefined> {
-    const [account] = await db
+  async getRedZoneAlertsByCustomer(customerId: number): Promise<RedZoneAlert[]> {
+    return await db
       .select()
-      .from(redZoneAccounts)
-      .where(eq(redZoneAccounts.id, id));
-    return account || undefined;
-  }
-
-  async getRedZoneByCustomer(customerId: number): Promise<RedZoneAccount | undefined> {
-    const [account] = await db
-      .select()
-      .from(redZoneAccounts)
+      .from(redZoneAlerts)
       .where(
         and(
-          eq(redZoneAccounts.customerId, customerId),
-          isNull(redZoneAccounts.resolvedAt)
+          eq(redZoneAlerts.customer_id, customerId),
+          isNull(redZoneAlerts.resolved_at)
         )
-      );
-    return account || undefined;
+      )
+      .orderBy(desc(redZoneAlerts.created_at));
   }
 
-  async createRedZoneAccount(redZone: InsertRedZoneAccount): Promise<RedZoneAccount> {
-    const [newAccount] = await db
-      .insert(redZoneAccounts)
-      .values(redZone)
+  async createRedZoneAlert(alert: InsertRedZoneAlert): Promise<RedZoneAlert> {
+    const [newAlert] = await db.insert(redZoneAlerts).values(alert).returning();
+    return newAlert;
+  }
+
+  async resolveRedZoneAlert(id: number): Promise<RedZoneAlert | undefined> {
+    const now = new Date();
+    const [resolvedAlert] = await db
+      .update(redZoneAlerts)
+      .set({ resolved_at: now })
+      .where(eq(redZoneAlerts.id, id))
       .returning();
-    return newAccount;
+    return resolvedAlert;
   }
 
-  async resolveRedZoneAccount(id: number): Promise<RedZoneAccount | undefined> {
-    const [resolvedAccount] = await db
-      .update(redZoneAccounts)
-      .set({ resolvedAt: new Date() })
-      .where(eq(redZoneAccounts.id, id))
-      .returning();
-    return resolvedAccount || undefined;
-  }
-
-  async getCalendarEvents(): Promise<CalendarEvent[]> {
-    return await db.select().from(calendarEvents);
-  }
-
-  async getCalendarEventsByCustomer(customerId: number): Promise<CalendarEvent[]> {
+  // Customer Metric Methods
+  async getCustomerMetrics(customerId: number): Promise<CustomerMetric[]> {
     return await db
       .select()
-      .from(calendarEvents)
-      .where(eq(calendarEvents.customerId, customerId));
+      .from(customerMetrics)
+      .where(eq(customerMetrics.customer_id, customerId))
+      .orderBy(customerMetrics.recorded_at);
   }
 
-  async createCalendarEvent(event: InsertCalendarEvent): Promise<CalendarEvent> {
-    const [newEvent] = await db
-      .insert(calendarEvents)
-      .values(event)
-      .returning();
-    return newEvent;
-  }
-
-  async getEmailThreadsByCustomer(customerId: number): Promise<EmailThread[]> {
-    return await db
-      .select()
-      .from(emailThreads)
-      .where(eq(emailThreads.customerId, customerId));
-  }
-
-  async createEmailThread(thread: InsertEmailThread): Promise<EmailThread> {
-    const [newThread] = await db
-      .insert(emailThreads)
-      .values(thread)
-      .returning();
-    return newThread;
-  }
-
-  async getIntegrationToken(userId: string, provider: string): Promise<IntegrationToken | undefined> {
-    const [token] = await db
-      .select()
-      .from(integrationTokens)
-      .where(
-        and(
-          eq(integrationTokens.userId, userId),
-          eq(integrationTokens.provider, provider)
-        )
-      );
-    return token || undefined;
-  }
-
-  async createIntegrationToken(token: InsertIntegrationToken): Promise<IntegrationToken> {
-    const [newToken] = await db
-      .insert(integrationTokens)
-      .values(token)
-      .returning();
-    return newToken;
-  }
-
-  async updateIntegrationToken(
-    id: number,
-    data: Partial<IntegrationToken>
-  ): Promise<IntegrationToken | undefined> {
-    const [updatedToken] = await db
-      .update(integrationTokens)
-      .set(data)
-      .where(eq(integrationTokens.id, id))
-      .returning();
-    return updatedToken || undefined;
-  }
-
-  async getMysqlConfig(): Promise<MysqlConfig | undefined> {
-    const [config] = await db
-      .select()
-      .from(mysqlConfig)
-      .where(eq(mysqlConfig.isActive, true));
-    return config || undefined;
-  }
-
-  async createMysqlConfig(config: InsertMysqlConfig): Promise<MysqlConfig> {
-    const [newConfig] = await db
-      .insert(mysqlConfig)
-      .values(config)
-      .returning();
-    return newConfig;
-  }
-
-  async updateMysqlConfig(
-    id: number,
-    data: Partial<MysqlConfig>
-  ): Promise<MysqlConfig | undefined> {
-    const [updatedConfig] = await db
-      .update(mysqlConfig)
-      .set(data)
-      .where(eq(mysqlConfig.id, id))
-      .returning();
-    return updatedConfig || undefined;
-  }
-
-  async getMysqlFieldMappings(): Promise<MysqlFieldMapping[]> {
-    return await db
-      .select()
-      .from(mysqlFieldMappings)
-      .where(eq(mysqlFieldMappings.isActive, true));
-  }
-
-  async createMysqlFieldMapping(mapping: InsertMysqlFieldMapping): Promise<MysqlFieldMapping> {
-    const [newMapping] = await db
-      .insert(mysqlFieldMappings)
-      .values(mapping)
-      .returning();
-    return newMapping;
-  }
-
-  async updateMysqlFieldMapping(
-    id: number,
-    data: Partial<MysqlFieldMapping>
-  ): Promise<MysqlFieldMapping | undefined> {
-    const [updatedMapping] = await db
-      .update(mysqlFieldMappings)
-      .set(data)
-      .where(eq(mysqlFieldMappings.id, id))
-      .returning();
-    return updatedMapping || undefined;
-  }
-
-  async getReportMetrics(
-    metricName: string,
-    startDate?: Date,
-    endDate?: Date
-  ): Promise<ReportMetric[]> {
-    let query = db
-      .select()
-      .from(reportMetrics)
-      .where(eq(reportMetrics.metricName, metricName));
-
-    if (startDate) {
-      query = query.where(gte(reportMetrics.metricDate, startDate));
-    }
-
-    if (endDate) {
-      query = query.where(gte(reportMetrics.metricDate, endDate));
-    }
-
-    return await query;
-  }
-
-  async createReportMetric(metric: InsertReportMetric): Promise<ReportMetric> {
+  async createCustomerMetric(customerId: number, metricType: string, value: number, percent?: number): Promise<CustomerMetric> {
     const [newMetric] = await db
-      .insert(reportMetrics)
-      .values(metric)
+      .insert(customerMetrics)
+      .values({
+        customer_id: customerId,
+        metric_type: metricType,
+        metric_value: value,
+        metric_percent: percent || null
+      })
       .returning();
     return newMetric;
   }
 
-  async getDashboardStats(): Promise<{
-    openTasks: number;
-    campaignGaps: number;
-    renewalAlerts: number;
-    redZoneCount: number;
-  }> {
-    // This would use more optimized queries in a real implementation
-    const [openTasksResult] = await db
-      .select({ count: db.fn.count() })
-      .from(tasks)
-      .where(eq(tasks.status, "not_started"));
-    
-    const openTasks = Number(openTasksResult?.count || 0);
-    
-    // Get customers with no campaigns in last 60 days
-    // This is simplified - would use JSON operators in production
-    const allCustomers = await db.select().from(customers);
-    const now = new Date();
-    const sixtyDaysAgo = new Date(now);
-    sixtyDaysAgo.setDate(sixtyDaysAgo.getDate() - 60);
-    
-    const campaignGaps = allCustomers.filter(customer => {
-      if (!customer.campaignStats?.lastSentDate) return true;
-      const lastSent = new Date(customer.campaignStats.lastSentDate);
-      return lastSent < sixtyDaysAgo;
-    }).length;
-    
-    // Renewal alerts - customers renewing in next 30 days
-    const thirtyDaysFromNow = new Date(now);
-    thirtyDaysFromNow.setDate(thirtyDaysFromNow.getDate() + 30);
-    
-    const renewalAlerts = allCustomers.filter(customer => {
-      if (!customer.renewalDate) return false;
-      return customer.renewalDate <= thirtyDaysFromNow;
-    }).length;
-    
-    // Red zone count
-    const [redZoneResult] = await db
-      .select({ count: db.fn.count() })
-      .from(redZoneAccounts)
-      .where(isNull(redZoneAccounts.resolvedAt));
-    
-    const redZoneCount = Number(redZoneResult?.count || 0);
-    
-    return {
-      openTasks,
-      campaignGaps,
-      renewalAlerts,
-      redZoneCount,
-    };
+  // MySQL Config Methods
+  async getMySQLConfig(): Promise<MySQLConfig | undefined> {
+    const [config] = await db.select().from(mysqlConfig);
+    return config;
   }
 
-  async getRecentActivity(limit = 5): Promise<any[]> {
-    // In a real app, this would query an activity log table
-    // This is a simplified mock implementation
-    const recentTasks = await db
-      .select({
-        id: tasks.id,
-        title: tasks.title,
-        createdAt: tasks.createdAt,
-        customerId: tasks.customerId,
-        createdByUserId: tasks.createdByUserId,
-      })
+  async createMySQLConfig(config: Omit<MySQLConfig, 'id' | 'created_at'>): Promise<MySQLConfig> {
+    const [newConfig] = await db.insert(mysqlConfig).values(config).returning();
+    return newConfig;
+  }
+
+  // MySQL Field Mapping Methods
+  async getMySQLFieldMappings(): Promise<MySQLFieldMapping[]> {
+    return await db.select().from(mysqlFieldMappings);
+  }
+
+  async createMySQLFieldMapping(mapping: Omit<MySQLFieldMapping, 'id' | 'created_at'>): Promise<MySQLFieldMapping> {
+    const [newMapping] = await db.insert(mysqlFieldMappings).values(mapping).returning();
+    return newMapping;
+  }
+
+  // Dashboard Stats
+  async getDashboardStats(timeframe: MetricTimeframe): Promise<any> {
+    const now = new Date();
+    let startDate = new Date();
+    
+    switch (timeframe) {
+      case 'weekly':
+        startDate.setDate(now.getDate() - 7);
+        break;
+      case 'monthly':
+        startDate.setMonth(now.getMonth() - 1);
+        break;
+      case 'quarterly':
+        startDate.setMonth(now.getMonth() - 3);
+        break;
+      case 'yearly':
+        startDate.setFullYear(now.getFullYear() - 1);
+        break;
+    }
+    
+    // Tasks stats
+    const openTasks = await db
+      .select()
       .from(tasks)
-      .orderBy(desc(tasks.createdAt))
-      .limit(limit);
+      .where(
+        and(
+          gte(tasks.due_date, startDate),
+          lt(tasks.status, 'completed')
+        )
+      );
     
-    // Fetch related data
-    const userIds = recentTasks.map(task => task.createdByUserId);
-    const customerIds = recentTasks.map(task => task.customerId);
+    // Red zone count
+    const redZoneCount = await db
+      .select()
+      .from(redZoneAlerts)
+      .where(
+        and(
+          gte(redZoneAlerts.created_at, startDate),
+          isNull(redZoneAlerts.resolved_at)
+        )
+      );
     
-    const taskUsers = userIds.length > 0
-      ? await db
-          .select()
-          .from(users)
-          .where(eq(users.id, userIds[0]))
-      : [];
+    // Health distribution
+    const healthyCounts = await db
+      .select()
+      .from(customers)
+      .where(eq(customers.health_status, 'healthy'));
     
-    const taskCustomers = customerIds.length > 0
-      ? await db
-          .select()
-          .from(customers)
-          .where(eq(customers.id, customerIds[0]))
-      : [];
+    const atRiskCounts = await db
+      .select()
+      .from(customers)
+      .where(eq(customers.health_status, 'at_risk'));
     
-    // Map to activity format
-    return recentTasks.map(task => {
-      const user = taskUsers.find(u => u.id === task.createdByUserId);
-      const customer = taskCustomers.find(c => c.id === task.customerId);
-      
-      return {
-        id: `task-${task.id}`,
-        user: {
-          id: user?.id || "",
-          name: user?.fullName || "Unknown User",
-          avatar: user?.avatarUrl || "",
-        },
-        action: "created task for",
-        target: {
-          type: "customer",
-          name: customer?.name || "Unknown Customer",
-        },
-        time: task.createdAt.toISOString(),
-        category: "Task",
-      };
-    });
+    const redZoneCounts = await db
+      .select()
+      .from(customers)
+      .where(eq(customers.health_status, 'red_zone'));
+    
+    const totalCustomers = healthyCounts.length + atRiskCounts.length + redZoneCounts.length;
+    
+    // generateTimeseriesData is already imported at the top of the file
+    
+    // For simplicity, we're mocking some of the data still
+    return {
+      openTasks: openTasks.length,
+      openTasksChange: 12, // mocked
+      campaignGaps: 14, // mocked
+      campaignGapsChange: -5, // mocked
+      renewalAlerts: 8, // mocked
+      renewalAlertsChange: 4, // mocked
+      redZoneCount: redZoneCount.length,
+      redZoneCountChange: -8, // mocked
+      healthDistribution: {
+        healthy: Math.round((healthyCounts.length / totalCustomers) * 100),
+        atRisk: Math.round((atRiskCounts.length / totalCustomers) * 100),
+        redZone: Math.round((redZoneCounts.length / totalCustomers) * 100)
+      },
+      monthlyMetrics: generateTimeseriesData(timeframe)
+    };
   }
 }
 
-export const storage = process.env.DATABASE_URL 
-  ? new DatabaseStorage() 
-  : new MemStorage();
+// Choose storage implementation based on whether we have a database connection
+const useDatabase = process.env.DATABASE_URL !== undefined;
+export const storage = useDatabase ? new DatabaseStorage() : new MemStorage();

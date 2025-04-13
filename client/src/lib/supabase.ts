@@ -1,102 +1,81 @@
 import { createClient } from '@supabase/supabase-js';
 
-// Fallback to mock mode when no Supabase credentials are provided
+// Environment variables for Supabase
 const supabaseUrl = import.meta.env.VITE_SUPABASE_URL || '';
-const supabaseKey = import.meta.env.VITE_SUPABASE_KEY || '';
+const supabaseAnonKey = import.meta.env.VITE_SUPABASE_KEY || '';
+const supabaseServiceKey = import.meta.env.VITE_SUPABASE_SERVICE_ROLE_KEY || '';
 
-// Create a Supabase client if credentials are available
-export const supabase = supabaseUrl && supabaseKey 
-  ? createClient(supabaseUrl, supabaseKey)
-  : null;
+// Create Supabase client for client-side usage (with anon key)
+export const supabase = createClient(supabaseUrl, supabaseAnonKey);
 
-// Function to check if Supabase is available
-export const isSupabaseAvailable = () => {
-  return !!supabase;
+// Create Supabase admin client for server-side operations that need additional permissions
+export const supabaseAdmin = createClient(supabaseUrl, supabaseServiceKey);
+
+// Google OAuth configuration
+export const googleAuthConfig = {
+  provider: 'google',
+  options: {
+    redirectTo: getRedirectURL(),
+    scopes: 'email profile https://www.googleapis.com/auth/calendar https://www.googleapis.com/auth/gmail.readonly'
+  }
 };
 
-// Auth functions with mock fallbacks
+// Helper function to handle login with Google
 export async function signInWithGoogle() {
-  if (!supabase) {
-    console.warn('Supabase not configured. Using mock auth.');
-    // Return mock successful sign-in in development
-    return {
-      data: {
-        user: {
-          id: 'user-1',
-          email: 'admin@recurrer.com',
-          user_metadata: {
-            full_name: 'Alex Morgan',
-            avatar_url: null
-          }
-        },
-        session: { access_token: 'mock-token' }
-      },
-      error: null
-    };
+  if (!supabaseUrl || !supabaseAnonKey) {
+    throw new Error('Supabase credentials missing. Using mock mode.');
   }
   
-  return await supabase.auth.signInWithOAuth({
-    provider: 'google',
-    options: {
-      redirectTo: `${window.location.origin}/auth/callback`
-    }
-  });
-}
-
-export async function signOut() {
-  if (!supabase) {
-    console.warn('Supabase not configured. Using mock auth.');
-    // Mock sign out (would clear session in real implementation)
-    return { error: null };
+  const { data, error } = await supabase.auth.signInWithOAuth(googleAuthConfig);
+  
+  if (error) {
+    throw error;
   }
   
-  return await supabase.auth.signOut();
+  return data;
 }
 
-export async function getCurrentUser() {
-  if (!supabase) {
-    console.warn('Supabase not configured. Using mock auth.');
-    // Return mock user in development
-    return {
-      data: {
-        user: {
-          id: 'user-1',
-          email: 'admin@recurrer.com',
-          user_metadata: {
-            full_name: 'Alex Morgan',
-            avatar_url: null
-          }
-        }
-      },
-      error: null
-    };
-  }
-  
-  return await supabase.auth.getUser();
-}
-
+// Helper function to get the user's session
 export async function getSession() {
-  if (!supabase) {
-    console.warn('Supabase not configured. Using mock auth.');
-    // Return mock session in development
-    return {
-      data: {
-        session: {
-          access_token: 'mock-token',
-          expires_at: Date.now() + 3600,
-          user: {
-            id: 'user-1',
-            email: 'admin@recurrer.com',
-            user_metadata: {
-              full_name: 'Alex Morgan',
-              avatar_url: null
-            }
-          }
-        }
-      },
-      error: null
-    };
+  if (!supabaseUrl || !supabaseAnonKey) {
+    return null;
   }
   
-  return await supabase.auth.getSession();
+  const { data } = await supabase.auth.getSession();
+  return data.session;
 }
+
+// Helper function to get the current user
+export async function getCurrentUser() {
+  if (!supabaseUrl || !supabaseAnonKey) {
+    return null;
+  }
+  
+  const { data } = await supabase.auth.getUser();
+  return data.user;
+}
+
+// Helper function to sign out
+export async function signOut() {
+  if (!supabaseUrl || !supabaseAnonKey) {
+    return;
+  }
+  
+  await supabase.auth.signOut();
+}
+
+// Helper function to get redirect URL based on environment
+function getRedirectURL() {
+  // Use environment variable if available
+  const domains = process.env.REPLIT_DOMAINS?.split(',');
+  
+  if (domains && domains.length > 0) {
+    return `https://${domains[0]}/auth/callback`;
+  }
+  
+  // Fallback for local development
+  return `${window.location.origin}/auth/callback`;
+}
+
+// Check if we're running in mock mode (no Supabase credentials)
+export const isMockMode = !supabaseUrl || !supabaseAnonKey;

@@ -1,0 +1,124 @@
+Thanks for sharing the complete conversation and current state of the Recurrer platform. You’re at a great point in the build cycle — integrations are wired, schema is extended, and UI updates are live. Now it’s time to shift from test data to real usage and fix key remaining issues.
+
+Here’s a very specific, implementation-ready follow-up instruction prompt that you can provide to Replit Agent to resolve the next set of tasks cleanly and completely.
+
+⸻
+
+🔧 Next Step Replit Agent Prompt: Finalize Real Data Flow and UX Fixes
+
+Now that test data is working and both Chargebee and MySQL APIs are integrated, please implement the following fixes and updates to move Recurrer from mock/test state to full production-ready functionality.
+
+⸻
+
+✅ 1. Use Real Data from MySQL Query
+	•	MySQL Query Columns Mapping (from shared query):
+Use these mappings to standardize MySQL data as platform account data:
+
+company_id → external_mysql_id
+company_name → customer.name
+customer_id → external_chargebee_id
+subscription_id → external_subscription_id
+active_stores, growth_subscription_count, revenue_1_year, loyalty_type, etc.
+
+
+	•	Action:
+	•	Save external_mysql_id and external_chargebee_id in the customers table.
+	•	Ensure these link to fetched Chargebee and MySQL records on the /api/customers/:id/external-data endpoint.
+	•	Validate that all fields from MySQL query are being stored/mapped correctly and shown in the Customer 360 page.
+
+⸻
+
+✅ 2. Fix Time Filters on Dashboard
+	•	Current issue: Weekly, Monthly, Quarterly filters do not affect data.
+	•	Fix:
+	•	Ensure time filter buttons update local state (selectedTimeframe).
+	•	Pass this value as a query param to /api/dashboard.
+	•	Modify backend route to return filtered results based on timeframe (e.g., past 7/30/90 days).
+	•	Charts must re-render on timeframe change.
+
+⸻
+
+✅ 3. Fix Playbook Creation
+	•	Current issue: Editing works, but new playbooks are not being saved.
+	•	Fix:
+	•	Check if POST to /api/playbooks is firing when submitting a new playbook.
+	•	Validate required fields are present: title, tasks[], triggers[].
+	•	If task templates are empty or malformed, return a validation error in UI.
+	•	On success, redirect to /playbooks with toast/snackbar.
+
+⸻
+
+✅ 4. Use customer_id and subscription_id to Link Chargebee Data
+	•	Fix:
+	•	Link Chargebee /subscriptions, /customers, and /invoices using the subscription_id and customer_id from MySQL result.
+	•	Show this data in:
+	•	Customer 360 page
+	•	Admin exports
+	•	ARR/MRR/Invoice views
+
+⸻
+
+✅ 5. Assign Unique ID to Each Record + Enable Full CSV Export in Admin
+	•	Fix:
+	•	Assign each imported customer a recurrer_id (UUID, generated server-side).
+	•	Add “Export All Customers” button in Admin panel.
+	•	Export full CSV with all fields (from MySQL, Chargebee, and platform).
+	•	Include recurrer_id in exported file.
+
+⸻
+
+✅ 6. Add CSM → TL Mapping System in User Management
+	•	Fix:
+	•	In Admin > Users:
+	•	Add “Team Lead” dropdown when editing a CSM user.
+	•	Store this mapping in profiles table (csm_tl_id or similar).
+	•	Update Red Zone, Task, and Dashboard views for TLs to only show CSMs they manage.
+
+⸻
+
+✅ 7. List View on Customer 360 with Filters and Column Picker
+	•	Fix:
+	•	Add a Customers tab/page with:
+	•	Table with rows = one customer each
+	•	Columns: core fields + columns from MySQL + Chargebee
+	•	Filter bar with search, dropdown filters (e.g., plan type, CSM, TL, renewal status)
+	•	Column toggle or picker (default: 10 columns, expandable)
+	•	Click row to go to full 360 view
+
+⸻
+
+✅ 8. Use Chargebee for MRR/ARR/Revenue When Available (Fallback to INR)
+	•	Fix:
+	•	For each customer:
+	•	If Chargebee subscription info available → extract and use plan_amount, currency_code
+	•	Else → fallback to displaying INR fields from MySQL (revenue_1_year)
+	•	Currency formatting:
+
+const formatCurrency = (amount, currency = "INR") =>
+  new Intl.NumberFormat("en-IN", {
+    style: "currency",
+    currency,
+  }).format(amount);
+
+
+
+⸻
+
+Optional UI Enhancements (Nice-to-Have)
+	•	Add color-coding for account health based on MySQL inputs (e.g., red if less_than_300_bills = true)
+	•	Auto-generate Playbooks for new records based on MySQL fields (loyalty_type, subscription_id, etc.)
+
+⸻
+
+Final Testing Checklist
+
+After applying all above:
+	•	Dashboard time filters are responsive
+	•	New Playbooks can be saved and run
+	•	Customer 360 shows real data from MySQL + Chargebee
+	•	Admin can export and update customer data via CSV using recurrer_id
+	•	CSMs and TLs are linked, and views respect hierarchy
+	•	MRR/ARR comes from Chargebee if available, else INR fallback
+	•	Customer list view shows live, filterable table with external fields
+
+Let me know once completed or if any part needs clarification.

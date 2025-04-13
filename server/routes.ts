@@ -1,620 +1,470 @@
-import type { Express, Request, Response } from "express";
+import type { Express } from "express";
 import { createServer, type Server } from "http";
 import { storage } from "./storage";
-import {
+import { z } from "zod";
+import { MetricTimeframe } from "@shared/types";
+import { 
   insertUserSchema,
   insertCustomerSchema,
   insertTaskSchema,
-  insertTaskCommentSchema,
   insertPlaybookSchema,
   insertPlaybookTaskSchema,
-  insertRedZoneAccountSchema,
-  insertCalendarEventSchema,
-  insertEmailThreadSchema,
-  insertIntegrationTokenSchema,
-  insertMysqlConfigSchema,
-  insertMysqlFieldMappingSchema,
-  insertReportMetricSchema,
+  insertRedZoneAlertSchema
 } from "@shared/schema";
-import { z } from "zod";
-import { ZodError } from "zod";
-import { fromZodError } from "zod-validation-error";
+import {
+  getChargebeeSubscriptions,
+  getChargebeeSubscription,
+  getChargebeeCustomers,
+  getChargebeeCustomer,
+  getChargebeeInvoices,
+  getChargebeeInvoice,
+  getInvoicesForSubscription,
+  getMySQLCompanies,
+  getMySQLCompany,
+  importMySQLDataToCustomer,
+  getCustomerExternalData
+} from "./external-data";
 
 export async function registerRoutes(app: Express): Promise<Server> {
-  // API middleware for errors
-  const handleError = (err: Error, res: Response) => {
-    console.error(err);
-    if (err instanceof ZodError) {
-      return res.status(400).json({
-        message: "Validation error",
-        errors: fromZodError(err).message,
-      });
-    }
-    res.status(500).json({ message: err.message || "Server error" });
-  };
-
-  // Health check route
-  app.get("/api/health", (_req, res) => {
-    res.json({ status: "ok" });
+  // API Routes - All prefixed with /api
+  
+  // Dashboard
+  app.get('/api/dashboard', async (req, res) => {
+    const timeframe = (req.query.timeframe as MetricTimeframe) || 'monthly';
+    const stats = await storage.getDashboardStats(timeframe);
+    res.json(stats);
   });
-
-  // Dashboard routes
-  app.get("/api/dashboard/stats", async (_req, res) => {
-    try {
-      const stats = await storage.getDashboardStats();
-      res.json(stats);
-    } catch (err) {
-      handleError(err as Error, res);
+  
+  // Users
+  app.get('/api/users/:id', async (req, res) => {
+    const id = parseInt(req.params.id);
+    const user = await storage.getUser(id);
+    if (!user) {
+      return res.status(404).json({ message: 'User not found' });
     }
+    res.json(user);
   });
-
-  app.get("/api/dashboard/recent-activity", async (_req, res) => {
-    try {
-      const activity = await storage.getRecentActivity();
-      res.json(activity);
-    } catch (err) {
-      handleError(err as Error, res);
-    }
-  });
-
-  app.get("/api/dashboard/upcoming-tasks", async (_req, res) => {
-    try {
-      const tasks = await storage.getUpcomingTasks();
-      res.json(tasks);
-    } catch (err) {
-      handleError(err as Error, res);
-    }
-  });
-
-  // User routes
-  app.get("/api/users/:id", async (req, res) => {
-    try {
-      const user = await storage.getUser(req.params.id);
-      if (!user) {
-        return res.status(404).json({ message: "User not found" });
-      }
-      res.json(user);
-    } catch (err) {
-      handleError(err as Error, res);
-    }
-  });
-
-  app.post("/api/users", async (req, res) => {
+  
+  app.post('/api/users', async (req, res) => {
     try {
       const userData = insertUserSchema.parse(req.body);
       const user = await storage.createUser(userData);
       res.status(201).json(user);
-    } catch (err) {
-      handleError(err as Error, res);
+    } catch (error) {
+      res.status(400).json({ message: 'Invalid user data', error });
     }
   });
-
-  app.patch("/api/users/:id", async (req, res) => {
+  
+  app.patch('/api/users/:id', async (req, res) => {
+    const id = parseInt(req.params.id);
     try {
-      const userData = insertUserSchema.partial().parse(req.body);
-      const user = await storage.updateUser(req.params.id, userData);
+      const userData = z.object({
+        name: z.string().optional(),
+        email: z.string().email().optional(),
+        role: z.enum(['admin', 'team_lead', 'csm']).optional(),
+        avatar_url: z.string().optional()
+      }).parse(req.body);
+      
+      const user = await storage.updateUser(id, userData);
       if (!user) {
-        return res.status(404).json({ message: "User not found" });
+        return res.status(404).json({ message: 'User not found' });
       }
       res.json(user);
-    } catch (err) {
-      handleError(err as Error, res);
+    } catch (error) {
+      res.status(400).json({ message: 'Invalid user data', error });
     }
   });
-
-  // Customer routes
-  app.get("/api/customers", async (_req, res) => {
-    try {
-      const customers = await storage.getCustomers();
-      res.json(customers);
-    } catch (err) {
-      handleError(err as Error, res);
-    }
+  
+  // Customers
+  app.get('/api/customers', async (req, res) => {
+    const customers = await storage.getCustomers();
+    res.json(customers);
   });
-
-  app.get("/api/customers/:id", async (req, res) => {
-    try {
-      const id = parseInt(req.params.id);
-      const customer = await storage.getCustomer(id);
-      if (!customer) {
-        return res.status(404).json({ message: "Customer not found" });
-      }
-      res.json(customer);
-    } catch (err) {
-      handleError(err as Error, res);
+  
+  app.get('/api/customers/:id', async (req, res) => {
+    const id = parseInt(req.params.id);
+    const customer = await storage.getCustomer(id);
+    if (!customer) {
+      return res.status(404).json({ message: 'Customer not found' });
     }
+    res.json(customer);
   });
-
-  app.post("/api/customers", async (req, res) => {
+  
+  app.post('/api/customers', async (req, res) => {
     try {
       const customerData = insertCustomerSchema.parse(req.body);
       const customer = await storage.createCustomer(customerData);
       res.status(201).json(customer);
-    } catch (err) {
-      handleError(err as Error, res);
+    } catch (error) {
+      res.status(400).json({ message: 'Invalid customer data', error });
     }
   });
-
-  app.patch("/api/customers/:id", async (req, res) => {
+  
+  app.patch('/api/customers/:id', async (req, res) => {
+    const id = parseInt(req.params.id);
     try {
-      const id = parseInt(req.params.id);
       const customerData = insertCustomerSchema.partial().parse(req.body);
       const customer = await storage.updateCustomer(id, customerData);
       if (!customer) {
-        return res.status(404).json({ message: "Customer not found" });
+        return res.status(404).json({ message: 'Customer not found' });
       }
       res.json(customer);
-    } catch (err) {
-      handleError(err as Error, res);
+    } catch (error) {
+      res.status(400).json({ message: 'Invalid customer data', error });
     }
   });
-
-  // Task routes
-  app.get("/api/tasks", async (_req, res) => {
-    try {
-      const tasks = await storage.getTasks();
-      res.json(tasks);
-    } catch (err) {
-      handleError(err as Error, res);
+  
+  // Tasks
+  app.get('/api/tasks', async (req, res) => {
+    const customerId = req.query.customerId ? parseInt(req.query.customerId as string) : undefined;
+    const assigneeId = req.query.assigneeId ? parseInt(req.query.assigneeId as string) : undefined;
+    
+    let tasks;
+    if (customerId) {
+      tasks = await storage.getTasksByCustomer(customerId);
+    } else if (assigneeId) {
+      tasks = await storage.getTasksByAssignee(assigneeId);
+    } else {
+      tasks = await storage.getTasks();
     }
+    
+    res.json(tasks);
   });
-
-  app.get("/api/tasks/:id", async (req, res) => {
-    try {
-      const id = parseInt(req.params.id);
-      const task = await storage.getTask(id);
-      if (!task) {
-        return res.status(404).json({ message: "Task not found" });
-      }
-      res.json(task);
-    } catch (err) {
-      handleError(err as Error, res);
+  
+  app.get('/api/tasks/:id', async (req, res) => {
+    const id = parseInt(req.params.id);
+    const task = await storage.getTask(id);
+    if (!task) {
+      return res.status(404).json({ message: 'Task not found' });
     }
+    res.json(task);
   });
-
-  app.get("/api/tasks/by-user/:userId", async (req, res) => {
-    try {
-      const tasks = await storage.getTasksByUser(req.params.userId);
-      res.json(tasks);
-    } catch (err) {
-      handleError(err as Error, res);
-    }
-  });
-
-  app.get("/api/tasks/by-customer/:customerId", async (req, res) => {
-    try {
-      const customerId = parseInt(req.params.customerId);
-      const tasks = await storage.getTasksByCustomer(customerId);
-      res.json(tasks);
-    } catch (err) {
-      handleError(err as Error, res);
-    }
-  });
-
-  app.post("/api/tasks", async (req, res) => {
+  
+  app.post('/api/tasks', async (req, res) => {
     try {
       const taskData = insertTaskSchema.parse(req.body);
       const task = await storage.createTask(taskData);
       res.status(201).json(task);
-    } catch (err) {
-      handleError(err as Error, res);
+    } catch (error) {
+      res.status(400).json({ message: 'Invalid task data', error });
     }
   });
-
-  app.patch("/api/tasks/:id", async (req, res) => {
+  
+  app.patch('/api/tasks/:id', async (req, res) => {
+    const id = parseInt(req.params.id);
     try {
-      const id = parseInt(req.params.id);
       const taskData = insertTaskSchema.partial().parse(req.body);
       const task = await storage.updateTask(id, taskData);
       if (!task) {
-        return res.status(404).json({ message: "Task not found" });
+        return res.status(404).json({ message: 'Task not found' });
       }
       res.json(task);
-    } catch (err) {
-      handleError(err as Error, res);
+    } catch (error) {
+      res.status(400).json({ message: 'Invalid task data', error });
     }
   });
-
+  
   // Task Comments
-  app.get("/api/task-comments/:taskId", async (req, res) => {
+  app.get('/api/tasks/:taskId/comments', async (req, res) => {
+    const taskId = parseInt(req.params.taskId);
+    const comments = await storage.getTaskComments(taskId);
+    res.json(comments);
+  });
+  
+  app.post('/api/tasks/:taskId/comments', async (req, res) => {
+    const taskId = parseInt(req.params.taskId);
+    const { userId, comment } = req.body;
+    
+    if (!userId || !comment) {
+      return res.status(400).json({ message: 'User ID and comment are required' });
+    }
+    
     try {
-      const taskId = parseInt(req.params.taskId);
-      const comments = await storage.getTaskComments(taskId);
-      res.json(comments);
-    } catch (err) {
-      handleError(err as Error, res);
+      const newComment = await storage.createTaskComment(taskId, userId, comment);
+      res.status(201).json(newComment);
+    } catch (error) {
+      res.status(400).json({ message: 'Error creating comment', error });
     }
   });
-
-  app.post("/api/task-comments", async (req, res) => {
-    try {
-      const commentData = insertTaskCommentSchema.parse(req.body);
-      const comment = await storage.createTaskComment(commentData);
-      res.status(201).json(comment);
-    } catch (err) {
-      handleError(err as Error, res);
-    }
+  
+  // Playbooks
+  app.get('/api/playbooks', async (req, res) => {
+    const playbooks = await storage.getPlaybooks();
+    res.json(playbooks);
   });
-
-  // Playbook routes
-  app.get("/api/playbooks", async (_req, res) => {
-    try {
-      const playbooks = await storage.getPlaybooks();
-      res.json(playbooks);
-    } catch (err) {
-      handleError(err as Error, res);
+  
+  app.get('/api/playbooks/:id', async (req, res) => {
+    const id = parseInt(req.params.id);
+    const playbook = await storage.getPlaybook(id);
+    if (!playbook) {
+      return res.status(404).json({ message: 'Playbook not found' });
     }
+    res.json(playbook);
   });
-
-  app.get("/api/playbooks/:id", async (req, res) => {
-    try {
-      const id = parseInt(req.params.id);
-      const playbook = await storage.getPlaybook(id);
-      if (!playbook) {
-        return res.status(404).json({ message: "Playbook not found" });
-      }
-      res.json(playbook);
-    } catch (err) {
-      handleError(err as Error, res);
-    }
-  });
-
-  app.post("/api/playbooks", async (req, res) => {
+  
+  app.post('/api/playbooks', async (req, res) => {
     try {
       const playbookData = insertPlaybookSchema.parse(req.body);
       const playbook = await storage.createPlaybook(playbookData);
       res.status(201).json(playbook);
-    } catch (err) {
-      handleError(err as Error, res);
+    } catch (error) {
+      res.status(400).json({ message: 'Invalid playbook data', error });
     }
   });
-
-  app.patch("/api/playbooks/:id", async (req, res) => {
+  
+  app.patch('/api/playbooks/:id', async (req, res) => {
+    const id = parseInt(req.params.id);
     try {
-      const id = parseInt(req.params.id);
       const playbookData = insertPlaybookSchema.partial().parse(req.body);
       const playbook = await storage.updatePlaybook(id, playbookData);
       if (!playbook) {
-        return res.status(404).json({ message: "Playbook not found" });
+        return res.status(404).json({ message: 'Playbook not found' });
       }
       res.json(playbook);
-    } catch (err) {
-      handleError(err as Error, res);
+    } catch (error) {
+      res.status(400).json({ message: 'Invalid playbook data', error });
     }
   });
-
-  // Playbook Task routes
-  app.get("/api/playbook-tasks/:playbookId", async (req, res) => {
+  
+  // Playbook Workflow - Create playbook with tasks in one transaction
+  app.post('/api/playbooks/workflow', async (req, res) => {
     try {
-      const playbookId = parseInt(req.params.playbookId);
-      const tasks = await storage.getPlaybookTasks(playbookId);
-      res.json(tasks);
-    } catch (err) {
-      handleError(err as Error, res);
+      // Define schema for the entire workflow
+      const workflowSchema = z.object({
+        name: z.string().min(1),
+        description: z.string().optional(),
+        trigger_type: z.enum(['manual', 'new_customer', 'usage_drop', 'renewal_approaching', 'custom_event']),
+        target_segments: z.array(z.enum(['starter', 'growth', 'key'])),
+        filters: z.record(z.string().optional()).optional(),
+        active: z.boolean().default(true),
+        tasks: z.array(z.object({
+          title: z.string().min(1),
+          description: z.string().optional(),
+          due_type: z.enum(['fixed', 'relative']),
+          due_offset: z.number().optional(),
+          fixed_date: z.date().optional(),
+          recurrence: z.enum(['none', 'daily', 'weekly', 'monthly', 'bi-weekly']),
+          assignment_role: z.enum(['csm', 'team_lead', 'admin']),
+          required_fields: z.array(z.string()).optional(),
+          template_message: z.string().optional(),
+          order: z.number()
+        })).min(1)
+      });
+      
+      // Validate the incoming data
+      const workflowData = workflowSchema.parse(req.body);
+      
+      // Extract playbook data
+      const playbookData = {
+        name: workflowData.name,
+        description: workflowData.description || null,
+        trigger_type: workflowData.trigger_type,
+        target_segments: workflowData.target_segments,
+        filters: workflowData.filters ? JSON.stringify(workflowData.filters) : null,
+        active: workflowData.active,
+        created_by: 1, // TODO: Get from auth context
+      };
+      
+      // Create the playbook
+      const playbook = await storage.createPlaybook(playbookData);
+      
+      // Create tasks for the playbook
+      const createdTasks = [];
+      for (const task of workflowData.tasks) {
+        // Convert task data to match DB schema
+        const playbookTaskData = {
+          title: task.title,
+          description: task.description || null,
+          due_type: task.due_type,
+          due_offset: task.due_type === 'relative' ? (task.due_offset || 0) : null,
+          fixed_date: task.due_type === 'fixed' && task.fixed_date ? new Date(task.fixed_date) : null,
+          recurrence: task.recurrence,
+          assignment_role: task.assignment_role,
+          required_fields: task.required_fields || [],
+          template_message: task.template_message || null,
+          order: task.order,
+          created_at: new Date()
+        };
+        
+        const createdTask = await storage.createPlaybookTask(playbook.id, playbookTaskData);
+        createdTasks.push(createdTask);
+      }
+      
+      // Return the created playbook with its tasks
+      res.status(201).json({
+        ...playbook,
+        tasks: createdTasks
+      });
+    } catch (error) {
+      console.error('Error creating playbook workflow:', error);
+      res.status(400).json({ 
+        message: 'Invalid playbook workflow data', 
+        error: error instanceof Error ? error.message : String(error) 
+      });
     }
   });
-
-  app.post("/api/playbook-tasks", async (req, res) => {
+  
+  // Playbook Tasks
+  app.get('/api/playbooks/:playbookId/tasks', async (req, res) => {
+    const playbookId = parseInt(req.params.playbookId);
+    const tasks = await storage.getPlaybookTasks(playbookId);
+    res.json(tasks);
+  });
+  
+  app.post('/api/playbooks/:playbookId/tasks', async (req, res) => {
+    const playbookId = parseInt(req.params.playbookId);
     try {
-      const taskData = insertPlaybookTaskSchema.parse(req.body);
-      const task = await storage.createPlaybookTask(taskData);
+      const taskSchema = z.object({
+        title: z.string(),
+        description: z.string().nullable().optional(),
+        due_type: z.enum(['fixed', 'relative']).default('relative'),
+        due_offset: z.number().nullable().optional(),
+        fixed_date: z.string().nullable().optional(),
+        recurrence: z.enum(['none', 'daily', 'weekly', 'monthly', 'bi-weekly']).default('none'),
+        assignment_role: z.enum(['csm', 'team_lead', 'admin']).default('csm'),
+        required_fields: z.array(z.string()).optional(),
+        template_message: z.string().nullable().optional(),
+        order: z.number()
+      });
+      
+      // Convert undefined to null for database compatibility
+      let taskData = taskSchema.parse(req.body);
+      
+      // Convert undefined values to null
+      if (taskData.description === undefined) taskData.description = null;
+      if (taskData.due_offset === undefined) taskData.due_offset = null;
+      if (taskData.fixed_date === undefined) taskData.fixed_date = null;
+      if (taskData.template_message === undefined) taskData.template_message = null;
+      if (taskData.required_fields === undefined) taskData.required_fields = [];
+      
+      // Add created_at date and handle undefined values
+      const fullTaskData = {
+        title: taskData.title,
+        description: taskData.description || null,
+        due_type: taskData.due_type,
+        due_offset: taskData.due_offset || null,
+        fixed_date: taskData.fixed_date ? new Date(taskData.fixed_date) : null,
+        recurrence: taskData.recurrence,
+        assignment_role: taskData.assignment_role,
+        required_fields: taskData.required_fields || [],
+        template_message: taskData.template_message || null,
+        order: taskData.order,
+        created_at: new Date()
+      };
+      
+      const task = await storage.createPlaybookTask(playbookId, fullTaskData);
       res.status(201).json(task);
-    } catch (err) {
-      handleError(err as Error, res);
+    } catch (error) {
+      res.status(400).json({ message: 'Invalid playbook task data', error });
     }
   });
-
-  app.patch("/api/playbook-tasks/:id", async (req, res) => {
+  
+  // Red Zone Alerts
+  app.get('/api/red-zone', async (req, res) => {
+    const customerId = req.query.customerId ? parseInt(req.query.customerId as string) : undefined;
+    
+    let alerts;
+    if (customerId) {
+      alerts = await storage.getRedZoneAlertsByCustomer(customerId);
+    } else {
+      alerts = await storage.getRedZoneAlerts();
+    }
+    
+    res.json(alerts);
+  });
+  
+  app.post('/api/red-zone', async (req, res) => {
     try {
-      const id = parseInt(req.params.id);
-      const taskData = insertPlaybookTaskSchema.partial().parse(req.body);
-      const task = await storage.updatePlaybookTask(id, taskData);
-      if (!task) {
-        return res.status(404).json({ message: "Playbook task not found" });
-      }
-      res.json(task);
-    } catch (err) {
-      handleError(err as Error, res);
+      const alertData = insertRedZoneAlertSchema.parse(req.body);
+      const alert = await storage.createRedZoneAlert(alertData);
+      res.status(201).json(alert);
+    } catch (error) {
+      res.status(400).json({ message: 'Invalid alert data', error });
     }
   });
-
-  // Red Zone routes
-  app.get("/api/red-zone", async (_req, res) => {
-    try {
-      const accounts = await storage.getRedZoneAccounts();
-      res.json(accounts);
-    } catch (err) {
-      handleError(err as Error, res);
+  
+  app.post('/api/red-zone/:id/resolve', async (req, res) => {
+    const id = parseInt(req.params.id);
+    const alert = await storage.resolveRedZoneAlert(id);
+    if (!alert) {
+      return res.status(404).json({ message: 'Alert not found' });
     }
+    res.json(alert);
   });
-
-  app.get("/api/red-zone/:id", async (req, res) => {
-    try {
-      const id = parseInt(req.params.id);
-      const account = await storage.getRedZoneAccount(id);
-      if (!account) {
-        return res.status(404).json({ message: "Red zone account not found" });
-      }
-      res.json(account);
-    } catch (err) {
-      handleError(err as Error, res);
+  
+  // Customer Metrics
+  app.get('/api/customers/:customerId/metrics', async (req, res) => {
+    const customerId = parseInt(req.params.customerId);
+    const metrics = await storage.getCustomerMetrics(customerId);
+    res.json(metrics);
+  });
+  
+  app.post('/api/customers/:customerId/metrics', async (req, res) => {
+    const customerId = parseInt(req.params.customerId);
+    const { metricType, value, percent } = req.body;
+    
+    if (!metricType || value === undefined) {
+      return res.status(400).json({ message: 'Metric type and value are required' });
     }
-  });
-
-  app.get("/api/red-zone/by-customer/:customerId", async (req, res) => {
+    
     try {
-      const customerId = parseInt(req.params.customerId);
-      const account = await storage.getRedZoneByCustomer(customerId);
-      if (!account) {
-        return res.status(404).json({ message: "Red zone account not found" });
-      }
-      res.json(account);
-    } catch (err) {
-      handleError(err as Error, res);
-    }
-  });
-
-  app.post("/api/red-zone", async (req, res) => {
-    try {
-      const accountData = insertRedZoneAccountSchema.parse(req.body);
-      const account = await storage.createRedZoneAccount(accountData);
-      res.status(201).json(account);
-    } catch (err) {
-      handleError(err as Error, res);
-    }
-  });
-
-  app.post("/api/red-zone/:id/resolve", async (req, res) => {
-    try {
-      const id = parseInt(req.params.id);
-      const account = await storage.resolveRedZoneAccount(id);
-      if (!account) {
-        return res.status(404).json({ message: "Red zone account not found" });
-      }
-      res.json(account);
-    } catch (err) {
-      handleError(err as Error, res);
-    }
-  });
-
-  // Calendar Event routes
-  app.get("/api/calendar-events", async (_req, res) => {
-    try {
-      const events = await storage.getCalendarEvents();
-      res.json(events);
-    } catch (err) {
-      handleError(err as Error, res);
-    }
-  });
-
-  app.get("/api/calendar-events/by-customer/:customerId", async (req, res) => {
-    try {
-      const customerId = parseInt(req.params.customerId);
-      const events = await storage.getCalendarEventsByCustomer(customerId);
-      res.json(events);
-    } catch (err) {
-      handleError(err as Error, res);
-    }
-  });
-
-  app.post("/api/calendar-events", async (req, res) => {
-    try {
-      const eventData = insertCalendarEventSchema.parse(req.body);
-      const event = await storage.createCalendarEvent(eventData);
-      res.status(201).json(event);
-    } catch (err) {
-      handleError(err as Error, res);
-    }
-  });
-
-  // Email Thread routes
-  app.get("/api/email-threads/by-customer/:customerId", async (req, res) => {
-    try {
-      const customerId = parseInt(req.params.customerId);
-      const threads = await storage.getEmailThreadsByCustomer(customerId);
-      res.json(threads);
-    } catch (err) {
-      handleError(err as Error, res);
-    }
-  });
-
-  app.post("/api/email-threads", async (req, res) => {
-    try {
-      const threadData = insertEmailThreadSchema.parse(req.body);
-      const thread = await storage.createEmailThread(threadData);
-      res.status(201).json(thread);
-    } catch (err) {
-      handleError(err as Error, res);
-    }
-  });
-
-  // Integration Token routes
-  app.get("/api/integration-tokens/:userId/:provider", async (req, res) => {
-    try {
-      const { userId, provider } = req.params;
-      const token = await storage.getIntegrationToken(userId, provider);
-      if (!token) {
-        return res.status(404).json({ message: "Integration token not found" });
-      }
-      res.json(token);
-    } catch (err) {
-      handleError(err as Error, res);
-    }
-  });
-
-  app.post("/api/integration-tokens", async (req, res) => {
-    try {
-      const tokenData = insertIntegrationTokenSchema.parse(req.body);
-      const token = await storage.createIntegrationToken(tokenData);
-      res.status(201).json(token);
-    } catch (err) {
-      handleError(err as Error, res);
-    }
-  });
-
-  app.patch("/api/integration-tokens/:id", async (req, res) => {
-    try {
-      const id = parseInt(req.params.id);
-      const tokenData = insertIntegrationTokenSchema.partial().parse(req.body);
-      const token = await storage.updateIntegrationToken(id, tokenData);
-      if (!token) {
-        return res.status(404).json({ message: "Integration token not found" });
-      }
-      res.json(token);
-    } catch (err) {
-      handleError(err as Error, res);
-    }
-  });
-
-  // MySQL Config routes
-  app.get("/api/mysql-config", async (_req, res) => {
-    try {
-      const config = await storage.getMysqlConfig();
-      res.json(config || { isActive: false });
-    } catch (err) {
-      handleError(err as Error, res);
-    }
-  });
-
-  app.post("/api/mysql-config", async (req, res) => {
-    try {
-      const configData = insertMysqlConfigSchema.parse(req.body);
-      const config = await storage.createMysqlConfig(configData);
-      res.status(201).json(config);
-    } catch (err) {
-      handleError(err as Error, res);
-    }
-  });
-
-  app.patch("/api/mysql-config/:id", async (req, res) => {
-    try {
-      const id = parseInt(req.params.id);
-      const configData = insertMysqlConfigSchema.partial().parse(req.body);
-      const config = await storage.updateMysqlConfig(id, configData);
-      if (!config) {
-        return res.status(404).json({ message: "MySQL config not found" });
-      }
-      res.json(config);
-    } catch (err) {
-      handleError(err as Error, res);
-    }
-  });
-
-  // MySQL Field Mapping routes
-  app.get("/api/mysql-field-mappings", async (_req, res) => {
-    try {
-      const mappings = await storage.getMysqlFieldMappings();
-      res.json(mappings);
-    } catch (err) {
-      handleError(err as Error, res);
-    }
-  });
-
-  app.post("/api/mysql-field-mappings", async (req, res) => {
-    try {
-      const mappingData = insertMysqlFieldMappingSchema.parse(req.body);
-      const mapping = await storage.createMysqlFieldMapping(mappingData);
-      res.status(201).json(mapping);
-    } catch (err) {
-      handleError(err as Error, res);
-    }
-  });
-
-  app.patch("/api/mysql-field-mappings/:id", async (req, res) => {
-    try {
-      const id = parseInt(req.params.id);
-      const mappingData = insertMysqlFieldMappingSchema.partial().parse(req.body);
-      const mapping = await storage.updateMysqlFieldMapping(id, mappingData);
-      if (!mapping) {
-        return res.status(404).json({ message: "MySQL field mapping not found" });
-      }
-      res.json(mapping);
-    } catch (err) {
-      handleError(err as Error, res);
-    }
-  });
-
-  // Report Metrics routes
-  app.get("/api/report-metrics/:metricName", async (req, res) => {
-    try {
-      const { metricName } = req.params;
-      const { startDate, endDate } = req.query;
-      
-      let startDateObj, endDateObj;
-      if (startDate) {
-        startDateObj = new Date(startDate as string);
-      }
-      if (endDate) {
-        endDateObj = new Date(endDate as string);
-      }
-      
-      const metrics = await storage.getReportMetrics(
-        metricName,
-        startDateObj,
-        endDateObj
-      );
-      res.json(metrics);
-    } catch (err) {
-      handleError(err as Error, res);
-    }
-  });
-
-  app.post("/api/report-metrics", async (req, res) => {
-    try {
-      const metricData = insertReportMetricSchema.parse(req.body);
-      const metric = await storage.createReportMetric(metricData);
+      const metric = await storage.createCustomerMetric(customerId, metricType, value, percent);
       res.status(201).json(metric);
-    } catch (err) {
-      handleError(err as Error, res);
+    } catch (error) {
+      res.status(400).json({ message: 'Error creating metric', error });
     }
   });
-
-  // Sync and Data Management routes
-  app.post("/api/sync", async (_req, res) => {
-    try {
-      // This would contain logic to sync data from MySQL to Supabase
-      // For now, we'll just return a success message
-      res.json({ message: "Sync initiated", status: "success" });
-    } catch (err) {
-      handleError(err as Error, res);
-    }
+  
+  // MySQL Config
+  app.get('/api/admin/mysql-config', async (req, res) => {
+    const config = await storage.getMySQLConfig();
+    res.json(config || {});
   });
-
-  app.post("/api/admin/mysql-query", async (req, res) => {
+  
+  app.post('/api/admin/mysql-config', async (req, res) => {
     try {
-      const querySchema = z.object({
-        query: z.string().min(1)
+      const configSchema = z.object({
+        host: z.string(),
+        port: z.number(),
+        username: z.string(),
+        password: z.string(),
+        database: z.string(),
+        created_by: z.number()
       });
       
-      const { query } = querySchema.parse(req.body);
-      
-      // This would execute the MySQL query in a real implementation
-      // For now, return mock data
-      res.json({
-        columns: ['id', 'name', 'email'],
-        rows: [
-          [1, 'Test User', 'test@example.com'],
-          [2, 'Another User', 'another@example.com']
-        ]
-      });
-    } catch (err) {
-      handleError(err as Error, res);
+      const configData = configSchema.parse(req.body);
+      const config = await storage.createMySQLConfig(configData);
+      res.status(201).json(config);
+    } catch (error) {
+      res.status(400).json({ message: 'Invalid MySQL config data', error });
     }
   });
-
-  app.post("/api/admin/import-csv", async (req, res) => {
+  
+  // MySQL Field Mappings
+  app.get('/api/admin/mysql-field-mappings', async (req, res) => {
+    const mappings = await storage.getMySQLFieldMappings();
+    res.json(mappings);
+  });
+  
+  app.post('/api/admin/mysql-field-mappings', async (req, res) => {
     try {
-      // This would handle CSV import logic
-      // For now, just return a success message
-      res.json({ 
-        message: "CSV import successful", 
-        imported: 10, 
-        updated: 5 
+      const mappingSchema = z.object({
+        mysql_table: z.string(),
+        mysql_field: z.string(),
+        local_table: z.string(),
+        local_field: z.string(),
+        created_by: z.number()
       });
-    } catch (err) {
-      handleError(err as Error, res);
+      
+      const mappingData = mappingSchema.parse(req.body);
+      const mapping = await storage.createMySQLFieldMapping(mappingData);
+      res.status(201).json(mapping);
+    } catch (error) {
+      res.status(400).json({ message: 'Invalid field mapping data', error });
     }
   });
+  
+  // Note: External data routes are now registered directly in server/index.ts
 
   const httpServer = createServer(app);
   return httpServer;

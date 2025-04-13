@@ -1,85 +1,74 @@
-import {
-  pgTable,
-  text,
-  serial,
-  integer,
-  boolean,
-  timestamp,
-  pgEnum,
-  json,
-  date,
-  real,
-  varchar,
-  uniqueIndex,
-} from "drizzle-orm/pg-core";
-import { relations } from "drizzle-orm";
-import { createInsertSchema } from "drizzle-zod";
+import { pgTable, text, serial, integer, boolean, timestamp, jsonb, foreignKey, pgEnum } from "drizzle-orm/pg-core";
+import { createInsertSchema, createSelectSchema } from "drizzle-zod";
 import { z } from "zod";
+import { relations } from "drizzle-orm";
 
 // Enums
-export const userRoleEnum = pgEnum("user_role", ["admin", "team_lead", "csm"]);
-export const taskStatusEnum = pgEnum("task_status", [
-  "not_started",
-  "in_progress",
-  "completed",
-  "blocked",
-]);
-export const taskRecurrenceEnum = pgEnum("task_recurrence", [
-  "none",
-  "daily",
-  "weekly",
-  "bi_weekly",
-  "monthly",
-  "quarterly",
-]);
-export const redZoneReasonEnum = pgEnum("red_zone_reason", [
-  "delayed_onboarding",
-  "no_qr_loyalty_setup",
-  "no_campaign_60_days",
-  "no_monthly_campaigns",
-  "no_review_meetings",
-  "low_nps",
-  "low_data_tagging",
-  "revenue_drop",
-]);
+export const userRoleEnum = pgEnum('user_role', ['admin', 'team_lead', 'csm']);
+export const taskStatusEnum = pgEnum('task_status', ['pending', 'in_progress', 'completed', 'overdue']);
+export const accountHealthEnum = pgEnum('account_health', ['healthy', 'at_risk', 'red_zone']);
+export const alertSeverityEnum = pgEnum('alert_severity', ['critical', 'high_risk', 'attention_needed']);
+export const playbookTriggerEnum = pgEnum('playbook_trigger', ['manual', 'new_customer', 'usage_drop', 'renewal_approaching', 'custom_event']);
+export const dueDateTypeEnum = pgEnum('due_date_type', ['fixed', 'relative']);
+export const recurrenceTypeEnum = pgEnum('recurrence_type', ['none', 'daily', 'weekly', 'monthly', 'bi-weekly']);
+export const accountTypeEnum = pgEnum('account_type', ['starter', 'growth', 'key']);
 
-// Users and Profiles
+// Users & Profiles
 export const users = pgTable("users", {
-  id: text("id").primaryKey(), // From Supabase Auth
+  id: serial("id").primaryKey(),
   email: text("email").notNull().unique(),
-  fullName: text("full_name"),
-  avatarUrl: text("avatar_url"),
-  role: userRoleEnum("role").notNull().default("csm"),
-  createdAt: timestamp("created_at").defaultNow(),
+  name: text("name").notNull(),
+  avatar_url: text("avatar_url"),
+  role: userRoleEnum("role").notNull().default('csm'),
+  team_lead_id: integer("team_lead_id").references(() => users.id), // ID of the team lead for CSMs
+  created_at: timestamp("created_at").defaultNow(),
 });
 
 // Customers
 export const customers = pgTable("customers", {
   id: serial("id").primaryKey(),
+  recurrer_id: text("recurrer_id").unique(), // UUID for consistent identification
   name: text("name").notNull(),
   industry: text("industry"),
-  website: text("website"),
-  status: text("status").default("active"),
-  arr: real("arr").default(0),
-  mrr: real("mrr").default(0),
-  onboardingStartDate: date("onboarding_start_date"),
-  onboardingCompletionDate: date("onboarding_completion_date"),
-  renewalDate: date("renewal_date"),
-  campaignStats: json("campaign_stats").$type<{
-    sent: number;
-    opened: number;
-    clicked: number;
-    lastSentDate: string;
-  }>(),
-  lastReviewMeeting: date("last_review_meeting"),
-  npsScore: integer("nps_score"),
-  dataTaggingPercentage: real("data_tagging_percentage"),
-  addOnRevenue: real("add_on_revenue").default(0),
-  createdAt: timestamp("created_at").defaultNow(),
-  updatedAt: timestamp("updated_at").defaultNow(),
-  assignedToUserId: text("assigned_to_user_id").references(() => users.id),
-  externalIds: json("external_ids").$type<Record<string, string>>(),
-  inRedZone: boolean("in_red_zone").default(false),
+  logo_url: text("logo_url"),
+  contact_name: text("contact_name"),
+  contact_email: text("contact_email"),
+  contact_phone: text("contact_phone"),
+  onboarded_at: timestamp("onboarded_at"),
+  renewal_date: timestamp("renewal_date"),
+  mrr: integer("mrr"),
+  arr: integer("arr"),
+  currency_code: text("currency_code").default('INR'),
+  health_status: accountHealthEnum("health_status").default('healthy'),
+  created_at: timestamp("created_at").defaultNow(),
+  assigned_csm: integer("assigned_csm").references(() => users.id),
+  // External IDs
+  chargebee_customer_id: text("chargebee_customer_id"),
+  chargebee_subscription_id: text("chargebee_subscription_id"),
+  mysql_company_id: text("mysql_company_id"),
+  // MySQL company fields
+  active_stores: integer("active_stores"),
+  growth_subscription_count: integer("growth_subscription_count"),
+  loyalty_active_store_count: integer("loyalty_active_store_count"),
+  loyalty_inactive_store_count: integer("loyalty_inactive_store_count"),
+  loyalty_active_channels: text("loyalty_active_channels"),
+  loyalty_channel_credits: integer("loyalty_channel_credits"),
+  negative_feedback_alert_inactive: integer("negative_feedback_alert_inactive"),
+  less_than_300_bills: integer("less_than_300_bills"),
+  active_auto_campaigns_count: integer("active_auto_campaigns_count"),
+  unique_customers_captured: integer("unique_customers_captured"),
+  revenue_1_year: integer("revenue_1_year"),
+  customers_with_min_one_visit: integer("customers_with_min_one_visit"),
+  customers_with_min_two_visit: integer("customers_with_min_two_visit"),
+  customers_without_min_visits: integer("customers_without_min_visits"),
+  percentage_of_inactive_customers: integer("percentage_of_inactive_customers"),
+  negative_feedbacks_count: integer("negative_feedbacks_count"),
+  campaigns_sent_last_90_days: integer("campaigns_sent_last_90_days"),
+  bills_received_last_30_days: integer("bills_received_last_30_days"),
+  customers_acquired_last_30_days: integer("customers_acquired_last_30_days"),
+  loyalty_type: text("loyalty_type"),
+  loyalty_reward: text("loyalty_reward"),
+  updated_from_mysql_at: timestamp("updated_from_mysql_at"),
 });
 
 // Tasks
@@ -87,27 +76,24 @@ export const tasks = pgTable("tasks", {
   id: serial("id").primaryKey(),
   title: text("title").notNull(),
   description: text("description"),
-  status: taskStatusEnum("status").default("not_started"),
-  dueDate: date("due_date"),
-  relativeDueDays: integer("relative_due_days"), // X days from task creation
-  recurrence: taskRecurrenceEnum("recurrence").default("none"),
-  assignedToUserId: text("assigned_to_user_id").references(() => users.id),
-  customerId: integer("customer_id").references(() => customers.id),
-  playbookId: integer("playbook_id").references(() => playbooks.id),
-  createdAt: timestamp("created_at").defaultNow(),
-  updatedAt: timestamp("updated_at").defaultNow(),
-  createdByUserId: text("created_by_user_id").references(() => users.id),
+  status: taskStatusEnum("status").default('pending'),
+  due_date: timestamp("due_date"),
+  customer_id: integer("customer_id").references(() => customers.id),
+  assigned_to: integer("assigned_to").references(() => users.id),
+  recurring: boolean("recurring").default(false),
+  recurrence_pattern: text("recurrence_pattern"),
+  playbook_id: integer("playbook_id").references(() => playbooks.id),
+  created_at: timestamp("created_at").defaultNow(),
+  created_by: integer("created_by").references(() => users.id),
 });
 
 // Task Comments
 export const taskComments = pgTable("task_comments", {
   id: serial("id").primaryKey(),
-  taskId: integer("task_id")
-    .references(() => tasks.id)
-    .notNull(),
+  task_id: integer("task_id").notNull().references(() => tasks.id),
+  user_id: integer("user_id").notNull().references(() => users.id),
   comment: text("comment").notNull(),
-  createdAt: timestamp("created_at").defaultNow(),
-  userId: text("user_id").references(() => users.id),
+  created_at: timestamp("created_at").defaultNow(),
 });
 
 // Playbooks
@@ -115,84 +101,64 @@ export const playbooks = pgTable("playbooks", {
   id: serial("id").primaryKey(),
   name: text("name").notNull(),
   description: text("description"),
-  triggerConfig: json("trigger_config").$type<{
-    triggerType: "time" | "renewal" | "pod_type" | "custom";
-    conditions: Record<string, any>;
-  }>(),
-  isActive: boolean("is_active").default(true),
-  createdAt: timestamp("created_at").defaultNow(),
-  updatedAt: timestamp("updated_at").defaultNow(),
-  createdByUserId: text("created_by_user_id").references(() => users.id),
+  trigger_type: playbookTriggerEnum("trigger_type").notNull().default('manual'),
+  target_segments: text("target_segments").array(), // Array of account types ['starter', 'growth', 'key']
+  filters: jsonb("filters"), // For POD, Location Count, ARR, Plan Type filters
+  active: boolean("active").default(true),
+  created_by: integer("created_by").references(() => users.id),
+  created_at: timestamp("created_at").defaultNow(),
 });
 
-// Playbook Tasks (template tasks)
+// Playbook Tasks
 export const playbookTasks = pgTable("playbook_tasks", {
   id: serial("id").primaryKey(),
-  playbookId: integer("playbook_id")
-    .references(() => playbooks.id)
-    .notNull(),
+  playbook_id: integer("playbook_id").notNull().references(() => playbooks.id),
   title: text("title").notNull(),
   description: text("description"),
-  relativeDueDays: integer("relative_due_days"),
-  recurrence: taskRecurrenceEnum("recurrence").default("none"),
-  sortOrder: integer("sort_order").default(0),
+  due_type: dueDateTypeEnum("due_type").notNull().default('relative'),
+  due_offset: integer("due_offset").default(0), // Days from trigger for relative
+  fixed_date: timestamp("fixed_date"), // For fixed date tasks
+  recurrence: recurrenceTypeEnum("recurrence").default('none'),
+  assignment_role: userRoleEnum("assignment_role").default('csm'),
+  required_fields: text("required_fields").array(), // ['comment', 'recording_link', 'attachment']
+  template_message: text("template_message"),
+  order: integer("order").notNull(), // For ordering tasks (uses database column "order")
+  created_at: timestamp("created_at").defaultNow(),
 });
 
-// Red Zone Accounts
-export const redZoneAccounts = pgTable("red_zone_accounts", {
+// Playbook Runs
+export const playbookRuns = pgTable("playbook_runs", {
   id: serial("id").primaryKey(),
-  customerId: integer("customer_id")
-    .references(() => customers.id)
-    .notNull()
-    .unique(),
-  reasons: json("reasons").$type<string[]>(),
-  createdAt: timestamp("created_at").defaultNow(),
-  resolvedAt: timestamp("resolved_at"),
+  playbook_id: integer("playbook_id").notNull().references(() => playbooks.id),
+  customer_id: integer("customer_id").notNull().references(() => customers.id),
+  status: text("status").notNull().default('active'), // active, completed, cancelled
+  triggered_by: integer("triggered_by").references(() => users.id),
+  trigger_event: text("trigger_event"),
+  started_at: timestamp("started_at").defaultNow(),
+  completed_at: timestamp("completed_at"),
 });
 
-// Calendar Events
-export const calendarEvents = pgTable("calendar_events", {
+// Red Zone Alerts
+export const redZoneAlerts = pgTable("red_zone_alerts", {
   id: serial("id").primaryKey(),
-  customerId: integer("customer_id").references(() => customers.id),
-  title: text("title").notNull(),
-  startTime: timestamp("start_time").notNull(),
-  endTime: timestamp("end_time").notNull(),
-  location: text("location"),
-  notes: text("notes"),
-  createdByUserId: text("created_by_user_id").references(() => users.id),
-  attendees: json("attendees").$type<string[]>(),
-  googleEventId: text("google_event_id"),
+  customer_id: integer("customer_id").notNull().references(() => customers.id),
+  reason: text("reason").notNull(),
+  severity: alertSeverityEnum("severity").default('attention_needed'),
+  created_at: timestamp("created_at").defaultNow(),
+  resolved_at: timestamp("resolved_at"),
 });
 
-// Email Threads
-export const emailThreads = pgTable("email_threads", {
+// Customer Metrics
+export const customerMetrics = pgTable("customer_metrics", {
   id: serial("id").primaryKey(),
-  customerId: integer("customer_id").references(() => customers.id),
-  subject: text("subject").notNull(),
-  lastMessageDate: timestamp("last_message_date").notNull(),
-  snippet: text("snippet"),
-  threadId: text("thread_id").unique(),
-  labels: json("labels").$type<string[]>(),
+  customer_id: integer("customer_id").notNull().references(() => customers.id),
+  metric_type: text("metric_type").notNull(),
+  metric_value: integer("metric_value"),
+  metric_percent: integer("metric_percent"),
+  recorded_at: timestamp("recorded_at").defaultNow(),
 });
 
-// Integration Tokens
-export const integrationTokens = pgTable("integration_tokens", {
-  id: serial("id").primaryKey(),
-  userId: text("user_id")
-    .references(() => users.id)
-    .notNull(),
-  provider: text("provider").notNull(), // google, chargebee, etc.
-  accessToken: text("access_token"),
-  refreshToken: text("refresh_token"),
-  tokenType: text("token_type"),
-  expiresAt: timestamp("expires_at"),
-  scopes: json("scopes").$type<string[]>(),
-  createdAt: timestamp("created_at").defaultNow(),
-  updatedAt: timestamp("updated_at").defaultNow(),
-  providerId: text("provider_id"), // user's ID in the provider system
-});
-
-// MySQL Config
+// MySQL Configuration
 export const mysqlConfig = pgTable("mysql_config", {
   id: serial("id").primaryKey(),
   host: text("host").notNull(),
@@ -200,221 +166,77 @@ export const mysqlConfig = pgTable("mysql_config", {
   username: text("username").notNull(),
   password: text("password").notNull(),
   database: text("database").notNull(),
-  isActive: boolean("is_active").default(false),
-  lastSyncAt: timestamp("last_sync_at"),
-  createdAt: timestamp("created_at").defaultNow(),
-  updatedAt: timestamp("updated_at").defaultNow(),
+  created_by: integer("created_by").references(() => users.id),
+  created_at: timestamp("created_at").defaultNow(),
 });
 
 // MySQL Field Mappings
 export const mysqlFieldMappings = pgTable("mysql_field_mappings", {
   id: serial("id").primaryKey(),
-  mysqlField: text("mysql_field").notNull(),
-  platformField: text("platform_field").notNull(),
-  mysqlTable: text("mysql_table").notNull(),
-  transformationType: text("transformation_type"), // direct, calculated, etc.
-  transformationRule: json("transformation_rule"),
-  isActive: boolean("is_active").default(true),
-});
-
-// Report Metrics
-export const reportMetrics = pgTable("report_metrics", {
-  id: serial("id").primaryKey(),
-  metricName: text("metric_name").notNull(),
-  metricValue: real("metric_value"),
-  metricDate: date("metric_date").notNull(),
-  customerId: integer("customer_id").references(() => customers.id),
-  metadata: json("metadata"),
-  createdAt: timestamp("created_at").defaultNow(),
+  mysql_table: text("mysql_table").notNull(),
+  mysql_field: text("mysql_field").notNull(),
+  local_table: text("local_table").notNull(),
+  local_field: text("local_field").notNull(),
+  created_by: integer("created_by").references(() => users.id),
+  created_at: timestamp("created_at").defaultNow(),
 });
 
 // Relations
-export const usersRelations = relations(users, ({ many }) => ({
-  customers: many(customers),
-  tasks: many(tasks, { relationName: "assignedTasks" }),
-  createdTasks: many(tasks, { relationName: "createdTasks" }),
-  playbooks: many(playbooks),
-  taskComments: many(taskComments),
-  integrationTokens: many(integrationTokens),
-  calendarEvents: many(calendarEvents),
+export const usersRelations = relations(users, ({ one, many }) => ({
+  teamLead: one(users, { fields: [users.team_lead_id], references: [users.id], relationName: "csm_team_lead" }),
+  csmMembers: many(users, { relationName: "csm_team_lead" }),
+  assignedTasks: many(tasks, { relationName: "assigned_tasks" }),
+  createdTasks: many(tasks, { relationName: "created_tasks" }),
+  createdPlaybooks: many(playbooks),
+  assignedCustomers: many(customers, { relationName: "assigned_customers" }),
 }));
 
 export const customersRelations = relations(customers, ({ one, many }) => ({
-  assignedTo: one(users, {
-    fields: [customers.assignedToUserId],
-    references: [users.id],
-  }),
+  assignedCsm: one(users, { fields: [customers.assigned_csm], references: [users.id], relationName: "assigned_customers" }),
   tasks: many(tasks),
-  redZone: one(redZoneAccounts),
-  calendarEvents: many(calendarEvents),
-  emailThreads: many(emailThreads),
+  redZoneAlerts: many(redZoneAlerts),
+  metrics: many(customerMetrics),
 }));
 
-export const tasksRelations = relations(tasks, ({ one, many }) => ({
-  assignedTo: one(users, {
-    fields: [tasks.assignedToUserId],
-    references: [users.id],
-    relationName: "assignedTasks",
-  }),
-  customer: one(customers, {
-    fields: [tasks.customerId],
-    references: [customers.id],
-  }),
-  createdBy: one(users, {
-    fields: [tasks.createdByUserId],
-    references: [users.id],
-    relationName: "createdTasks",
-  }),
-  playbook: one(playbooks, {
-    fields: [tasks.playbookId],
-    references: [playbooks.id],
-  }),
-  comments: many(taskComments),
-}));
-
-export const taskCommentsRelations = relations(taskComments, ({ one }) => ({
-  task: one(tasks, {
-    fields: [taskComments.taskId],
-    references: [tasks.id],
-  }),
-  user: one(users, {
-    fields: [taskComments.userId],
-    references: [users.id],
-  }),
+export const tasksRelations = relations(tasks, ({ one }) => ({
+  customer: one(customers, { fields: [tasks.customer_id], references: [customers.id] }),
+  assignedTo: one(users, { fields: [tasks.assigned_to], references: [users.id], relationName: "assigned_tasks" }),
+  createdBy: one(users, { fields: [tasks.created_by], references: [users.id], relationName: "created_tasks" }),
+  playbook: one(playbooks, { fields: [tasks.playbook_id], references: [playbooks.id] }),
 }));
 
 export const playbooksRelations = relations(playbooks, ({ one, many }) => ({
-  createdBy: one(users, {
-    fields: [playbooks.createdByUserId],
-    references: [users.id],
-  }),
+  createdBy: one(users, { fields: [playbooks.created_by], references: [users.id] }),
   tasks: many(playbookTasks),
-  generatedTasks: many(tasks),
+  runs: many(playbookRuns),
 }));
 
 export const playbookTasksRelations = relations(playbookTasks, ({ one }) => ({
-  playbook: one(playbooks, {
-    fields: [playbookTasks.playbookId],
-    references: [playbooks.id],
-  }),
+  playbook: one(playbooks, { fields: [playbookTasks.playbook_id], references: [playbooks.id] }),
 }));
 
-export const redZoneAccountsRelations = relations(
-  redZoneAccounts,
-  ({ one }) => ({
-    customer: one(customers, {
-      fields: [redZoneAccounts.customerId],
-      references: [customers.id],
-    }),
-  })
-);
-
-export const calendarEventsRelations = relations(
-  calendarEvents,
-  ({ one }) => ({
-    customer: one(customers, {
-      fields: [calendarEvents.customerId],
-      references: [customers.id],
-    }),
-    createdBy: one(users, {
-      fields: [calendarEvents.createdByUserId],
-      references: [users.id],
-    }),
-  })
-);
-
-export const emailThreadsRelations = relations(emailThreads, ({ one }) => ({
-  customer: one(customers, {
-    fields: [emailThreads.customerId],
-    references: [customers.id],
-  }),
+export const playbookRunsRelations = relations(playbookRuns, ({ one }) => ({
+  playbook: one(playbooks, { fields: [playbookRuns.playbook_id], references: [playbooks.id] }),
+  customer: one(customers, { fields: [playbookRuns.customer_id], references: [customers.id] }),
+  triggeredBy: one(users, { fields: [playbookRuns.triggered_by], references: [users.id] }),
 }));
 
-export const integrationTokensRelations = relations(
-  integrationTokens,
-  ({ one }) => ({
-    user: one(users, {
-      fields: [integrationTokens.userId],
-      references: [users.id],
-    }),
-  })
-);
+export const redZoneAlertsRelations = relations(redZoneAlerts, ({ one }) => ({
+  customer: one(customers, { fields: [redZoneAlerts.customer_id], references: [customers.id] }),
+}));
 
-// Insert Schemas
-export const insertUserSchema = createInsertSchema(users).omit({
-  id: true,
-  createdAt: true,
-});
+export const customerMetricsRelations = relations(customerMetrics, ({ one }) => ({
+  customer: one(customers, { fields: [customerMetrics.customer_id], references: [customers.id] }),
+}));
 
-export const insertCustomerSchema = createInsertSchema(customers).omit({
-  id: true,
-  createdAt: true,
-  updatedAt: true,
-});
-
-export const insertTaskSchema = createInsertSchema(tasks).omit({
-  id: true,
-  createdAt: true,
-  updatedAt: true,
-});
-
-export const insertTaskCommentSchema = createInsertSchema(taskComments).omit({
-  id: true,
-  createdAt: true,
-});
-
-export const insertPlaybookSchema = createInsertSchema(playbooks).omit({
-  id: true,
-  createdAt: true,
-  updatedAt: true,
-});
-
-export const insertPlaybookTaskSchema = createInsertSchema(playbookTasks).omit({
-  id: true,
-});
-
-export const insertRedZoneAccountSchema = createInsertSchema(
-  redZoneAccounts
-).omit({
-  id: true,
-  createdAt: true,
-});
-
-export const insertCalendarEventSchema = createInsertSchema(calendarEvents).omit(
-  {
-    id: true,
-  }
-);
-
-export const insertEmailThreadSchema = createInsertSchema(emailThreads).omit({
-  id: true,
-});
-
-export const insertIntegrationTokenSchema = createInsertSchema(
-  integrationTokens
-).omit({
-  id: true,
-  createdAt: true,
-  updatedAt: true,
-});
-
-export const insertMysqlConfigSchema = createInsertSchema(mysqlConfig).omit({
-  id: true,
-  createdAt: true,
-  updatedAt: true,
-  lastSyncAt: true,
-});
-
-export const insertMysqlFieldMappingSchema = createInsertSchema(
-  mysqlFieldMappings
-).omit({
-  id: true,
-});
-
-export const insertReportMetricSchema = createInsertSchema(reportMetrics).omit({
-  id: true,
-  createdAt: true,
-});
+// Schemas
+export const insertUserSchema = createInsertSchema(users).omit({ id: true, created_at: true });
+export const insertCustomerSchema = createInsertSchema(customers).omit({ id: true, created_at: true });
+export const insertTaskSchema = createInsertSchema(tasks).omit({ id: true, created_at: true });
+export const insertPlaybookSchema = createInsertSchema(playbooks).omit({ id: true, created_at: true });
+export const insertPlaybookTaskSchema = createInsertSchema(playbookTasks).omit({ id: true, created_at: true });
+export const insertPlaybookRunSchema = createInsertSchema(playbookRuns).omit({ id: true, started_at: true, completed_at: true });
+export const insertRedZoneAlertSchema = createInsertSchema(redZoneAlerts).omit({ id: true, created_at: true, resolved_at: true });
 
 // Types
 export type User = typeof users.$inferSelect;
@@ -427,7 +249,6 @@ export type Task = typeof tasks.$inferSelect;
 export type InsertTask = z.infer<typeof insertTaskSchema>;
 
 export type TaskComment = typeof taskComments.$inferSelect;
-export type InsertTaskComment = z.infer<typeof insertTaskCommentSchema>;
 
 export type Playbook = typeof playbooks.$inferSelect;
 export type InsertPlaybook = z.infer<typeof insertPlaybookSchema>;
@@ -435,25 +256,13 @@ export type InsertPlaybook = z.infer<typeof insertPlaybookSchema>;
 export type PlaybookTask = typeof playbookTasks.$inferSelect;
 export type InsertPlaybookTask = z.infer<typeof insertPlaybookTaskSchema>;
 
-export type RedZoneAccount = typeof redZoneAccounts.$inferSelect;
-export type InsertRedZoneAccount = z.infer<typeof insertRedZoneAccountSchema>;
+export type PlaybookRun = typeof playbookRuns.$inferSelect;
+export type InsertPlaybookRun = z.infer<typeof insertPlaybookRunSchema>;
 
-export type CalendarEvent = typeof calendarEvents.$inferSelect;
-export type InsertCalendarEvent = z.infer<typeof insertCalendarEventSchema>;
+export type RedZoneAlert = typeof redZoneAlerts.$inferSelect;
+export type InsertRedZoneAlert = z.infer<typeof insertRedZoneAlertSchema>;
 
-export type EmailThread = typeof emailThreads.$inferSelect;
-export type InsertEmailThread = z.infer<typeof insertEmailThreadSchema>;
+export type CustomerMetric = typeof customerMetrics.$inferSelect;
 
-export type IntegrationToken = typeof integrationTokens.$inferSelect;
-export type InsertIntegrationToken = z.infer<typeof insertIntegrationTokenSchema>;
-
-export type MysqlConfig = typeof mysqlConfig.$inferSelect;
-export type InsertMysqlConfig = z.infer<typeof insertMysqlConfigSchema>;
-
-export type MysqlFieldMapping = typeof mysqlFieldMappings.$inferSelect;
-export type InsertMysqlFieldMapping = z.infer<
-  typeof insertMysqlFieldMappingSchema
->;
-
-export type ReportMetric = typeof reportMetrics.$inferSelect;
-export type InsertReportMetric = z.infer<typeof insertReportMetricSchema>;
+export type MySQLConfig = typeof mysqlConfig.$inferSelect;
+export type MySQLFieldMapping = typeof mysqlFieldMappings.$inferSelect;

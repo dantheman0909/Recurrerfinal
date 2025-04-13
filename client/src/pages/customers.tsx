@@ -1,206 +1,212 @@
 import { useState } from "react";
 import { useQuery } from "@tanstack/react-query";
-import { Link } from "wouter";
-import { 
-  Table, 
-  TableBody, 
-  TableCell, 
-  TableHead, 
-  TableHeader, 
-  TableRow 
-} from "@/components/ui/table";
 import { 
   Card, 
-  CardContent, 
-  CardHeader 
+  CardContent,
 } from "@/components/ui/card";
 import { 
-  Input 
-} from "@/components/ui/input";
-import { 
-  DropdownMenu, 
-  DropdownMenuContent, 
-  DropdownMenuItem, 
-  DropdownMenuTrigger 
-} from "@/components/ui/dropdown-menu";
+  Building, 
+  ArrowUpRight, 
+  Search,
+  Filter,
+  UserPlus
+} from "lucide-react";
+import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
-import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
-import { AlertTriangle, MoreVertical, ChevronDown, Plus, Search } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
-import { formatCurrency } from "@/lib/utils";
-import type { CustomerListItem } from "@shared/types";
+import { cn, formatINR } from "@/lib/utils";
+import { Customer } from "@shared/schema";
+import { Link } from "wouter";
 
 export default function Customers() {
-  const [searchQuery, setSearchQuery] = useState("");
-  const [industry, setIndustry] = useState<string | null>(null);
-  const [status, setStatus] = useState<string | null>(null);
-
-  // Fetch customers
-  const { data: customers, isLoading } = useQuery<CustomerListItem[]>({
-    queryKey: ["/api/customers"],
-  });
-
-  // Filter customers based on search query, industry, and status
-  const filteredCustomers = customers?.filter(customer => {
-    const matchesSearch = searchQuery === "" || 
-      customer.name.toLowerCase().includes(searchQuery.toLowerCase());
-    
-    const matchesIndustry = industry === null || customer.industry === industry;
-    const matchesStatus = status === null || customer.status === status;
-    
-    return matchesSearch && matchesIndustry && matchesStatus;
-  });
-
-  // Get unique industries
-  const industries = [...new Set(customers?.map(c => c.industry) || [])];
+  const [searchTerm, setSearchTerm] = useState("");
+  const [healthFilter, setHealthFilter] = useState<string | null>(null);
   
-  // Get unique statuses
-  const statuses = [...new Set(customers?.map(c => c.status) || [])];
+  const { data: customers, isLoading } = useQuery({
+    queryKey: ['/api/customers'],
+  });
+  
+  const filteredCustomers = customers?.filter((customer: Customer) => {
+    const matchesSearch = customer.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
+                          (customer.contact_name && customer.contact_name.toLowerCase().includes(searchTerm.toLowerCase()));
+    
+    const matchesHealth = !healthFilter || customer.health_status === healthFilter;
+    
+    return matchesSearch && matchesHealth;
+  });
+  
+  const getHealthBadgeStyles = (health: string) => {
+    switch (health) {
+      case 'healthy':
+        return "bg-green-100 text-green-800";
+      case 'at_risk':
+        return "bg-yellow-100 text-yellow-800";
+      case 'red_zone':
+        return "bg-red-100 text-red-800";
+      default:
+        return "bg-gray-100 text-gray-800";
+    }
+  };
+  
+  const getHealthFilterStyles = (filter: string | null) => {
+    if (healthFilter === filter) {
+      switch (filter) {
+        case 'healthy':
+          return "bg-green-100 text-green-800 border-green-200";
+        case 'at_risk':
+          return "bg-yellow-100 text-yellow-800 border-yellow-200";
+        case 'red_zone':
+          return "bg-red-100 text-red-800 border-red-200";
+        default:
+          return "bg-teal-100 text-teal-800 border-teal-200";
+      }
+    }
+    return "bg-white";
+  };
 
   return (
-    <div className="py-6">
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 md:px-8">
-        <div className="flex justify-between items-center mb-6">
-          <h1 className="text-2xl font-semibold text-gray-900">Customers</h1>
-          <Button className="flex items-center">
-            <Plus className="h-4 w-4 mr-2" /> Add Customer
-          </Button>
+    <>
+      <div className="bg-white shadow">
+        <div className="px-4 sm:px-6 lg:max-w-7xl lg:mx-auto lg:px-8">
+          <div className="py-6 md:flex md:items-center md:justify-between">
+            <div className="flex-1 min-w-0">
+              <h1 className="text-2xl font-semibold text-gray-900">Customer 360</h1>
+              <p className="mt-1 text-sm text-gray-500">
+                View and manage all your customer accounts
+              </p>
+            </div>
+            <div className="mt-4 flex md:mt-0 md:ml-4">
+              <Button className="ml-3">
+                <UserPlus className="h-4 w-4 mr-2" />
+                Add Customer
+              </Button>
+            </div>
+          </div>
         </div>
-        
-        {/* Filters */}
-        <div className="bg-white p-4 rounded-lg shadow mb-6 grid grid-cols-1 md:grid-cols-3 gap-4">
-          <div className="relative">
-            <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
+      </div>
+      
+      <div className="px-4 sm:px-6 lg:px-8 py-6">
+        <div className="mb-6 flex flex-col md:flex-row justify-between gap-4">
+          <div className="relative w-full md:w-1/3">
+            <div className="absolute inset-y-0 left-0 flex items-center pl-3 pointer-events-none">
               <Search className="h-5 w-5 text-gray-400" />
             </div>
             <Input
-              className="pl-10"
+              type="search"
               placeholder="Search customers..."
-              value={searchQuery}
-              onChange={e => setSearchQuery(e.target.value)}
+              className="pl-10"
+              value={searchTerm}
+              onChange={(e) => setSearchTerm(e.target.value)}
             />
           </div>
           
-          <DropdownMenu>
-            <DropdownMenuTrigger asChild>
-              <Button variant="outline" className="w-full justify-between">
-                <span>{industry || "All Industries"}</span>
-                <ChevronDown className="h-4 w-4 ml-2" />
-              </Button>
-            </DropdownMenuTrigger>
-            <DropdownMenuContent>
-              <DropdownMenuItem onClick={() => setIndustry(null)}>
-                All Industries
-              </DropdownMenuItem>
-              {industries.map(ind => (
-                <DropdownMenuItem key={ind} onClick={() => setIndustry(ind)}>
-                  {ind}
-                </DropdownMenuItem>
-              ))}
-            </DropdownMenuContent>
-          </DropdownMenu>
-          
-          <DropdownMenu>
-            <DropdownMenuTrigger asChild>
-              <Button variant="outline" className="w-full justify-between">
-                <span>{status || "All Statuses"}</span>
-                <ChevronDown className="h-4 w-4 ml-2" />
-              </Button>
-            </DropdownMenuTrigger>
-            <DropdownMenuContent>
-              <DropdownMenuItem onClick={() => setStatus(null)}>
-                All Statuses
-              </DropdownMenuItem>
-              {statuses.map(st => (
-                <DropdownMenuItem key={st} onClick={() => setStatus(st)}>
-                  {st.charAt(0).toUpperCase() + st.slice(1)}
-                </DropdownMenuItem>
-              ))}
-            </DropdownMenuContent>
-          </DropdownMenu>
+          <div className="flex flex-wrap gap-2">
+            <Button 
+              variant="outline" 
+              size="sm"
+              className={cn(getHealthFilterStyles(null))}
+              onClick={() => setHealthFilter(null)}
+            >
+              <Filter className="h-4 w-4 mr-1" />
+              All
+            </Button>
+            <Button 
+              variant="outline" 
+              size="sm" 
+              className={cn(getHealthFilterStyles('healthy'))}
+              onClick={() => setHealthFilter(healthFilter === 'healthy' ? null : 'healthy')}
+            >
+              Healthy
+            </Button>
+            <Button 
+              variant="outline" 
+              size="sm" 
+              className={cn(getHealthFilterStyles('at_risk'))}
+              onClick={() => setHealthFilter(healthFilter === 'at_risk' ? null : 'at_risk')}
+            >
+              At Risk
+            </Button>
+            <Button 
+              variant="outline" 
+              size="sm"
+              className={cn(getHealthFilterStyles('red_zone'))}
+              onClick={() => setHealthFilter(healthFilter === 'red_zone' ? null : 'red_zone')}
+            >
+              Red Zone
+            </Button>
+          </div>
         </div>
         
-        {/* Customer Table */}
-        <Card>
-          <CardContent className="p-0">
-            <Table>
-              <TableHeader>
-                <TableRow>
-                  <TableHead>Name</TableHead>
-                  <TableHead>Industry</TableHead>
-                  <TableHead>Status</TableHead>
-                  <TableHead className="text-right">ARR</TableHead>
-                  <TableHead className="text-right">MRR</TableHead>
-                  <TableHead>CSM</TableHead>
-                  <TableHead></TableHead>
-                </TableRow>
-              </TableHeader>
-              <TableBody>
-                {isLoading ? (
-                  <TableRow>
-                    <TableCell colSpan={7} className="text-center py-4">Loading customers...</TableCell>
-                  </TableRow>
-                ) : filteredCustomers && filteredCustomers.length > 0 ? (
-                  filteredCustomers.map((customer) => (
-                    <TableRow key={customer.id}>
-                      <TableCell className="font-medium">
+        {isLoading ? (
+          <div className="text-center py-10">Loading customers...</div>
+        ) : (
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
+            {filteredCustomers?.map((customer: Customer) => (
+              <Link key={customer.id} href={`/customers/${customer.id}`}>
+                <a className="block h-full">
+                  <Card className="h-full hover:shadow-md transition-shadow duration-200">
+                    <CardContent className="p-6">
+                      <div className="flex justify-between items-start">
                         <div className="flex items-center">
-                          <Link href={`/customers/${customer.id}`}>
-                            {customer.name}
-                          </Link>
-                          {customer.inRedZone && (
-                            <AlertTriangle className="h-4 w-4 text-red-500 ml-2" />
-                          )}
+                          <div className="bg-gray-100 rounded-md p-3 flex items-center justify-center">
+                            {customer.logo_url ? (
+                              <img 
+                                src={customer.logo_url} 
+                                alt={customer.name} 
+                                className="h-10 w-10 object-contain" 
+                              />
+                            ) : (
+                              <Building className="h-10 w-10 text-gray-600" />
+                            )}
+                          </div>
+                          <div className="ml-3">
+                            <h3 className="text-lg font-medium text-gray-900">{customer.name}</h3>
+                            <p className="text-sm text-gray-500">{customer.industry || 'No industry'}</p>
+                          </div>
                         </div>
-                      </TableCell>
-                      <TableCell>{customer.industry}</TableCell>
-                      <TableCell>
-                        <Badge variant="outline" className={customer.status === 'active' ? 'bg-green-100 text-green-800 border-0' : 'bg-yellow-100 text-yellow-800 border-0'}>
-                          {customer.status.charAt(0).toUpperCase() + customer.status.slice(1)}
+                        <Badge className={cn(getHealthBadgeStyles(customer.health_status))}>
+                          {customer.health_status.replace('_', ' ')}
                         </Badge>
-                      </TableCell>
-                      <TableCell className="text-right">{formatCurrency(customer.arr)}</TableCell>
-                      <TableCell className="text-right">{formatCurrency(customer.mrr)}</TableCell>
-                      <TableCell>
-                        <div className="flex items-center">
-                          <Avatar className="h-8 w-8 mr-2">
-                            <AvatarImage src={customer.assignedTo.avatar} alt={customer.assignedTo.name} />
-                            <AvatarFallback>{customer.assignedTo.name.charAt(0)}</AvatarFallback>
-                          </Avatar>
-                          <span className="text-sm">{customer.assignedTo.name}</span>
+                      </div>
+                      
+                      <div className="mt-6 grid grid-cols-2 gap-4">
+                        <div className="text-center p-2 bg-gray-50 rounded-md">
+                          <p className="text-sm text-gray-500">MRR</p>
+                          <p className="text-lg font-semibold">{formatINR(customer.mrr || 0)}</p>
                         </div>
-                      </TableCell>
-                      <TableCell>
-                        <DropdownMenu>
-                          <DropdownMenuTrigger asChild>
-                            <Button variant="ghost" size="icon">
-                              <MoreVertical className="h-4 w-4" />
-                            </Button>
-                          </DropdownMenuTrigger>
-                          <DropdownMenuContent align="end">
-                            <DropdownMenuItem>
-                              <Link href={`/customers/${customer.id}`}>
-                                View Details
-                              </Link>
-                            </DropdownMenuItem>
-                            <DropdownMenuItem>Create Task</DropdownMenuItem>
-                            <DropdownMenuItem>Schedule Meeting</DropdownMenuItem>
-                            <DropdownMenuItem>Send Campaign</DropdownMenuItem>
-                          </DropdownMenuContent>
-                        </DropdownMenu>
-                      </TableCell>
-                    </TableRow>
-                  ))
-                ) : (
-                  <TableRow>
-                    <TableCell colSpan={7} className="text-center py-4">No customers found</TableCell>
-                  </TableRow>
-                )}
-              </TableBody>
-            </Table>
-          </CardContent>
-        </Card>
+                        <div className="text-center p-2 bg-gray-50 rounded-md">
+                          <p className="text-sm text-gray-500">ARR</p>
+                          <p className="text-lg font-semibold">{formatINR(customer.arr || 0)}</p>
+                        </div>
+                      </div>
+                      
+                      <div className="mt-4 flex items-center justify-between">
+                        <div>
+                          <p className="text-sm text-gray-500">Renewal</p>
+                          <p className="text-sm font-medium">
+                            {customer.renewal_date 
+                              ? new Date(customer.renewal_date).toLocaleDateString() 
+                              : 'No date set'}
+                          </p>
+                        </div>
+                        <Button variant="ghost" size="sm" className="text-teal-600">
+                          Details <ArrowUpRight className="ml-1 h-4 w-4" />
+                        </Button>
+                      </div>
+                    </CardContent>
+                  </Card>
+                </a>
+              </Link>
+            ))}
+          </div>
+        )}
+        
+        {filteredCustomers?.length === 0 && (
+          <div className="text-center py-10">
+            <p className="text-gray-500">No customers match your search criteria.</p>
+          </div>
+        )}
       </div>
-    </div>
+    </>
   );
 }

@@ -1,493 +1,411 @@
 import { useState } from "react";
 import { useQuery } from "@tanstack/react-query";
-import { Link } from "wouter";
 import { 
   Card, 
-  CardContent, 
-  CardHeader 
+  CardHeader, 
+  CardTitle, 
+  CardContent 
 } from "@/components/ui/card";
-import {
-  Table,
-  TableBody,
-  TableCell,
-  TableHead,
-  TableHeader,
-  TableRow,
-} from "@/components/ui/table";
-import { 
-  DropdownMenu, 
-  DropdownMenuContent, 
-  DropdownMenuItem, 
-  DropdownMenuTrigger 
-} from "@/components/ui/dropdown-menu";
-import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Badge } from "@/components/ui/badge";
 import { 
-  Dialog,
-  DialogContent,
-  DialogHeader,
-  DialogTitle,
-  DialogTrigger,
-  DialogFooter
-} from "@/components/ui/dialog";
-import {
-  Form,
-  FormControl,
-  FormField,
-  FormItem,
-  FormLabel
-} from "@/components/ui/form";
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue
-} from "@/components/ui/select";
-import { Textarea } from "@/components/ui/textarea";
-import { 
-  Avatar, 
-  AvatarFallback, 
-  AvatarImage 
-} from "@/components/ui/avatar";
-import { 
-  Search, 
-  Plus, 
+  CheckSquare, 
+  Clock, 
   Filter, 
-  MoreVertical, 
-  ChevronDown, 
-  Calendar as CalendarIcon 
+  Plus, 
+  Search, 
+  User, 
+  Calendar,
+  Building
 } from "lucide-react";
-import { Calendar } from "@/components/ui/calendar";
-import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
-import { insertTaskSchema } from "@shared/schema";
-import { formatDate, getStatusColor } from "@/lib/utils";
-import { useForm } from "react-hook-form";
-import { zodResolver } from "@hookform/resolvers/zod";
+import { Task } from "@shared/schema";
+import { TaskStatus } from "@shared/types";
 import { format } from "date-fns";
-import { useUserContext } from "@/lib/user-context";
-import { apiRequest } from "@/lib/queryClient";
-import type { TaskListItem } from "@shared/types";
-import { z } from "zod";
+import { cn } from "@/lib/utils";
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
+import { Label } from "@/components/ui/label";
+import { Textarea } from "@/components/ui/textarea";
 
 export default function Tasks() {
-  const [searchQuery, setSearchQuery] = useState("");
+  const [searchTerm, setSearchTerm] = useState("");
   const [statusFilter, setStatusFilter] = useState<string | null>(null);
-  const [assigneeFilter, setAssigneeFilter] = useState<string | null>(null);
-  const [dialogOpen, setDialogOpen] = useState(false);
-  const { user } = useUserContext();
-
-  // Fetch tasks
-  const { 
-    data: tasks, 
-    isLoading,
-    refetch
-  } = useQuery<TaskListItem[]>({
-    queryKey: ["/api/tasks"],
+  const [assigneeFilter, setAssigneeFilter] = useState<number | null>(null);
+  const [isCreateDialogOpen, setIsCreateDialogOpen] = useState(false);
+  
+  const { data: tasks, isLoading: isLoadingTasks } = useQuery({
+    queryKey: ['/api/tasks'],
   });
-
-  // Fetch users for assignee dropdown
+  
   const { data: users } = useQuery({
-    queryKey: ["/api/users"],
+    queryKey: ['/api/users'],
   });
-
-  // Fetch customers for task creation
+  
   const { data: customers } = useQuery({
-    queryKey: ["/api/customers"],
+    queryKey: ['/api/customers'],
   });
-
-  // Form for creating a new task
-  const form = useForm({
-    resolver: zodResolver(
-      insertTaskSchema.extend({
-        dueDate: z.date().optional(),
-      })
-    ),
-    defaultValues: {
-      title: "",
-      description: "",
-      status: "not_started",
-      dueDate: undefined,
-      relativeDueDays: undefined,
-      recurrence: "none",
-      assignedToUserId: user?.id || "",
-      customerId: undefined,
-      playbookId: undefined,
-      createdByUserId: user?.id || "",
-    },
-  });
-
-  // Filter tasks based on search and filters
-  const filteredTasks = tasks?.filter(task => {
-    const matchesSearch = searchQuery === "" || 
-      task.title.toLowerCase().includes(searchQuery.toLowerCase());
+  
+  // Format users and customers data for lookups
+  const userMap = users?.reduce((acc: any, user: any) => {
+    acc[user.id] = user;
+    return acc;
+  }, {}) || {};
+  
+  const customerMap = customers?.reduce((acc: any, customer: any) => {
+    acc[customer.id] = customer;
+    return acc;
+  }, {}) || {};
+  
+  const filteredTasks = tasks?.filter((task: Task) => {
+    const matchesSearch = task.title.toLowerCase().includes(searchTerm.toLowerCase()) ||
+                          (task.description && task.description.toLowerCase().includes(searchTerm.toLowerCase()));
     
-    const matchesStatus = statusFilter === null || task.status === statusFilter;
-    const matchesAssignee = assigneeFilter === null || 
-      task.assignedTo.id === assigneeFilter;
+    const matchesStatus = !statusFilter || task.status === statusFilter;
+    const matchesAssignee = !assigneeFilter || task.assigned_to === assigneeFilter;
     
     return matchesSearch && matchesStatus && matchesAssignee;
   });
-
-  const handleCreateTask = async (data: any) => {
-    try {
-      await apiRequest("POST", "/api/tasks", data);
-      form.reset();
-      setDialogOpen(false);
-      refetch();
-    } catch (error) {
-      console.error("Error creating task:", error);
+  
+  const getStatusBadgeStyles = (status: TaskStatus | null | undefined) => {
+    if (!status) return "bg-gray-100 text-gray-800";
+    
+    switch (status) {
+      case 'pending':
+        return "bg-yellow-100 text-yellow-800";
+      case 'in_progress':
+        return "bg-green-100 text-green-800";
+      case 'completed':
+        return "bg-blue-100 text-blue-800";
+      case 'overdue':
+        return "bg-red-100 text-red-800";
+      default:
+        return "bg-gray-100 text-gray-800";
     }
+  };
+  
+  // Group tasks by status
+  const tasksByStatus = {
+    pending: filteredTasks?.filter((task: Task) => task.status === 'pending') || [],
+    in_progress: filteredTasks?.filter((task: Task) => task.status === 'in_progress') || [],
+    completed: filteredTasks?.filter((task: Task) => task.status === 'completed') || [],
+    overdue: filteredTasks?.filter((task: Task) => task.status === 'overdue') || [],
   };
 
   return (
-    <div className="py-6">
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 md:px-8">
-        <div className="flex justify-between items-center mb-6">
-          <h1 className="text-2xl font-semibold text-gray-900">Task Management</h1>
-          <Dialog open={dialogOpen} onOpenChange={setDialogOpen}>
-            <DialogTrigger asChild>
-              <Button className="flex items-center">
-                <Plus className="h-4 w-4 mr-2" /> Add Task
-              </Button>
-            </DialogTrigger>
-            <DialogContent className="sm:max-w-md">
-              <DialogHeader>
-                <DialogTitle>Create New Task</DialogTitle>
-              </DialogHeader>
-              <Form {...form}>
-                <form onSubmit={form.handleSubmit(handleCreateTask)} className="space-y-4">
-                  <FormField
-                    control={form.control}
-                    name="title"
-                    render={({ field }) => (
-                      <FormItem>
-                        <FormLabel>Title</FormLabel>
-                        <FormControl>
-                          <Input placeholder="Task title" {...field} />
-                        </FormControl>
-                      </FormItem>
-                    )}
-                  />
-                  
-                  <FormField
-                    control={form.control}
-                    name="description"
-                    render={({ field }) => (
-                      <FormItem>
-                        <FormLabel>Description</FormLabel>
-                        <FormControl>
-                          <Textarea placeholder="Task description" {...field} />
-                        </FormControl>
-                      </FormItem>
-                    )}
-                  />
-                  
-                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                    <FormField
-                      control={form.control}
-                      name="customerId"
-                      render={({ field }) => (
-                        <FormItem>
-                          <FormLabel>Customer</FormLabel>
-                          <Select 
-                            onValueChange={(value) => field.onChange(parseInt(value))}
-                            defaultValue={field.value?.toString()}
-                          >
-                            <FormControl>
-                              <SelectTrigger>
-                                <SelectValue placeholder="Select customer" />
-                              </SelectTrigger>
-                            </FormControl>
-                            <SelectContent>
-                              {customers?.map((customer: any) => (
-                                <SelectItem key={customer.id} value={customer.id.toString()}>
-                                  {customer.name}
-                                </SelectItem>
-                              ))}
-                            </SelectContent>
-                          </Select>
-                        </FormItem>
-                      )}
-                    />
-                    
-                    <FormField
-                      control={form.control}
-                      name="dueDate"
-                      render={({ field }) => (
-                        <FormItem className="flex flex-col">
-                          <FormLabel>Due Date</FormLabel>
-                          <Popover>
-                            <PopoverTrigger asChild>
-                              <FormControl>
-                                <Button
-                                  variant="outline"
-                                  className="w-full pl-3 text-left font-normal"
-                                >
-                                  {field.value ? (
-                                    format(field.value, "PPP")
-                                  ) : (
-                                    <span>Pick a date</span>
-                                  )}
-                                  <CalendarIcon className="ml-auto h-4 w-4 opacity-50" />
-                                </Button>
-                              </FormControl>
-                            </PopoverTrigger>
-                            <PopoverContent className="w-auto p-0" align="start">
-                              <Calendar
-                                mode="single"
-                                selected={field.value}
-                                onSelect={field.onChange}
-                                initialFocus
-                              />
-                            </PopoverContent>
-                          </Popover>
-                        </FormItem>
-                      )}
-                    />
+    <>
+      <div className="bg-white shadow">
+        <div className="px-4 sm:px-6 lg:max-w-7xl lg:mx-auto lg:px-8">
+          <div className="py-6 md:flex md:items-center md:justify-between">
+            <div className="flex-1 min-w-0">
+              <h1 className="text-2xl font-semibold text-gray-900">Task Management</h1>
+              <p className="mt-1 text-sm text-gray-500">
+                Create, track, and manage customer success tasks
+              </p>
+            </div>
+            <div className="mt-4 flex md:mt-0 md:ml-4">
+              <Dialog open={isCreateDialogOpen} onOpenChange={setIsCreateDialogOpen}>
+                <DialogTrigger asChild>
+                  <Button>
+                    <Plus className="h-4 w-4 mr-2" />
+                    New Task
+                  </Button>
+                </DialogTrigger>
+                <DialogContent>
+                  <DialogHeader>
+                    <DialogTitle>Create New Task</DialogTitle>
+                  </DialogHeader>
+                  <div className="grid gap-4 py-4">
+                    <div className="grid gap-2">
+                      <Label htmlFor="title">Task Title</Label>
+                      <Input id="title" placeholder="Enter task title" />
+                    </div>
+                    <div className="grid gap-2">
+                      <Label htmlFor="description">Description</Label>
+                      <Textarea id="description" placeholder="Enter task description" />
+                    </div>
+                    <div className="grid gap-2">
+                      <Label htmlFor="customer">Customer</Label>
+                      <Select>
+                        <SelectTrigger id="customer">
+                          <SelectValue placeholder="Select customer" />
+                        </SelectTrigger>
+                        <SelectContent>
+                          {customers?.map((customer: any) => (
+                            <SelectItem key={customer.id} value={customer.id.toString()}>
+                              {customer.name}
+                            </SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
+                    </div>
+                    <div className="grid gap-2">
+                      <Label htmlFor="assignee">Assign To</Label>
+                      <Select>
+                        <SelectTrigger id="assignee">
+                          <SelectValue placeholder="Select team member" />
+                        </SelectTrigger>
+                        <SelectContent>
+                          {users?.map((user: any) => (
+                            <SelectItem key={user.id} value={user.id.toString()}>
+                              {user.name}
+                            </SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
+                    </div>
+                    <div className="grid gap-2">
+                      <Label htmlFor="due_date">Due Date</Label>
+                      <Input id="due_date" type="date" />
+                    </div>
+                    <div className="grid gap-2">
+                      <Label htmlFor="status">Status</Label>
+                      <Select>
+                        <SelectTrigger id="status">
+                          <SelectValue placeholder="Select status" />
+                        </SelectTrigger>
+                        <SelectContent>
+                          <SelectItem value="pending">Pending</SelectItem>
+                          <SelectItem value="in_progress">In Progress</SelectItem>
+                          <SelectItem value="completed">Completed</SelectItem>
+                        </SelectContent>
+                      </Select>
+                    </div>
+                    <div className="flex justify-end mt-4">
+                      <Button 
+                        variant="outline" 
+                        onClick={() => setIsCreateDialogOpen(false)}
+                        className="mr-2"
+                      >
+                        Cancel
+                      </Button>
+                      <Button>Create Task</Button>
+                    </div>
                   </div>
-                  
-                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                    <FormField
-                      control={form.control}
-                      name="status"
-                      render={({ field }) => (
-                        <FormItem>
-                          <FormLabel>Status</FormLabel>
-                          <Select 
-                            onValueChange={field.onChange}
-                            defaultValue={field.value}
-                          >
-                            <FormControl>
-                              <SelectTrigger>
-                                <SelectValue placeholder="Select status" />
-                              </SelectTrigger>
-                            </FormControl>
-                            <SelectContent>
-                              <SelectItem value="not_started">Not Started</SelectItem>
-                              <SelectItem value="in_progress">In Progress</SelectItem>
-                              <SelectItem value="completed">Completed</SelectItem>
-                              <SelectItem value="blocked">Blocked</SelectItem>
-                            </SelectContent>
-                          </Select>
-                        </FormItem>
-                      )}
-                    />
-                    
-                    <FormField
-                      control={form.control}
-                      name="recurrence"
-                      render={({ field }) => (
-                        <FormItem>
-                          <FormLabel>Recurrence</FormLabel>
-                          <Select 
-                            onValueChange={field.onChange}
-                            defaultValue={field.value}
-                          >
-                            <FormControl>
-                              <SelectTrigger>
-                                <SelectValue placeholder="Select recurrence" />
-                              </SelectTrigger>
-                            </FormControl>
-                            <SelectContent>
-                              <SelectItem value="none">None</SelectItem>
-                              <SelectItem value="daily">Daily</SelectItem>
-                              <SelectItem value="weekly">Weekly</SelectItem>
-                              <SelectItem value="bi_weekly">Bi-Weekly</SelectItem>
-                              <SelectItem value="monthly">Monthly</SelectItem>
-                              <SelectItem value="quarterly">Quarterly</SelectItem>
-                            </SelectContent>
-                          </Select>
-                        </FormItem>
-                      )}
-                    />
-                  </div>
-                  
-                  <FormField
-                    control={form.control}
-                    name="assignedToUserId"
-                    render={({ field }) => (
-                      <FormItem>
-                        <FormLabel>Assigned To</FormLabel>
-                        <Select 
-                          onValueChange={field.onChange}
-                          defaultValue={field.value}
-                        >
-                          <FormControl>
-                            <SelectTrigger>
-                              <SelectValue placeholder="Select assignee" />
-                            </SelectTrigger>
-                          </FormControl>
-                          <SelectContent>
-                            {users?.map((user: any) => (
-                              <SelectItem key={user.id} value={user.id}>
-                                {user.fullName || user.email}
-                              </SelectItem>
-                            ))}
-                          </SelectContent>
-                        </Select>
-                      </FormItem>
-                    )}
-                  />
-                  
-                  <DialogFooter>
-                    <Button type="submit">Create Task</Button>
-                  </DialogFooter>
-                </form>
-              </Form>
-            </DialogContent>
-          </Dialog>
+                </DialogContent>
+              </Dialog>
+            </div>
+          </div>
         </div>
-        
-        {/* Filters */}
-        <div className="bg-white p-4 rounded-lg shadow mb-6 flex flex-col sm:flex-row gap-4">
-          <div className="relative flex-grow">
-            <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
+      </div>
+      
+      <div className="px-4 sm:px-6 lg:px-8 py-6">
+        <div className="mb-6 flex flex-col md:flex-row justify-between gap-4">
+          <div className="relative w-full md:w-1/3">
+            <div className="absolute inset-y-0 left-0 flex items-center pl-3 pointer-events-none">
               <Search className="h-5 w-5 text-gray-400" />
             </div>
             <Input
-              className="pl-10"
+              type="search"
               placeholder="Search tasks..."
-              value={searchQuery}
-              onChange={e => setSearchQuery(e.target.value)}
+              className="pl-10"
+              value={searchTerm}
+              onChange={(e) => setSearchTerm(e.target.value)}
             />
           </div>
           
-          <DropdownMenu>
-            <DropdownMenuTrigger asChild>
-              <Button variant="outline" className="flex items-center gap-2">
-                <Filter className="h-4 w-4" /> Status
-                <ChevronDown className="h-4 w-4" />
-              </Button>
-            </DropdownMenuTrigger>
-            <DropdownMenuContent align="end">
-              <DropdownMenuItem onClick={() => setStatusFilter(null)}>
-                All Statuses
-              </DropdownMenuItem>
-              <DropdownMenuItem onClick={() => setStatusFilter("not_started")}>
-                Not Started
-              </DropdownMenuItem>
-              <DropdownMenuItem onClick={() => setStatusFilter("in_progress")}>
-                In Progress
-              </DropdownMenuItem>
-              <DropdownMenuItem onClick={() => setStatusFilter("completed")}>
-                Completed
-              </DropdownMenuItem>
-              <DropdownMenuItem onClick={() => setStatusFilter("blocked")}>
-                Blocked
-              </DropdownMenuItem>
-            </DropdownMenuContent>
-          </DropdownMenu>
-          
-          <DropdownMenu>
-            <DropdownMenuTrigger asChild>
-              <Button variant="outline" className="flex items-center gap-2">
-                <Filter className="h-4 w-4" /> Assignee
-                <ChevronDown className="h-4 w-4" />
-              </Button>
-            </DropdownMenuTrigger>
-            <DropdownMenuContent align="end">
-              <DropdownMenuItem onClick={() => setAssigneeFilter(null)}>
-                All Assignees
-              </DropdownMenuItem>
-              {users?.map((user: any) => (
-                <DropdownMenuItem 
-                  key={user.id}
-                  onClick={() => setAssigneeFilter(user.id)}
-                >
-                  {user.fullName || user.email}
-                </DropdownMenuItem>
-              ))}
-            </DropdownMenuContent>
-          </DropdownMenu>
+          <div className="flex flex-wrap gap-2">
+            <Select value={statusFilter || ""} onValueChange={(value) => setStatusFilter(value || null)}>
+              <SelectTrigger className="w-[150px]">
+                <div className="flex items-center">
+                  <Filter className="h-4 w-4 mr-2" />
+                  <span>{statusFilter ? statusFilter.replace('_', ' ') : 'Status'}</span>
+                </div>
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="all-statuses">All Statuses</SelectItem>
+                <SelectItem value="pending">Pending</SelectItem>
+                <SelectItem value="in_progress">In Progress</SelectItem>
+                <SelectItem value="completed">Completed</SelectItem>
+                <SelectItem value="overdue">Overdue</SelectItem>
+              </SelectContent>
+            </Select>
+            
+            <Select value={assigneeFilter?.toString() || ""} onValueChange={(value) => setAssigneeFilter(value ? parseInt(value) : null)}>
+              <SelectTrigger className="w-[150px]">
+                <div className="flex items-center">
+                  <User className="h-4 w-4 mr-2" />
+                  <span>Assignee</span>
+                </div>
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="all-assignees">All Assignees</SelectItem>
+                {users?.map((user: any) => (
+                  <SelectItem key={user.id} value={user.id.toString()}>
+                    {user.name}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          </div>
         </div>
         
-        {/* Tasks Table */}
-        <Card>
-          <CardContent className="p-0">
-            <Table>
-              <TableHeader>
-                <TableRow>
-                  <TableHead>Title</TableHead>
-                  <TableHead>Status</TableHead>
-                  <TableHead>Due Date</TableHead>
-                  <TableHead>Customer</TableHead>
-                  <TableHead>Assigned To</TableHead>
-                  <TableHead>Recurrence</TableHead>
-                  <TableHead></TableHead>
-                </TableRow>
-              </TableHeader>
-              <TableBody>
-                {isLoading ? (
-                  <TableRow>
-                    <TableCell colSpan={7} className="text-center py-4">Loading tasks...</TableCell>
-                  </TableRow>
-                ) : filteredTasks && filteredTasks.length > 0 ? (
-                  filteredTasks.map((task) => (
-                    <TableRow key={task.id}>
-                      <TableCell className="font-medium">
-                        {task.title}
-                      </TableCell>
-                      <TableCell>
-                        <Badge 
-                          variant="outline" 
-                          className={`${getStatusColor(task.status).bg} ${getStatusColor(task.status).text} border-0`}
-                        >
-                          {task.status.split('_').map(word => 
-                            word.charAt(0).toUpperCase() + word.slice(1)
-                          ).join(' ')}
-                        </Badge>
-                      </TableCell>
-                      <TableCell>{formatDate(task.dueDate)}</TableCell>
-                      <TableCell>
-                        <Link href={`/customers/${task.customer.id}`}>
-                          <a className="hover:underline">{task.customer.name}</a>
-                        </Link>
-                      </TableCell>
-                      <TableCell>
-                        <div className="flex items-center">
-                          <Avatar className="h-8 w-8 mr-2">
-                            <AvatarImage src={task.assignedTo.avatar} alt={task.assignedTo.name} />
-                            <AvatarFallback>{task.assignedTo.name.charAt(0)}</AvatarFallback>
-                          </Avatar>
-                          <span className="text-sm">{task.assignedTo.name}</span>
+        <Tabs defaultValue="list" className="w-full">
+          <TabsList className="w-full justify-start mb-4">
+            <TabsTrigger value="list">List View</TabsTrigger>
+            <TabsTrigger value="kanban">Kanban View</TabsTrigger>
+          </TabsList>
+          
+          <TabsContent value="list">
+            <Card>
+              <CardHeader className="pb-2">
+                <CardTitle>All Tasks</CardTitle>
+              </CardHeader>
+              <CardContent>
+                {isLoadingTasks ? (
+                  <div className="text-center py-10">Loading tasks...</div>
+                ) : filteredTasks?.length > 0 ? (
+                  <ul className="divide-y divide-gray-200">
+                    {filteredTasks.map((task: Task) => (
+                      <li key={task.id}>
+                        <div className="block hover:bg-gray-50">
+                          <div className="px-4 py-4 sm:px-6">
+                            <div className="flex items-center justify-between">
+                              <p className="text-sm font-medium text-teal-600 truncate">
+                                {task.title}
+                              </p>
+                              <div className="ml-2 flex-shrink-0 flex">
+                                <Badge className={cn("px-2 text-xs leading-5 font-semibold rounded-full", getStatusBadgeStyles(task.status))}>
+                                  {task.status?.replace('_', ' ') || 'Unknown'}
+                                </Badge>
+                              </div>
+                            </div>
+                            <div className="mt-2 sm:flex sm:justify-between">
+                              <div className="sm:flex">
+                                <p className="flex items-center text-sm text-gray-500">
+                                  <User className="flex-shrink-0 mr-1.5 h-5 w-5 text-gray-400" />
+                                  Assigned to: {userMap[task.assigned_to]?.name || 'Unassigned'}
+                                </p>
+                                <p className="mt-2 flex items-center text-sm text-gray-500 sm:mt-0 sm:ml-6">
+                                  <Building className="flex-shrink-0 mr-1.5 h-5 w-5 text-gray-400" />
+                                  {customerMap[task.customer_id]?.name || 'No customer'}
+                                </p>
+                              </div>
+                              <div className="mt-2 flex items-center text-sm text-gray-500 sm:mt-0">
+                                <Calendar className="flex-shrink-0 mr-1.5 h-5 w-5 text-gray-400" />
+                                <p>
+                                  Due {task.due_date ? format(new Date(task.due_date), 'MMM d, yyyy') : 'No due date'}
+                                </p>
+                              </div>
+                            </div>
+                            {task.description && (
+                              <div className="mt-2">
+                                <p className="text-sm text-gray-500">{task.description}</p>
+                              </div>
+                            )}
+                          </div>
                         </div>
-                      </TableCell>
-                      <TableCell>
-                        {task.recurrence === 'none' ? 'One-time' :
-                         task.recurrence === 'daily' ? 'Daily' :
-                         task.recurrence === 'weekly' ? 'Weekly' :
-                         task.recurrence === 'bi_weekly' ? 'Bi-Weekly' :
-                         task.recurrence === 'monthly' ? 'Monthly' :
-                         'Quarterly'}
-                      </TableCell>
-                      <TableCell>
-                        <DropdownMenu>
-                          <DropdownMenuTrigger asChild>
-                            <Button variant="ghost" size="icon">
-                              <MoreVertical className="h-4 w-4" />
-                            </Button>
-                          </DropdownMenuTrigger>
-                          <DropdownMenuContent align="end">
-                            <DropdownMenuItem>Edit Task</DropdownMenuItem>
-                            <DropdownMenuItem>Mark as Completed</DropdownMenuItem>
-                            <DropdownMenuItem>Add Comment</DropdownMenuItem>
-                            <DropdownMenuItem>View Details</DropdownMenuItem>
-                          </DropdownMenuContent>
-                        </DropdownMenu>
-                      </TableCell>
-                    </TableRow>
-                  ))
+                      </li>
+                    ))}
+                  </ul>
                 ) : (
-                  <TableRow>
-                    <TableCell colSpan={7} className="text-center py-4">No tasks found</TableCell>
-                  </TableRow>
+                  <div className="text-center py-10">
+                    <p className="text-gray-500">No tasks match your search criteria.</p>
+                  </div>
                 )}
-              </TableBody>
-            </Table>
-          </CardContent>
-        </Card>
+              </CardContent>
+            </Card>
+          </TabsContent>
+          
+          <TabsContent value="kanban">
+            <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
+              <KanbanColumn 
+                title="Pending" 
+                icon={<Clock className="h-5 w-5 text-yellow-500" />}
+                tasks={tasksByStatus.pending}
+                userMap={userMap}
+                customerMap={customerMap}
+                getStatusBadgeStyles={getStatusBadgeStyles}
+              />
+              
+              <KanbanColumn 
+                title="In Progress" 
+                icon={<CheckSquare className="h-5 w-5 text-green-500" />}
+                tasks={tasksByStatus.in_progress}
+                userMap={userMap}
+                customerMap={customerMap}
+                getStatusBadgeStyles={getStatusBadgeStyles}
+              />
+              
+              <KanbanColumn 
+                title="Completed" 
+                icon={<CheckSquare className="h-5 w-5 text-blue-500" />}
+                tasks={tasksByStatus.completed}
+                userMap={userMap}
+                customerMap={customerMap}
+                getStatusBadgeStyles={getStatusBadgeStyles}
+              />
+              
+              <KanbanColumn 
+                title="Overdue" 
+                icon={<Clock className="h-5 w-5 text-red-500" />}
+                tasks={tasksByStatus.overdue}
+                userMap={userMap}
+                customerMap={customerMap}
+                getStatusBadgeStyles={getStatusBadgeStyles}
+              />
+            </div>
+          </TabsContent>
+        </Tabs>
+      </div>
+    </>
+  );
+}
+
+interface KanbanColumnProps {
+  title: string;
+  icon: React.ReactNode;
+  tasks: Task[];
+  userMap: Record<number, any>;
+  customerMap: Record<number, any>;
+  getStatusBadgeStyles: (status: TaskStatus | null | undefined) => string;
+}
+
+function KanbanColumn({ title, icon, tasks, userMap, customerMap, getStatusBadgeStyles }: KanbanColumnProps) {
+  return (
+    <div className="bg-gray-50 rounded-lg p-4">
+      <div className="flex items-center mb-3">
+        {icon}
+        <h3 className="text-lg font-medium ml-2">{title}</h3>
+        <Badge className="ml-2">{tasks.length}</Badge>
+      </div>
+      
+      <div className="space-y-3">
+        {tasks.length > 0 ? (
+          tasks.map((task) => (
+            <Card key={task.id} className="cursor-pointer hover:shadow transition-shadow">
+              <CardContent className="p-3">
+                <h4 className="font-medium text-teal-600">{task.title}</h4>
+                {task.description && (
+                  <p className="text-sm text-gray-500 mt-1 line-clamp-2">{task.description}</p>
+                )}
+                <div className="flex items-center justify-between mt-3">
+                  <div className="flex items-center">
+                    <User className="h-4 w-4 text-gray-400 mr-1" />
+                    <span className="text-xs text-gray-500">
+                      {userMap[task.assigned_to]?.name || 'Unassigned'}
+                    </span>
+                  </div>
+                  {task.due_date && (
+                    <span className="text-xs text-gray-500">
+                      {format(new Date(task.due_date), 'MMM d')}
+                    </span>
+                  )}
+                </div>
+                <div className="mt-2">
+                  <Badge variant="outline" className="text-xs">
+                    {customerMap[task.customer_id]?.name || 'No customer'}
+                  </Badge>
+                </div>
+              </CardContent>
+            </Card>
+          ))
+        ) : (
+          <div className="text-center py-6 text-gray-400 text-sm">
+            No tasks
+          </div>
+        )}
       </div>
     </div>
   );

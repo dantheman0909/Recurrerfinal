@@ -1,450 +1,377 @@
 import { useState } from "react";
-import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
+import { useQuery } from "@tanstack/react-query";
 import { 
   Card, 
-  CardContent, 
-  CardHeader 
+  CardHeader, 
+  CardTitle, 
+  CardContent 
 } from "@/components/ui/card";
-import {
-  Table,
-  TableBody,
-  TableCell,
-  TableHead,
-  TableHeader,
-  TableRow,
-} from "@/components/ui/table";
-import { 
-  DropdownMenu, 
-  DropdownMenuContent, 
-  DropdownMenuItem, 
-  DropdownMenuTrigger 
-} from "@/components/ui/dropdown-menu";
-import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
-import { Badge } from "@/components/ui/badge";
-import {
-  Dialog,
-  DialogContent,
-  DialogHeader,
-  DialogTitle,
-  DialogTrigger,
-  DialogFooter,
-} from "@/components/ui/dialog";
+import { Input } from "@/components/ui/input";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { Label } from "@/components/ui/label";
-import { Textarea } from "@/components/ui/textarea";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { Badge } from "@/components/ui/badge";
 import { 
   AlertTriangle, 
-  Search, 
-  MoreVertical, 
-  CheckCircle, 
-  AlertCircle, 
-  Calendar, 
-  MessageSquare,
-  ChevronDown,
-  Filter,
-  Clock
+  Filter, 
+  Search,
+  Calendar,
+  Building,
+  BarChart2,
+  CheckCircle
 } from "lucide-react";
+import { cn } from "@/lib/utils";
 import { Link } from "wouter";
-import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
-import { formatCurrency, formatDate } from "@/lib/utils";
-import { apiRequest } from "@/lib/queryClient";
+import { format } from "date-fns";
+import { RedZoneAlert } from "@shared/schema";
+import { AlertSeverity } from "@shared/types";
 
 export default function RedZone() {
-  const [searchQuery, setSearchQuery] = useState("");
-  const [reasonFilter, setReasonFilter] = useState<string | null>(null);
-  const [resolveDialogOpen, setResolveDialogOpen] = useState(false);
-  const [selectedAccountId, setSelectedAccountId] = useState<number | null>(null);
-  const [resolveNote, setResolveNote] = useState("");
-  const [activeTab, setActiveTab] = useState("current");
-  const queryClient = useQueryClient();
-
-  // Fetch red zone accounts
-  const { data: redZoneAccounts, isLoading } = useQuery({
-    queryKey: ["/api/red-zone"],
+  const [searchTerm, setSearchTerm] = useState("");
+  const [severityFilter, setSeverityFilter] = useState<string | null>(null);
+  
+  const { data: alerts, isLoading } = useQuery({
+    queryKey: ['/api/red-zone'],
   });
-
-  // Fetch resolved red zone accounts
-  const { data: resolvedAccounts, isLoading: isLoadingResolved } = useQuery({
-    queryKey: ["/api/red-zone/resolved"],
-    enabled: activeTab === "resolved",
+  
+  const { data: customers } = useQuery({
+    queryKey: ['/api/customers'],
   });
-
-  // Mutation for resolving a red zone issue
-  const resolveAccountMutation = useMutation({
-    mutationFn: async (accountId: number) => {
-      await apiRequest("POST", `/api/red-zone/${accountId}/resolve`, { note: resolveNote });
-    },
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["/api/red-zone"] });
-      queryClient.invalidateQueries({ queryKey: ["/api/red-zone/resolved"] });
-      setResolveDialogOpen(false);
-      setResolveNote("");
-      setSelectedAccountId(null);
-    },
+  
+  // Format customers data for lookups
+  const customerMap = customers?.reduce((acc: any, customer: any) => {
+    acc[customer.id] = customer;
+    return acc;
+  }, {}) || {};
+  
+  const filteredAlerts = alerts?.filter((alert: RedZoneAlert) => {
+    const customerName = customerMap[alert.customer_id]?.name || '';
+    const matchesSearch = alert.reason.toLowerCase().includes(searchTerm.toLowerCase()) ||
+                         customerName.toLowerCase().includes(searchTerm.toLowerCase());
+    
+    const matchesSeverity = !severityFilter || alert.severity === severityFilter;
+    
+    return matchesSearch && matchesSeverity;
   });
-
-  // Handle resolving a red zone account
-  const handleResolveRedZone = () => {
-    if (selectedAccountId) {
-      resolveAccountMutation.mutate(selectedAccountId);
-    }
-  };
-
-  // Map reason codes to readable text
-  const getReasonText = (reason: string) => {
-    switch (reason) {
-      case "delayed_onboarding":
-        return "Delayed onboarding";
-      case "no_qr_loyalty_setup":
-        return "No QR/loyalty setup";
-      case "no_campaign_60_days":
-        return "No campaign in 60+ days";
-      case "no_monthly_campaigns":
-        return "No monthly campaigns";
-      case "no_review_meetings":
-        return "No review meetings";
-      case "low_nps":
-        return "Low NPS score";
-      case "low_data_tagging":
-        return "Low data tagging";
-      case "revenue_drop":
-        return "Revenue drop";
+  
+  const getSeverityBadgeStyles = (severity: AlertSeverity) => {
+    switch (severity) {
+      case 'critical':
+        return "bg-red-100 text-red-800";
+      case 'high_risk':
+        return "bg-red-100 text-red-800";
+      case 'attention_needed':
+        return "bg-yellow-100 text-yellow-800";
       default:
-        return reason;
+        return "bg-gray-100 text-gray-800";
     }
   };
-
-  // Get red zone reason badges
-  const getReasonBadges = (reasons: string[]) => {
-    return reasons.map((reason, index) => (
-      <Badge 
-        key={index} 
-        variant="outline" 
-        className="bg-red-100 text-red-800 border-0 mr-1 mb-1"
-      >
-        {getReasonText(reason)}
-      </Badge>
-    ));
+  
+  const severityLabel = (severity: AlertSeverity) => {
+    switch (severity) {
+      case 'critical':
+        return "Critical";
+      case 'high_risk':
+        return "High Risk";
+      case 'attention_needed':
+        return "Attention Needed";
+      default:
+        return severity;
+    }
   };
-
-  // Get all unique reasons from accounts
-  const allReasons = redZoneAccounts?.flatMap(account => account.reasons || []) || [];
-  const uniqueReasons = [...new Set(allReasons)];
-
-  // Filter accounts based on search and reason filter
-  const filteredAccounts = (activeTab === "current" ? redZoneAccounts : resolvedAccounts)?.filter(account => {
-    if (!account?.customer) return false;
-    
-    const matchesSearch = searchQuery === "" || 
-      account.customer.name.toLowerCase().includes(searchQuery.toLowerCase());
-    
-    const matchesReason = reasonFilter === null || 
-      (account.reasons && account.reasons.includes(reasonFilter));
-    
-    return matchesSearch && matchesReason;
-  });
+  
+  // Group alerts by severity
+  const alertsBySeverity = {
+    critical: filteredAlerts?.filter((alert: RedZoneAlert) => alert.severity === 'critical') || [],
+    high_risk: filteredAlerts?.filter((alert: RedZoneAlert) => alert.severity === 'high_risk') || [],
+    attention_needed: filteredAlerts?.filter((alert: RedZoneAlert) => alert.severity === 'attention_needed') || [],
+  };
+  
+  // Calculate severity counts for the summary
+  const criticalCount = alertsBySeverity.critical.length;
+  const highRiskCount = alertsBySeverity.high_risk.length;
+  const attentionNeededCount = alertsBySeverity.attention_needed.length;
+  const totalAlerts = criticalCount + highRiskCount + attentionNeededCount;
 
   return (
-    <div className="py-6">
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 md:px-8">
-        <div className="flex justify-between items-center mb-6">
-          <div className="flex items-center">
-            <AlertTriangle className="h-6 w-6 text-red-500 mr-2" />
-            <h1 className="text-2xl font-semibold text-gray-900">Red Zone Alerts</h1>
+    <>
+      <div className="bg-white shadow">
+        <div className="px-4 sm:px-6 lg:max-w-7xl lg:mx-auto lg:px-8">
+          <div className="py-6 md:flex md:items-center md:justify-between">
+            <div className="flex-1 min-w-0">
+              <div className="flex items-center">
+                <AlertTriangle className="h-8 w-8 text-red-500 mr-3" />
+                <div>
+                  <h1 className="text-2xl font-semibold text-gray-900">Red Zone Alerts</h1>
+                  <p className="mt-1 text-sm text-gray-500">
+                    Identify and resolve critical customer issues
+                  </p>
+                </div>
+              </div>
+            </div>
+            <div className="mt-4 flex md:mt-0 md:ml-4">
+              <Button variant="outline" className="mr-2">
+                <BarChart2 className="h-4 w-4 mr-2" />
+                View Report
+              </Button>
+            </div>
+          </div>
+        </div>
+      </div>
+      
+      <div className="px-4 sm:px-6 lg:px-8 py-6">
+        {/* Alert Summary Cards */}
+        <div className="grid grid-cols-1 md:grid-cols-4 gap-4 mb-6">
+          <Card className="bg-red-50 border-red-100">
+            <CardContent className="p-6">
+              <div className="flex justify-between items-center">
+                <h3 className="text-lg font-medium text-red-800">Critical</h3>
+                <Badge className="bg-red-100 text-red-800">{criticalCount}</Badge>
+              </div>
+              <p className="text-sm text-red-600 mt-1">
+                Requires immediate attention
+              </p>
+            </CardContent>
+          </Card>
+          
+          <Card className="bg-orange-50 border-orange-100">
+            <CardContent className="p-6">
+              <div className="flex justify-between items-center">
+                <h3 className="text-lg font-medium text-orange-800">High Risk</h3>
+                <Badge className="bg-orange-100 text-orange-800">{highRiskCount}</Badge>
+              </div>
+              <p className="text-sm text-orange-600 mt-1">
+                Needs action this week
+              </p>
+            </CardContent>
+          </Card>
+          
+          <Card className="bg-yellow-50 border-yellow-100">
+            <CardContent className="p-6">
+              <div className="flex justify-between items-center">
+                <h3 className="text-lg font-medium text-yellow-800">Attention Needed</h3>
+                <Badge className="bg-yellow-100 text-yellow-800">{attentionNeededCount}</Badge>
+              </div>
+              <p className="text-sm text-yellow-600 mt-1">
+                Monitor closely
+              </p>
+            </CardContent>
+          </Card>
+          
+          <Card className="bg-green-50 border-green-100">
+            <CardContent className="p-6">
+              <div className="flex justify-between items-center">
+                <h3 className="text-lg font-medium text-green-800">Total Active</h3>
+                <Badge className="bg-green-100 text-green-800">{totalAlerts}</Badge>
+              </div>
+              <p className="text-sm text-green-600 mt-1">
+                <span className="font-medium">8</span> resolved this month
+              </p>
+            </CardContent>
+          </Card>
+        </div>
+      
+        <div className="mb-6 flex flex-col md:flex-row justify-between gap-4">
+          <div className="relative w-full md:w-1/3">
+            <div className="absolute inset-y-0 left-0 flex items-center pl-3 pointer-events-none">
+              <Search className="h-5 w-5 text-gray-400" />
+            </div>
+            <Input
+              type="search"
+              placeholder="Search alerts or customers..."
+              className="pl-10"
+              value={searchTerm}
+              onChange={(e) => setSearchTerm(e.target.value)}
+            />
+          </div>
+          
+          <div className="flex flex-wrap gap-2">
+            <Select value={severityFilter || ""} onValueChange={(value) => setSeverityFilter(value || null)}>
+              <SelectTrigger className="w-[180px]">
+                <div className="flex items-center">
+                  <Filter className="h-4 w-4 mr-2" />
+                  <span>{severityFilter ? severityLabel(severityFilter as AlertSeverity) : 'All Severities'}</span>
+                </div>
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="all-severities">All Severities</SelectItem>
+                <SelectItem value="critical">Critical</SelectItem>
+                <SelectItem value="high_risk">High Risk</SelectItem>
+                <SelectItem value="attention_needed">Attention Needed</SelectItem>
+              </SelectContent>
+            </Select>
           </div>
         </div>
         
-        {/* Info Card */}
-        <Card className="mb-6 bg-red-50 border-red-200">
-          <CardContent className="p-6">
-            <div className="flex items-start">
-              <AlertCircle className="h-10 w-10 text-red-500 mr-4 flex-shrink-0" />
-              <div>
-                <h2 className="text-xl font-semibold mb-2 text-red-800">About Red Zone Alerts</h2>
-                <p className="mb-4 text-red-700">
-                  Red Zone alerts are automatically triggered when customer accounts meet certain risk criteria.
-                  These alerts help you identify at-risk accounts that need immediate attention.
-                </p>
-                <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-                  <div className="flex items-center">
-                    <Clock className="h-5 w-5 mr-2 text-red-500" />
-                    <span className="text-red-700">Automated daily checks</span>
-                  </div>
-                  <div className="flex items-center">
-                    <AlertTriangle className="h-5 w-5 mr-2 text-red-500" />
-                    <span className="text-red-700">Multi-factor risk assessment</span>
-                  </div>
-                  <div className="flex items-center">
-                    <CheckCircle className="h-5 w-5 mr-2 text-red-500" />
-                    <span className="text-red-700">Auto-resolves when resolved</span>
-                  </div>
-                </div>
-              </div>
-            </div>
-          </CardContent>
-        </Card>
-        
-        {/* Tabs */}
-        <Tabs value={activeTab} onValueChange={setActiveTab}>
-          <TabsList className="mb-4">
-            <TabsTrigger value="current">Current Red Zone Alerts</TabsTrigger>
-            <TabsTrigger value="resolved">Resolved Alerts</TabsTrigger>
+        <Tabs defaultValue="all" className="w-full">
+          <TabsList className="w-full justify-start mb-4">
+            <TabsTrigger value="all">All Alerts</TabsTrigger>
+            <TabsTrigger value="critical">Critical</TabsTrigger>
+            <TabsTrigger value="high_risk">High Risk</TabsTrigger>
+            <TabsTrigger value="attention_needed">Attention Needed</TabsTrigger>
           </TabsList>
           
-          <TabsContent value="current">
-            {/* Search and Filters */}
-            <div className="bg-white p-4 rounded-lg shadow mb-6 flex flex-col sm:flex-row gap-4">
-              <div className="relative flex-grow">
-                <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
-                  <Search className="h-5 w-5 text-gray-400" />
-                </div>
-                <Input
-                  className="pl-10"
-                  placeholder="Search customers..."
-                  value={searchQuery}
-                  onChange={e => setSearchQuery(e.target.value)}
-                />
-              </div>
-              
-              <DropdownMenu>
-                <DropdownMenuTrigger asChild>
-                  <Button variant="outline" className="flex items-center gap-2">
-                    <Filter className="h-4 w-4" /> 
-                    Filter by Reason
-                    <ChevronDown className="h-4 w-4" />
-                  </Button>
-                </DropdownMenuTrigger>
-                <DropdownMenuContent align="end">
-                  <DropdownMenuItem onClick={() => setReasonFilter(null)}>
-                    All Reasons
-                  </DropdownMenuItem>
-                  {uniqueReasons.map((reason) => (
-                    <DropdownMenuItem 
-                      key={reason} 
-                      onClick={() => setReasonFilter(reason)}
-                    >
-                      {getReasonText(reason)}
-                    </DropdownMenuItem>
-                  ))}
-                </DropdownMenuContent>
-              </DropdownMenu>
-            </div>
-            
-            {/* Red Zone Accounts Table */}
+          <TabsContent value="all">
             <Card>
-              <CardContent className="p-0">
-                <Table>
-                  <TableHeader>
-                    <TableRow>
-                      <TableHead>Customer</TableHead>
-                      <TableHead>Red Zone Reasons</TableHead>
-                      <TableHead>Date Added</TableHead>
-                      <TableHead>Status</TableHead>
-                      <TableHead>CSM</TableHead>
-                      <TableHead className="text-right">ARR</TableHead>
-                      <TableHead></TableHead>
-                    </TableRow>
-                  </TableHeader>
-                  <TableBody>
-                    {isLoading ? (
-                      <TableRow>
-                        <TableCell colSpan={7} className="text-center py-4">Loading red zone accounts...</TableCell>
-                      </TableRow>
-                    ) : filteredAccounts && filteredAccounts.length > 0 ? (
-                      filteredAccounts.map((account) => (
-                        <TableRow key={account.id}>
-                          <TableCell className="font-medium">
-                            <Link href={`/customers/${account.customerId}`}>
-                              <a className="font-medium hover:underline">
-                                {account.customer?.name}
-                              </a>
-                            </Link>
-                          </TableCell>
-                          <TableCell>
-                            <div className="flex flex-wrap">
-                              {getReasonBadges(account.reasons || [])}
-                            </div>
-                          </TableCell>
-                          <TableCell>{formatDate(account.createdAt)}</TableCell>
-                          <TableCell>
-                            <Badge variant="outline" className="bg-red-100 text-red-800 border-0">
-                              Active
-                            </Badge>
-                          </TableCell>
-                          <TableCell>
-                            <div className="flex items-center">
-                              <Avatar className="h-8 w-8 mr-2">
-                                <AvatarImage src={account.customer?.assignedTo?.avatarUrl} alt={account.customer?.assignedTo?.fullName} />
-                                <AvatarFallback>
-                                  {account.customer?.assignedTo?.fullName?.charAt(0) || "U"}
-                                </AvatarFallback>
-                              </Avatar>
-                              <span className="text-sm">{account.customer?.assignedTo?.fullName || "Unassigned"}</span>
-                            </div>
-                          </TableCell>
-                          <TableCell className="text-right">{formatCurrency(account.customer?.arr || 0)}</TableCell>
-                          <TableCell>
-                            <DropdownMenu>
-                              <DropdownMenuTrigger asChild>
-                                <Button variant="ghost" size="icon">
-                                  <MoreVertical className="h-4 w-4" />
-                                </Button>
-                              </DropdownMenuTrigger>
-                              <DropdownMenuContent align="end">
-                                <DropdownMenuItem onClick={() => {
-                                  setSelectedAccountId(account.id);
-                                  setResolveDialogOpen(true);
-                                }}>
-                                  Mark as Resolved
-                                </DropdownMenuItem>
-                                <DropdownMenuItem asChild>
-                                  <Link href={`/customers/${account.customerId}`}>
-                                    View Customer
-                                  </Link>
-                                </DropdownMenuItem>
-                                <DropdownMenuItem>Create Task</DropdownMenuItem>
-                                <DropdownMenuItem>Schedule Meeting</DropdownMenuItem>
-                              </DropdownMenuContent>
-                            </DropdownMenu>
-                          </TableCell>
-                        </TableRow>
-                      ))
-                    ) : (
-                      <TableRow>
-                        <TableCell colSpan={7} className="text-center py-6">
-                          <div className="flex flex-col items-center py-8">
-                            <CheckCircle className="h-12 w-12 text-green-500 mb-3" />
-                            <p className="text-lg font-medium text-gray-900 mb-1">No Red Zone Alerts</p>
-                            <p className="text-gray-500">All customer accounts are healthy!</p>
-                          </div>
-                        </TableCell>
-                      </TableRow>
-                    )}
-                  </TableBody>
-                </Table>
+              <CardHeader className="pb-2">
+                <CardTitle>All Red Zone Alerts</CardTitle>
+              </CardHeader>
+              <CardContent>
+                {isLoading ? (
+                  <div className="text-center py-10">Loading alerts...</div>
+                ) : filteredAlerts?.length > 0 ? (
+                  <div className="divide-y divide-gray-200">
+                    {filteredAlerts.map((alert: RedZoneAlert) => (
+                      <AlertItem 
+                        key={alert.id} 
+                        alert={alert} 
+                        customer={customerMap[alert.customer_id]} 
+                        getSeverityBadgeStyles={getSeverityBadgeStyles}
+                        severityLabel={severityLabel}
+                      />
+                    ))}
+                  </div>
+                ) : (
+                  <div className="text-center py-10">
+                    <p className="text-gray-500">No alerts match your search criteria.</p>
+                  </div>
+                )}
               </CardContent>
             </Card>
           </TabsContent>
           
-          <TabsContent value="resolved">
-            {/* Search for Resolved Tab */}
-            <div className="bg-white p-4 rounded-lg shadow mb-6">
-              <div className="relative">
-                <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
-                  <Search className="h-5 w-5 text-gray-400" />
-                </div>
-                <Input
-                  className="pl-10"
-                  placeholder="Search resolved accounts..."
-                  value={searchQuery}
-                  onChange={e => setSearchQuery(e.target.value)}
-                />
-              </div>
-            </div>
-            
-            {/* Resolved Accounts Table */}
-            <Card>
-              <CardContent className="p-0">
-                <Table>
-                  <TableHeader>
-                    <TableRow>
-                      <TableHead>Customer</TableHead>
-                      <TableHead>Red Zone Reasons</TableHead>
-                      <TableHead>Date Added</TableHead>
-                      <TableHead>Resolved Date</TableHead>
-                      <TableHead>CSM</TableHead>
-                      <TableHead></TableHead>
-                    </TableRow>
-                  </TableHeader>
-                  <TableBody>
-                    {isLoadingResolved ? (
-                      <TableRow>
-                        <TableCell colSpan={6} className="text-center py-4">Loading resolved accounts...</TableCell>
-                      </TableRow>
-                    ) : filteredAccounts && filteredAccounts.length > 0 ? (
-                      filteredAccounts.map((account) => (
-                        <TableRow key={account.id}>
-                          <TableCell className="font-medium">
-                            <Link href={`/customers/${account.customerId}`}>
-                              <a className="font-medium hover:underline">
-                                {account.customer?.name}
-                              </a>
-                            </Link>
-                          </TableCell>
-                          <TableCell>
-                            <div className="flex flex-wrap">
-                              {getReasonBadges(account.reasons || [])}
-                            </div>
-                          </TableCell>
-                          <TableCell>{formatDate(account.createdAt)}</TableCell>
-                          <TableCell>{formatDate(account.resolvedAt)}</TableCell>
-                          <TableCell>
-                            <div className="flex items-center">
-                              <Avatar className="h-8 w-8 mr-2">
-                                <AvatarImage src={account.customer?.assignedTo?.avatarUrl} alt={account.customer?.assignedTo?.fullName} />
-                                <AvatarFallback>
-                                  {account.customer?.assignedTo?.fullName?.charAt(0) || "U"}
-                                </AvatarFallback>
-                              </Avatar>
-                              <span className="text-sm">{account.customer?.assignedTo?.fullName || "Unassigned"}</span>
-                            </div>
-                          </TableCell>
-                          <TableCell>
-                            <Button variant="ghost" size="sm" asChild>
-                              <Link href={`/customers/${account.customerId}`}>
-                                View
-                              </Link>
-                            </Button>
-                          </TableCell>
-                        </TableRow>
-                      ))
-                    ) : (
-                      <TableRow>
-                        <TableCell colSpan={6} className="text-center py-6">
-                          <p className="text-gray-500">No resolved red zone accounts found</p>
-                        </TableCell>
-                      </TableRow>
-                    )}
-                  </TableBody>
-                </Table>
-              </CardContent>
-            </Card>
+          <TabsContent value="critical">
+            <AlertsByTypeList 
+              alerts={alertsBySeverity.critical} 
+              isLoading={isLoading} 
+              customerMap={customerMap}
+              getSeverityBadgeStyles={getSeverityBadgeStyles}
+              severityLabel={severityLabel}
+              title="Critical Alerts"
+            />
+          </TabsContent>
+          
+          <TabsContent value="high_risk">
+            <AlertsByTypeList 
+              alerts={alertsBySeverity.high_risk} 
+              isLoading={isLoading} 
+              customerMap={customerMap}
+              getSeverityBadgeStyles={getSeverityBadgeStyles}
+              severityLabel={severityLabel}
+              title="High Risk Alerts"
+            />
+          </TabsContent>
+          
+          <TabsContent value="attention_needed">
+            <AlertsByTypeList 
+              alerts={alertsBySeverity.attention_needed} 
+              isLoading={isLoading} 
+              customerMap={customerMap}
+              getSeverityBadgeStyles={getSeverityBadgeStyles}
+              severityLabel={severityLabel}
+              title="Attention Needed Alerts"
+            />
           </TabsContent>
         </Tabs>
-        
-        {/* Resolve Dialog */}
-        <Dialog open={resolveDialogOpen} onOpenChange={setResolveDialogOpen}>
-          <DialogContent>
-            <DialogHeader>
-              <DialogTitle>Resolve Red Zone Alert</DialogTitle>
-            </DialogHeader>
-            <div className="space-y-4 py-4">
-              <p className="text-sm text-gray-500">
-                This will mark the red zone alert as resolved. The customer will no longer appear in the red zone list unless new issues are detected.
-              </p>
-              <div className="space-y-2">
-                <Label htmlFor="resolve-note">Resolution Note</Label>
-                <Textarea
-                  id="resolve-note"
-                  placeholder="Enter details about how this issue was resolved..."
-                  value={resolveNote}
-                  onChange={(e) => setResolveNote(e.target.value)}
-                  rows={4}
-                />
-              </div>
+      </div>
+    </>
+  );
+}
+
+interface AlertItemProps {
+  alert: RedZoneAlert;
+  customer: any;
+  getSeverityBadgeStyles: (severity: AlertSeverity) => string;
+  severityLabel: (severity: AlertSeverity) => string;
+}
+
+function AlertItem({ alert, customer, getSeverityBadgeStyles, severityLabel }: AlertItemProps) {
+  return (
+    <div className="py-4">
+      <div className="flex flex-col md:flex-row md:items-start md:justify-between">
+        <div className="flex items-start">
+          <div className="bg-red-100 rounded-md p-2 flex items-center justify-center mr-3">
+            <AlertTriangle className="h-5 w-5 text-red-600" />
+          </div>
+          <div>
+            <h3 className="text-lg font-medium text-gray-900">{customer?.name || 'Unknown Customer'}</h3>
+            <p className="text-sm text-red-600 mt-1">{alert.reason}</p>
+            <div className="flex mt-2 items-center">
+              <Badge className={cn(getSeverityBadgeStyles(alert.severity))}>
+                {severityLabel(alert.severity)}
+              </Badge>
+              <span className="ml-3 text-sm text-gray-500 flex items-center">
+                <Calendar className="h-4 w-4 mr-1" />
+                Created on {format(new Date(alert.created_at), 'MMM d, yyyy')}
+              </span>
+              {customer && (
+                <span className="ml-3 text-sm text-gray-500 flex items-center">
+                  <Building className="h-4 w-4 mr-1" />
+                  {customer.industry || 'No industry'}
+                </span>
+              )}
             </div>
-            <DialogFooter>
-              <Button variant="outline" onClick={() => setResolveDialogOpen(false)}>
-                Cancel
-              </Button>
-              <Button onClick={handleResolveRedZone} disabled={resolveAccountMutation.isPending}>
-                {resolveAccountMutation.isPending ? "Resolving..." : "Resolve Alert"}
-              </Button>
-            </DialogFooter>
-          </DialogContent>
-        </Dialog>
+          </div>
+        </div>
+        <div className="flex items-center mt-3 md:mt-0 space-x-2">
+          <Button variant="outline" size="sm" asChild>
+            <Link href={`/customers/${alert.customer_id}`}>
+              View Customer
+            </Link>
+          </Button>
+          <Button size="sm">
+            <CheckCircle className="h-4 w-4 mr-2" />
+            Resolve
+          </Button>
+        </div>
       </div>
     </div>
+  );
+}
+
+interface AlertsByTypeListProps {
+  alerts: RedZoneAlert[];
+  isLoading: boolean;
+  customerMap: Record<number, any>;
+  getSeverityBadgeStyles: (severity: AlertSeverity) => string;
+  severityLabel: (severity: AlertSeverity) => string;
+  title: string;
+}
+
+function AlertsByTypeList({ 
+  alerts, 
+  isLoading, 
+  customerMap, 
+  getSeverityBadgeStyles, 
+  severityLabel,
+  title
+}: AlertsByTypeListProps) {
+  return (
+    <Card>
+      <CardHeader className="pb-2">
+        <CardTitle>{title}</CardTitle>
+      </CardHeader>
+      <CardContent>
+        {isLoading ? (
+          <div className="text-center py-10">Loading alerts...</div>
+        ) : alerts?.length > 0 ? (
+          <div className="divide-y divide-gray-200">
+            {alerts.map((alert: RedZoneAlert) => (
+              <AlertItem 
+                key={alert.id} 
+                alert={alert} 
+                customer={customerMap[alert.customer_id]} 
+                getSeverityBadgeStyles={getSeverityBadgeStyles}
+                severityLabel={severityLabel}
+              />
+            ))}
+          </div>
+        ) : (
+          <div className="text-center py-10">
+            <p className="text-gray-500">No {title.toLowerCase()} found.</p>
+          </div>
+        )}
+      </CardContent>
+    </Card>
   );
 }
