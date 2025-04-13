@@ -143,9 +143,8 @@ export default function Dashboard() {
             <div className="flex-1 min-w-0">
               <div className="flex items-center mb-1">
                 <h1 className="text-2xl font-semibold text-gray-900">
-                  {greeting}, {users && users.length > 0 ? users[0].name.split(' ')[0] : 'User'}
+                  {greeting}, {users && users.length > 0 ? users[0].name.split(' ')[0] : 'User'} <span className="ml-1 animate-bounce inline-block">👋</span>
                 </h1>
-                <div className="ml-2 h-2 w-2 rounded-full bg-green-500 animate-pulse"></div>
               </div>
               <p className="mt-1 text-sm text-gray-500">
                 Overview of your customer success metrics and tasks
