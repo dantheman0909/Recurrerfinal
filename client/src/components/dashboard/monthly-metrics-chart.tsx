@@ -15,16 +15,16 @@ interface MonthlyMetricsChartProps {
 export function MonthlyMetricsChart({ data, timeframe = "monthly" }: MonthlyMetricsChartProps) {
   if (!data) {
     return (
-      <Card>
-        <CardContent className="p-5">
+      <div className="w-full h-full">
+        <div className="flex flex-col items-center justify-center h-full min-h-[250px]">
           <h3 className="text-lg leading-6 font-medium text-gray-900">
             Revenue Metrics
           </h3>
           <div className="mt-2 flex items-center text-sm text-gray-500">
             <p>No data available</p>
           </div>
-        </CardContent>
-      </Card>
+        </div>
+      </div>
     );
   }
   
@@ -86,23 +86,24 @@ export function MonthlyMetricsChart({ data, timeframe = "monthly" }: MonthlyMetr
   const tooltipFormatter = (value: number) => formatCurrency(value);
 
   return (
-    <Card>
-      <CardContent className="p-5">
+    <div className="w-full h-full">
+      <div className="mb-4">
         <h3 className="text-lg leading-6 font-medium text-gray-900">
           {getChartTitle()}
         </h3>
-        <div className="mt-2 flex items-center text-sm text-gray-500">
+        <div className="mt-1 flex items-center text-sm text-gray-500">
           <p>{getChartDescription()}</p>
         </div>
-        <div className="mt-5">
-          <GradientChart 
-            data={chartData} 
-            height={250} 
-            showGrid={true}
-            valueFormatter={tooltipFormatter}
-          />
-        </div>
-      </CardContent>
-    </Card>
+      </div>
+      <div className="w-full h-[calc(100%-60px)] min-h-[250px]">
+        <GradientChart 
+          data={chartData} 
+          height="100%" 
+          className="h-full"
+          showGrid={true}
+          valueFormatter={tooltipFormatter}
+        />
+      </div>
+    </div>
   );
 }

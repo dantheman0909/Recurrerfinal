@@ -409,8 +409,8 @@ export default function Dashboard() {
       <div className="mt-8 px-4 sm:px-6 lg:px-8">
         <div className="grid grid-cols-1 gap-5 lg:grid-cols-2">
           {dashboardData?.monthlyMetrics && (
-            <Card>
-              <CardContent className="p-6">
+            <Card className="flex flex-col h-[500px]">
+              <CardContent className="p-6 flex-1 flex flex-col h-full">
                 <div className="flex items-center justify-between mb-4">
                   <h3 className="text-lg font-medium text-gray-900 flex items-center gap-1">
                     Monthly Key Metrics
@@ -429,15 +429,17 @@ export default function Dashboard() {
                     />
                   </h3>
                 </div>
-                <MonthlyMetricsChart
-                  data={dashboardData.monthlyMetrics}
-                  timeframe={timeframe}
-                />
+                <div className="flex-1 h-full">
+                  <MonthlyMetricsChart
+                    data={dashboardData.monthlyMetrics}
+                    timeframe={timeframe}
+                  />
+                </div>
               </CardContent>
             </Card>
           )}
-          <Card>
-            <CardContent className="p-6">
+          <Card className="flex flex-col h-[500px]">
+            <CardContent className="p-6 flex-1 flex flex-col h-full">
               <div className="flex items-center justify-between mb-4">
                 <h3 className="text-lg font-medium text-gray-900 flex items-center gap-1">
                   Customer Health Distribution
@@ -456,34 +458,36 @@ export default function Dashboard() {
                   />
                 </h3>
               </div>
-              <HealthDistributionChart
-                data={[
-                  {
-                    segment: "Enterprise",
-                    excellent: 48,
-                    good: 32,
-                    average: 10,
-                    at_risk: 6,
-                    critical: 4,
-                  },
-                  {
-                    segment: "Mid-Market",
-                    excellent: 35,
-                    good: 40,
-                    average: 15,
-                    at_risk: 7,
-                    critical: 3,
-                  },
-                  {
-                    segment: "Small Business",
-                    excellent: 28,
-                    good: 35,
-                    average: 22,
-                    at_risk: 10,
-                    critical: 5,
-                  },
-                ]}
-              />
+              <div className="flex-1 h-full">
+                <HealthDistributionChart
+                  data={[
+                    {
+                      segment: "Enterprise",
+                      excellent: 48,
+                      good: 32,
+                      average: 10,
+                      at_risk: 6,
+                      critical: 4,
+                    },
+                    {
+                      segment: "Mid-Market",
+                      excellent: 35,
+                      good: 40,
+                      average: 15,
+                      at_risk: 7,
+                      critical: 3,
+                    },
+                    {
+                      segment: "Small Business",
+                      excellent: 28,
+                      good: 35,
+                      average: 22,
+                      at_risk: 10,
+                      critical: 5,
+                    },
+                  ]}
+                />
+              </div>
             </CardContent>
           </Card>
         </div>
