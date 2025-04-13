@@ -126,6 +126,11 @@ function DatabaseConfigTab() {
   const [isConfigTested, setIsConfigTested] = useState(false);
   const [isConnected, setIsConnected] = useState(false);
   
+  // State for save query dialog
+  const [saveQueryDialogOpen, setSaveQueryDialogOpen] = useState(false);
+  const [queryName, setQueryName] = useState("");
+  const [queryDescription, setQueryDescription] = useState("");
+  
   const { toast } = useToast();
   
   const { data: existingConfig, isLoading: isLoadingConfig } = useQuery({
@@ -221,10 +226,21 @@ function DatabaseConfigTab() {
       // Handle the new response format that includes metadata
       if (data.isPreview && data.results) {
         setQueryResults(data.results);
-        const resultCount = data.results.length || 0;
+        
+        // Show a more detailed toast message for preview results
+        let description;
+        const previewCount = data.results.length || 0;
+        const totalCount = data.totalResults || previewCount;
+        
+        if (totalCount > previewCount) {
+          description = `Preview showing ${previewCount} of ${totalCount} total results (limited to 10 rows for preview).`;
+        } else {
+          description = `Query returned ${previewCount} results.`;
+        }
+        
         toast({
           title: "Query Executed",
-          description: `Query preview showing ${resultCount} results (limited to 10 rows for preview).`,
+          description,
         });
       } else {
         // Handle legacy format for backward compatibility
@@ -288,6 +304,36 @@ function DatabaseConfigTab() {
   const handleSaveMapping = (mapping: any) => {
     saveFieldMappingMutation.mutate(mapping);
   };
+  
+  // Add save query mutation
+  const saveQueryMutation = useMutation({
+    mutationFn: async () => {
+      const response = await apiRequest("POST", "/api/admin/mysql-saved-queries", {
+        name: queryName,
+        description: queryDescription,
+        query: sqlQuery,
+        created_by: 1 // Default to first user for demo
+      });
+      return response.json();
+    },
+    onSuccess: (data) => {
+      toast({
+        title: "Query Saved",
+        description: "Your SQL query has been saved successfully.",
+      });
+      setSaveQueryDialogOpen(false);
+      setQueryName("");
+      setQueryDescription("");
+      queryClient.invalidateQueries({ queryKey: ['/api/admin/mysql-saved-queries'] });
+    },
+    onError: (error) => {
+      toast({
+        title: "Save Failed",
+        description: error.message || "Failed to save query.",
+        variant: "destructive",
+      });
+    },
+  });
   
   return (
     <div className="grid grid-cols-1 gap-6">
@@ -425,7 +471,73 @@ function DatabaseConfigTab() {
                   />
                 </div>
                 
-                <div className="flex justify-end">
+                <div className="flex justify-end space-x-2">
+                  <Dialog open={saveQueryDialogOpen} onOpenChange={setSaveQueryDialogOpen}>
+                    <DialogTrigger asChild>
+                      <Button 
+                        variant="outline"
+                        onClick={() => {
+                          setSaveQueryDialogOpen(true);
+                        }}
+                      >
+                        <Save className="h-4 w-4 mr-2" />
+                        Save Query
+                      </Button>
+                    </DialogTrigger>
+                    <DialogContent>
+                      <DialogHeader>
+                        <DialogTitle>Save SQL Query</DialogTitle>
+                      </DialogHeader>
+                      <div className="grid gap-4 py-4">
+                        <div className="grid gap-2">
+                          <Label htmlFor="query-name">Query Name</Label>
+                          <Input 
+                            id="query-name" 
+                            placeholder="e.g., Active Customers" 
+                            value={queryName}
+                            onChange={(e) => setQueryName(e.target.value)}
+                          />
+                        </div>
+                        <div className="grid gap-2">
+                          <Label htmlFor="query-description">Description (Optional)</Label>
+                          <Textarea 
+                            id="query-description" 
+                            placeholder="e.g., Retrieves all active customers with their subscription details" 
+                            value={queryDescription}
+                            onChange={(e) => setQueryDescription(e.target.value)}
+                          />
+                        </div>
+                        <div className="grid gap-2">
+                          <Label htmlFor="query-preview">Query</Label>
+                          <Textarea 
+                            id="query-preview" 
+                            className="font-mono"
+                            value={sqlQuery}
+                            readOnly
+                          />
+                          <p className="text-xs text-gray-500">
+                            Saved queries will run without the 10-row preview limitation when used for data synchronization.
+                          </p>
+                        </div>
+                      </div>
+                      <div className="flex justify-end">
+                        <Button 
+                          type="submit" 
+                          onClick={() => saveQueryMutation.mutate()}
+                          disabled={saveQueryMutation.isPending || !queryName}
+                        >
+                          {saveQueryMutation.isPending ? (
+                            <>
+                              <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                              Saving...
+                            </>
+                          ) : (
+                            'Save Query'
+                          )}
+                        </Button>
+                      </div>
+                    </DialogContent>
+                  </Dialog>
                   <Button 
                     onClick={handleRunQuery}
                     disabled={runQueryMutation.isPending}

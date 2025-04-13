@@ -599,12 +599,16 @@ export async function registerRoutes(app: Express): Promise<Server> {
         const [results] = await pool.query(safeQuery);
         await pool.end();
         
-        // Add metadata to indicate this is a preview with limited rows
+        // For preview queries, only return a maximum of 10 rows
         if (preview) {
+          // Take only the first 10 results regardless of what was returned
+          const limitedResults = Array.isArray(results) ? results.slice(0, 10) : [];
+          
           return res.json({
-            results: results || [],
+            results: limitedResults,
             isPreview: true,
             previewLimit: 10,
+            totalResults: Array.isArray(results) ? results.length : 0,
             originalQuery: query.trim()
           });
         }
