@@ -48,7 +48,8 @@ import {
   BadgeDollarSign,
   Calendar,
   Clock,
-  Percent
+  Percent,
+  Search
 } from "lucide-react";
 import { UserRole } from "@shared/types";
 import { AvatarWithInitials } from "@/components/ui/avatar-with-initials";
@@ -162,6 +163,10 @@ function DatabaseConfigTab() {
   // Track available MySQL fields from the query
   const [availableMySQLFields, setAvailableMySQLFields] = useState<string[]>([]);
   
+  // Track available Recurrer fields from the database
+  const [availableRecurrerFields, setAvailableRecurrerFields] = useState<string[]>([]);
+  const [fieldSearchTerm, setFieldSearchTerm] = useState("");
+  
   const { toast } = useToast();
   
   const { data: existingConfig, isLoading: isLoadingConfig } = useQuery({
@@ -170,6 +175,11 @@ function DatabaseConfigTab() {
   
   const { data: existingMappings, isLoading: isLoadingMappings } = useQuery({
     queryKey: ['/api/admin/mysql-field-mappings'],
+  });
+  
+  // Query to get all available fields from the customers table
+  const { data: existingCustomerFields } = useQuery({
+    queryKey: ['/api/admin/customer-fields'],
   });
   
   // Set form fields if we have existing config
@@ -203,6 +213,13 @@ function DatabaseConfigTab() {
       setAvailableMySQLFields(fields);
     }
   }, [queryResults]);
+  
+  // Extract available Recurrer fields from customer fields data
+  React.useEffect(() => {
+    if (existingCustomerFields && Array.isArray(existingCustomerFields)) {
+      setAvailableRecurrerFields(existingCustomerFields);
+    }
+  }, [existingCustomerFields]);
   
   const testConnectionMutation = useMutation({
     mutationFn: async () => {
@@ -911,12 +928,66 @@ function DatabaseConfigTab() {
                         </div>
                         <div className="grid gap-2">
                           <Label htmlFor="local-field">Recurrer Field</Label>
-                          <Input 
-                            id="local-field" 
-                            placeholder="Enter field name (e.g. loyalty_score)" 
-                            value={newMapping.local_field}
-                            onChange={(e) => handleMappingChange('local_field', e.target.value)}
-                          />
+                          <Popover>
+                            <PopoverTrigger asChild>
+                              <Button
+                                variant="outline"
+                                role="combobox"
+                                className="w-full justify-between"
+                              >
+                                {newMapping.local_field || "Select or create a field..."}
+                                <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
+                              </Button>
+                            </PopoverTrigger>
+                            <PopoverContent className="w-full p-0">
+                              <Command>
+                                <CommandInput 
+                                  placeholder="Search fields..." 
+                                  className="h-9"
+                                  value={fieldSearchTerm}
+                                  onValueChange={setFieldSearchTerm}
+                                />
+                                <CommandList>
+                                  <CommandEmpty>No matching fields found. Type to create a new field.</CommandEmpty>
+                                  <CommandGroup>
+                                    {availableRecurrerFields.filter(field => 
+                                      field.toLowerCase().includes(fieldSearchTerm.toLowerCase())
+                                    ).map(field => (
+                                      <CommandItem
+                                        key={field}
+                                        value={field}
+                                        onSelect={() => {
+                                          handleMappingChange('local_field', field);
+                                          setFieldSearchTerm("");
+                                        }}
+                                      >
+                                        {field}
+                                        {newMapping.local_field === field && (
+                                          <Check className="ml-auto h-4 w-4" />
+                                        )}
+                                      </CommandItem>
+                                    ))}
+                                  </CommandGroup>
+                                  {fieldSearchTerm && !availableRecurrerFields.some(f => 
+                                    f.toLowerCase() === fieldSearchTerm.toLowerCase()
+                                  ) && (
+                                    <CommandGroup heading="Create new field">
+                                      <CommandItem
+                                        onSelect={() => {
+                                          handleMappingChange('local_field', fieldSearchTerm);
+                                          setFieldSearchTerm("");
+                                        }}
+                                        className="text-blue-600"
+                                      >
+                                        <span>Create "{fieldSearchTerm}"</span>
+                                        <Search className="ml-auto h-4 w-4" />
+                                      </CommandItem>
+                                    </CommandGroup>
+                                  )}
+                                </CommandList>
+                              </Command>
+                            </PopoverContent>
+                          </Popover>
                           <p className="text-xs text-gray-500">
                             If field doesn't exist, it will be created automatically in the database.
                           </p>
