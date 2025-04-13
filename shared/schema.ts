@@ -187,6 +187,20 @@ export const mysqlFieldMappings = pgTable("mysql_field_mappings", {
   created_at: timestamp("created_at").defaultNow(),
 });
 
+// MySQL Saved Queries
+export const mysqlSavedQueries = pgTable("mysql_saved_queries", {
+  id: serial("id").primaryKey(),
+  name: text("name").notNull(),
+  description: text("description"),
+  query: text("query").notNull(),
+  last_run_at: timestamp("last_run_at"),
+  is_scheduled: boolean("is_scheduled").default(false),
+  schedule_frequency: integer("schedule_frequency").default(0), // Hours between runs, 0 means manual only
+  enabled: boolean("enabled").default(true),
+  created_by: integer("created_by").references(() => users.id),
+  created_at: timestamp("created_at").defaultNow(),
+});
+
 // Chargebee Configuration
 export const chargebeeConfig = pgTable("chargebee_config", {
   id: serial("id").primaryKey(),
@@ -269,6 +283,7 @@ export const insertPlaybookRunSchema = createInsertSchema(playbookRuns).omit({ i
 export const insertRedZoneAlertSchema = createInsertSchema(redZoneAlerts).omit({ id: true, created_at: true, resolved_at: true });
 export const insertMySQLConfigSchema = createInsertSchema(mysqlConfig).omit({ id: true, created_at: true });
 export const insertMySQLFieldMappingSchema = createInsertSchema(mysqlFieldMappings).omit({ id: true, created_at: true });
+export const insertMySQLSavedQuerySchema = createInsertSchema(mysqlSavedQueries).omit({ id: true, created_at: true, last_run_at: true });
 export const insertChargebeeConfigSchema = createInsertSchema(chargebeeConfig).omit({ id: true, created_at: true, last_synced_at: true });
 export const insertChargebeeFieldMappingSchema = createInsertSchema(chargebeeFieldMappings).omit({ id: true, created_at: true });
 
@@ -300,6 +315,8 @@ export type CustomerMetric = typeof customerMetrics.$inferSelect;
 
 export type MySQLConfig = typeof mysqlConfig.$inferSelect;
 export type MySQLFieldMapping = typeof mysqlFieldMappings.$inferSelect;
+export type MySQLSavedQuery = typeof mysqlSavedQueries.$inferSelect;
+export type InsertMySQLSavedQuery = z.infer<typeof insertMySQLSavedQuerySchema>;
 export type ChargebeeConfig = typeof chargebeeConfig.$inferSelect;
 export type InsertChargebeeConfig = z.infer<typeof insertChargebeeConfigSchema>;
 export type ChargebeeFieldMapping = typeof chargebeeFieldMappings.$inferSelect;

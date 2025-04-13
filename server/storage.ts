@@ -1,11 +1,14 @@
 import { 
   users, customers, tasks, taskComments, playbooks, playbookTasks, 
-  redZoneAlerts, customerMetrics, mysqlConfig, mysqlFieldMappings, chargebeeConfig, chargebeeFieldMappings,
+  redZoneAlerts, customerMetrics, mysqlConfig, mysqlFieldMappings, mysqlSavedQueries,
+  chargebeeConfig, chargebeeFieldMappings,
   type User, type Customer, type Task, type TaskComment, type Playbook, 
   type PlaybookTask, type RedZoneAlert, type CustomerMetric, 
-  type MySQLConfig, type MySQLFieldMapping, type ChargebeeConfig, type ChargebeeFieldMapping,
+  type MySQLConfig, type MySQLFieldMapping, type MySQLSavedQuery,
+  type ChargebeeConfig, type ChargebeeFieldMapping,
   type InsertUser, type InsertCustomer, type InsertTask, type InsertPlaybook,
-  type InsertRedZoneAlert, type InsertChargebeeConfig, type InsertChargebeeFieldMapping
+  type InsertRedZoneAlert, type InsertMySQLSavedQuery,
+  type InsertChargebeeConfig, type InsertChargebeeFieldMapping
 } from "@shared/schema";
 import { db } from "./db";
 import { eq, and, isNull, desc, gte, lt } from "drizzle-orm";
@@ -65,6 +68,16 @@ export interface IStorage {
   // MySQL Field Mappings
   getMySQLFieldMappings(): Promise<MySQLFieldMapping[]>;
   createMySQLFieldMapping(mapping: Omit<MySQLFieldMapping, 'id' | 'created_at'>): Promise<MySQLFieldMapping>;
+  updateMySQLFieldMapping(id: number, mapping: Partial<Omit<MySQLFieldMapping, 'id' | 'created_at'>>): Promise<MySQLFieldMapping | undefined>;
+  deleteMySQLFieldMapping(id: number): Promise<boolean>;
+  
+  // MySQL Saved Queries
+  getMySQLSavedQueries(): Promise<MySQLSavedQuery[]>;
+  getMySQLSavedQuery(id: number): Promise<MySQLSavedQuery | undefined>;
+  createMySQLSavedQuery(query: InsertMySQLSavedQuery): Promise<MySQLSavedQuery>;
+  updateMySQLSavedQuery(id: number, query: Partial<Omit<MySQLSavedQuery, 'id' | 'created_at'>>): Promise<MySQLSavedQuery | undefined>;
+  deleteMySQLSavedQuery(id: number): Promise<boolean>;
+  updateMySQLSavedQueryLastRun(id: number): Promise<MySQLSavedQuery | undefined>;
   
   // Chargebee Configuration
   getChargebeeConfig(): Promise<ChargebeeConfig | undefined>;
