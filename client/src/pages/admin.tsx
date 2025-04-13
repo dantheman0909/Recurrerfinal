@@ -40,7 +40,12 @@ import {
   AlertTriangle,
   FileText,
   Save,
-  Link as LinkIcon
+  Link as LinkIcon,
+  Key,
+  BadgeDollarSign,
+  Calendar,
+  Clock,
+  Percent
 } from "lucide-react";
 import { UserRole } from "@shared/types";
 import { AvatarWithInitials } from "@/components/ui/avatar-with-initials";
@@ -130,6 +135,17 @@ function DatabaseConfigTab() {
   const [saveQueryDialogOpen, setSaveQueryDialogOpen] = useState(false);
   const [queryName, setQueryName] = useState("");
   const [queryDescription, setQueryDescription] = useState("");
+  
+  // State for field mapping form
+  const [mappingDialogOpen, setMappingDialogOpen] = useState(false);
+  const [newMapping, setNewMapping] = useState({
+    mysql_table: "",
+    mysql_field: "",
+    local_table: "",
+    local_field: "",
+    field_type: "text",
+    is_key_field: false
+  });
   
   const { toast } = useToast();
   
@@ -305,6 +321,44 @@ function DatabaseConfigTab() {
   
   const handleRunQuery = () => {
     runQueryMutation.mutate();
+  };
+  
+  // Handler for field mapping form changes
+  const handleMappingChange = (name: string, value: any) => {
+    setNewMapping(prev => ({ ...prev, [name]: value }));
+  };
+  
+  // Handler for checkbox changes
+  const handleCheckboxChange = (event: React.ChangeEvent<HTMLInputElement>) => {
+    const { name, checked } = event.target;
+    setNewMapping(prev => ({ ...prev, [name]: checked }));
+  };
+  
+  // Handle submitting the mapping form
+  const handleSubmitMapping = () => {
+    // Create a mapping object with the correct field names for the API
+    const mapping = {
+      mysql_table: newMapping.mysql_table,
+      mysql_field: newMapping.mysql_field,
+      local_table: newMapping.local_table,
+      local_field: newMapping.local_field,
+      field_type: newMapping.field_type,
+      is_key_field: newMapping.is_key_field,
+    };
+    
+    saveFieldMappingMutation.mutate(mapping);
+    
+    // Reset form and close dialog after submission
+    setNewMapping({
+      mysql_table: "",
+      mysql_field: "",
+      local_table: "",
+      local_field: "",
+      field_type: "text",
+      is_key_field: false
+    });
+    
+    setMappingDialogOpen(false);
   };
   
   const handleSaveMapping = (mapping: any) => {
@@ -698,7 +752,81 @@ function DatabaseConfigTab() {
                           </Select>
                         </div>
                       </div>
-                      <div className="flex justify-end mt-4">
+                      
+                      <div className="grid grid-cols-2 gap-4">
+                        <div className="grid gap-2">
+                          <Label htmlFor="field-type">Data Type</Label>
+                          <Select>
+                            <SelectTrigger id="field-type">
+                              <SelectValue placeholder="Select data type" />
+                            </SelectTrigger>
+                            <SelectContent>
+                              <SelectItem value="text">
+                                <div className="flex items-center">
+                                  <FileText className="w-4 h-4 mr-2" />
+                                  <span>Text</span>
+                                </div>
+                              </SelectItem>
+                              <SelectItem value="number">
+                                <div className="flex items-center">
+                                  <span className="w-4 h-4 mr-2 font-bold">#</span>
+                                  <span>Number</span>
+                                </div>
+                              </SelectItem>
+                              <SelectItem value="percentage">
+                                <div className="flex items-center">
+                                  <Percent className="w-4 h-4 mr-2" />
+                                  <span>Percentage</span>
+                                </div>
+                              </SelectItem>
+                              <SelectItem value="percentage_calculated">
+                                <div className="flex items-center">
+                                  <Percent className="w-4 h-4 mr-2" />
+                                  <span>Percentage (Calculated)</span>
+                                </div>
+                              </SelectItem>
+                              <SelectItem value="date">
+                                <div className="flex items-center">
+                                  <Calendar className="w-4 h-4 mr-2" />
+                                  <span>Date</span>
+                                </div>
+                              </SelectItem>
+                              <SelectItem value="time">
+                                <div className="flex items-center">
+                                  <Clock className="w-4 h-4 mr-2" />
+                                  <span>Time</span>
+                                </div>
+                              </SelectItem>
+                              <SelectItem value="revenue">
+                                <div className="flex items-center">
+                                  <BadgeDollarSign className="w-4 h-4 mr-2" />
+                                  <span>Revenue (₹)</span>
+                                </div>
+                              </SelectItem>
+                            </SelectContent>
+                          </Select>
+                        </div>
+                        
+                        <div className="grid gap-2">
+                          <Label htmlFor="is-primary-key" className="flex items-center space-x-2">
+                            <div>Primary Key</div>
+                            <div className="text-gray-500 text-xs">(Unique identifier)</div>
+                          </Label>
+                          <div className="flex items-center space-x-2 h-10 px-2 border rounded-md">
+                            <input
+                              type="checkbox"
+                              id="is-primary-key"
+                              className="h-4 w-4 rounded border-gray-300 text-primary"
+                            />
+                            <div className="text-sm text-gray-600">
+                              Mark as primary key for matching records
+                            </div>
+                          </div>
+                        </div>
+                      </div>
+                      
+                      <div className="flex justify-end mt-4 space-x-2">
+                        <Button variant="outline">Cancel</Button>
                         <Button>Save Mapping</Button>
                       </div>
                     </div>
