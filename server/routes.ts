@@ -457,6 +457,59 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
   
+  // Test MySQL connection
+  app.post('/api/admin/mysql-config/test', async (req, res) => {
+    try {
+      const configSchema = z.object({
+        host: z.string(),
+        port: z.number(),
+        username: z.string(),
+        password: z.string(),
+        database: z.string()
+      });
+      
+      const configData = configSchema.parse(req.body);
+      
+      // Create a temporary MySQL service to test the connection
+      const mysql = await import('mysql2/promise');
+      
+      try {
+        // Create a connection pool with a timeout
+        const pool = mysql.createPool({
+          host: configData.host,
+          port: configData.port,
+          user: configData.username,
+          password: configData.password,
+          database: configData.database,
+          waitForConnections: true,
+          connectionLimit: 1,
+          queueLimit: 0,
+          connectTimeout: 5000 // 5 second timeout
+        });
+        
+        // Try to get a connection from the pool
+        const conn = await pool.getConnection();
+        conn.release(); // Release the connection immediately
+        await pool.end(); // Close the pool
+        
+        res.json({ success: true, message: "Successfully connected to the MySQL database" });
+      } catch (dbError) {
+        console.error('MySQL connection test failed:', dbError);
+        res.status(400).json({ 
+          success: false, 
+          message: `Failed to connect to MySQL database: ${dbError.message}` 
+        });
+      }
+    } catch (error) {
+      console.error('MySQL config validation error:', error);
+      res.status(400).json({ 
+        success: false, 
+        message: "Invalid MySQL configuration data",
+        error: error.message 
+      });
+    }
+  });
+  
   // MySQL Field Mappings
   app.get('/api/admin/mysql-field-mappings', async (req, res) => {
     const mappings = await storage.getMySQLFieldMappings();
