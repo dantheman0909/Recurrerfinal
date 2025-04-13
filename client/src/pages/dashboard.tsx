@@ -298,11 +298,11 @@ export default function Dashboard() {
                   Total MRR
                   <HelpTooltip
                     content={
-                      <div className="space-y-1">
+                      <div className="space-y-1 w-full">
                         <div className="font-semibold text-gray-800">
                           Monthly Recurring Revenue
                         </div>
-                        <div>
+                        <div className="break-words">
                           Total revenue generated each month from all active
                           subscriptions.
                         </div>
@@ -331,11 +331,11 @@ export default function Dashboard() {
                   Total ARR
                   <HelpTooltip
                     content={
-                      <div className="space-y-1">
+                      <div className="space-y-1 w-full">
                         <div className="font-semibold text-gray-800">
                           Annual Recurring Revenue
                         </div>
-                        <div>
+                        <div className="break-words">
                           Total revenue expected over the next 12 months (MRR ×
                           12).
                         </div>
@@ -364,11 +364,11 @@ export default function Dashboard() {
                   Avg. Revenue Per Customer
                   <HelpTooltip
                     content={
-                      <div className="space-y-1">
+                      <div className="space-y-1 w-full">
                         <div className="font-semibold text-gray-800">
                           Average Revenue Per Customer
                         </div>
-                        <div>
+                        <div className="break-words">
                           Monthly revenue per customer (MRR ÷ active customers).
                         </div>
                       </div>
@@ -384,11 +384,11 @@ export default function Dashboard() {
                   Growth Rate
                   <HelpTooltip
                     content={
-                      <div className="space-y-1">
+                      <div className="space-y-1 w-full">
                         <div className="font-semibold text-gray-800">
                           Growth Rate
                         </div>
-                        <div>
+                        <div className="break-words">
                           Percentage increase in MRR compared to previous
                           period.
                         </div>
@@ -416,11 +416,11 @@ export default function Dashboard() {
                     Monthly Key Metrics
                     <HelpTooltip
                       content={
-                        <div className="space-y-1">
+                        <div className="space-y-1 w-full">
                           <div className="font-semibold text-gray-800">
                             Monthly Key Metrics
                           </div>
-                          <div>
+                          <div className="break-words">
                             Trends of important business metrics over time,
                             showing month-by-month performance.
                           </div>
@@ -443,11 +443,11 @@ export default function Dashboard() {
                   Customer Health Distribution
                   <HelpTooltip
                     content={
-                      <div className="space-y-1">
+                      <div className="space-y-1 w-full">
                         <div className="font-semibold text-gray-800">
                           Customer Health Distribution
                         </div>
-                        <div>
+                        <div className="break-words">
                           Breakdown of customer health across different market
                           segments.
                         </div>
