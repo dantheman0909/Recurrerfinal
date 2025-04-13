@@ -1407,6 +1407,284 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // Custom Reports
+  app.get('/api/custom-reports', async (req, res) => {
+    try {
+      const reports = await storage.getCustomReports();
+      res.json(reports);
+    } catch (error) {
+      console.error('Error getting custom reports:', error);
+      res.status(500).json({ message: 'Failed to fetch custom reports', error: (error as Error).message });
+    }
+  });
+
+  app.get('/api/custom-reports/:id', async (req, res) => {
+    try {
+      const id = parseInt(req.params.id);
+      const report = await storage.getCustomReport(id);
+      
+      if (!report) {
+        return res.status(404).json({ message: 'Custom report not found' });
+      }
+      
+      res.json(report);
+    } catch (error) {
+      res.status(500).json({ message: 'Failed to fetch custom report', error: (error as Error).message });
+    }
+  });
+
+  app.post('/api/custom-reports', async (req, res) => {
+    try {
+      const reportData = insertCustomReportSchema.parse(req.body);
+      const report = await storage.createCustomReport(reportData);
+      res.status(201).json(report);
+    } catch (error) {
+      res.status(400).json({ 
+        message: 'Invalid custom report data', 
+        error: error instanceof Error ? error.message : String(error) 
+      });
+    }
+  });
+
+  app.patch('/api/custom-reports/:id', async (req, res) => {
+    try {
+      const id = parseInt(req.params.id);
+      const reportData = insertCustomReportSchema.partial().parse(req.body);
+      const report = await storage.updateCustomReport(id, reportData);
+      
+      if (!report) {
+        return res.status(404).json({ message: 'Custom report not found' });
+      }
+      
+      res.json(report);
+    } catch (error) {
+      res.status(400).json({ 
+        message: 'Invalid custom report data', 
+        error: error instanceof Error ? error.message : String(error) 
+      });
+    }
+  });
+
+  app.delete('/api/custom-reports/:id', async (req, res) => {
+    try {
+      const id = parseInt(req.params.id);
+      const success = await storage.deleteCustomReport(id);
+      
+      if (!success) {
+        return res.status(404).json({ message: 'Custom report not found' });
+      }
+      
+      res.status(204).end();
+    } catch (error) {
+      res.status(500).json({ 
+        message: 'Failed to delete custom report', 
+        error: error instanceof Error ? error.message : String(error) 
+      });
+    }
+  });
+
+  app.post('/api/custom-reports/:id/run', async (req, res) => {
+    try {
+      const id = parseInt(req.params.id);
+      const report = await storage.updateCustomReportLastRun(id);
+      
+      if (!report) {
+        return res.status(404).json({ message: 'Custom report not found' });
+      }
+      
+      res.json(report);
+    } catch (error) {
+      res.status(500).json({ 
+        message: 'Failed to run custom report', 
+        error: error instanceof Error ? error.message : String(error) 
+      });
+    }
+  });
+
+  // Custom Metrics
+  app.get('/api/custom-reports/:reportId/metrics', async (req, res) => {
+    try {
+      const reportId = parseInt(req.params.reportId);
+      const metrics = await storage.getCustomMetrics(reportId);
+      res.json(metrics);
+    } catch (error) {
+      console.error('Error getting custom metrics:', error);
+      res.status(500).json({ message: 'Failed to fetch custom metrics', error: (error as Error).message });
+    }
+  });
+
+  app.get('/api/custom-metrics/:id', async (req, res) => {
+    try {
+      const id = parseInt(req.params.id);
+      const metric = await storage.getCustomMetric(id);
+      
+      if (!metric) {
+        return res.status(404).json({ message: 'Custom metric not found' });
+      }
+      
+      res.json(metric);
+    } catch (error) {
+      res.status(500).json({ message: 'Failed to fetch custom metric', error: (error as Error).message });
+    }
+  });
+
+  app.post('/api/custom-reports/:reportId/metrics', async (req, res) => {
+    try {
+      const reportId = parseInt(req.params.reportId);
+      // Ensure the report ID in the URL matches the one in the body
+      const metricData = insertCustomMetricSchema.parse({
+        ...req.body,
+        report_id: reportId
+      });
+      
+      const metric = await storage.createCustomMetric(metricData);
+      res.status(201).json(metric);
+    } catch (error) {
+      res.status(400).json({ 
+        message: 'Invalid custom metric data', 
+        error: error instanceof Error ? error.message : String(error) 
+      });
+    }
+  });
+
+  app.patch('/api/custom-metrics/:id', async (req, res) => {
+    try {
+      const id = parseInt(req.params.id);
+      const metricData = insertCustomMetricSchema.partial().parse(req.body);
+      const metric = await storage.updateCustomMetric(id, metricData);
+      
+      if (!metric) {
+        return res.status(404).json({ message: 'Custom metric not found' });
+      }
+      
+      res.json(metric);
+    } catch (error) {
+      res.status(400).json({ 
+        message: 'Invalid custom metric data', 
+        error: error instanceof Error ? error.message : String(error) 
+      });
+    }
+  });
+
+  app.delete('/api/custom-metrics/:id', async (req, res) => {
+    try {
+      const id = parseInt(req.params.id);
+      const success = await storage.deleteCustomMetric(id);
+      
+      if (!success) {
+        return res.status(404).json({ message: 'Custom metric not found' });
+      }
+      
+      res.status(204).end();
+    } catch (error) {
+      res.status(500).json({ 
+        message: 'Failed to delete custom metric', 
+        error: error instanceof Error ? error.message : String(error) 
+      });
+    }
+  });
+
+  // Report Schedules
+  app.get('/api/custom-reports/:reportId/schedules', async (req, res) => {
+    try {
+      const reportId = parseInt(req.params.reportId);
+      const schedules = await storage.getReportSchedules(reportId);
+      res.json(schedules);
+    } catch (error) {
+      console.error('Error getting report schedules:', error);
+      res.status(500).json({ message: 'Failed to fetch report schedules', error: (error as Error).message });
+    }
+  });
+
+  app.get('/api/report-schedules/:id', async (req, res) => {
+    try {
+      const id = parseInt(req.params.id);
+      const schedule = await storage.getReportSchedule(id);
+      
+      if (!schedule) {
+        return res.status(404).json({ message: 'Report schedule not found' });
+      }
+      
+      res.json(schedule);
+    } catch (error) {
+      res.status(500).json({ message: 'Failed to fetch report schedule', error: (error as Error).message });
+    }
+  });
+
+  app.post('/api/custom-reports/:reportId/schedules', async (req, res) => {
+    try {
+      const reportId = parseInt(req.params.reportId);
+      // Ensure the report ID in the URL matches the one in the body
+      const scheduleData = insertReportScheduleSchema.parse({
+        ...req.body,
+        report_id: reportId
+      });
+      
+      const schedule = await storage.createReportSchedule(scheduleData);
+      res.status(201).json(schedule);
+    } catch (error) {
+      res.status(400).json({ 
+        message: 'Invalid report schedule data', 
+        error: error instanceof Error ? error.message : String(error) 
+      });
+    }
+  });
+
+  app.patch('/api/report-schedules/:id', async (req, res) => {
+    try {
+      const id = parseInt(req.params.id);
+      const scheduleData = insertReportScheduleSchema.partial().parse(req.body);
+      const schedule = await storage.updateReportSchedule(id, scheduleData);
+      
+      if (!schedule) {
+        return res.status(404).json({ message: 'Report schedule not found' });
+      }
+      
+      res.json(schedule);
+    } catch (error) {
+      res.status(400).json({ 
+        message: 'Invalid report schedule data', 
+        error: error instanceof Error ? error.message : String(error) 
+      });
+    }
+  });
+
+  app.delete('/api/report-schedules/:id', async (req, res) => {
+    try {
+      const id = parseInt(req.params.id);
+      const success = await storage.deleteReportSchedule(id);
+      
+      if (!success) {
+        return res.status(404).json({ message: 'Report schedule not found' });
+      }
+      
+      res.status(204).end();
+    } catch (error) {
+      res.status(500).json({ 
+        message: 'Failed to delete report schedule', 
+        error: error instanceof Error ? error.message : String(error) 
+      });
+    }
+  });
+
+  app.post('/api/report-schedules/:id/send', async (req, res) => {
+    try {
+      const id = parseInt(req.params.id);
+      const schedule = await storage.updateReportScheduleLastSent(id);
+      
+      if (!schedule) {
+        return res.status(404).json({ message: 'Report schedule not found' });
+      }
+      
+      res.json(schedule);
+    } catch (error) {
+      res.status(500).json({ 
+        message: 'Failed to send report', 
+        error: error instanceof Error ? error.message : String(error) 
+      });
+    }
+  });
+
   // Note: External data routes are now registered directly in server/index.ts
 
   const httpServer = createServer(app);

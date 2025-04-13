@@ -252,11 +252,18 @@ app.get('/api/customers/:id/external-data', getCustomerExternalData);
           } catch (seedError) {
             console.error('Error seeding achievements:', seedError);
           }
-        } else {
-          console.warn('Notifications and achievements tables warning:', achievementResult.error);
         }
       } catch (error) {
         console.error('Error creating notifications and achievements tables:', error);
+      }
+      
+      try {
+        // Create custom reports tables
+        const { createCustomReportsTables } = await import('./create-custom-reports-tables');
+        await createCustomReportsTables();
+        log('Custom reports tables created successfully');
+      } catch (error) {
+        console.error('Error creating custom reports tables:', error);
       }
     }
   } catch (error) {
