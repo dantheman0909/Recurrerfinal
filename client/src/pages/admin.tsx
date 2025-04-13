@@ -2209,7 +2209,7 @@ function SystemSettingsTab() {
   // Mutations for saving settings
   const saveThresholdsMutation = useMutation({
     mutationFn: (data: typeof thresholds) => 
-      apiRequest('/api/admin/system/achievement-thresholds', { method: 'POST', data }),
+      apiRequest('POST', '/api/admin/system/achievement-thresholds', data),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['/api/admin/system/achievement-thresholds'] });
       toast({
@@ -2229,7 +2229,7 @@ function SystemSettingsTab() {
   
   const saveBadgeConfigMutation = useMutation({
     mutationFn: (data: typeof badgeConfig) => 
-      apiRequest('/api/admin/system/badge-config', { method: 'POST', data }),
+      apiRequest('POST', '/api/admin/system/badge-config', data),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['/api/admin/system/badge-config'] });
       toast({
@@ -2249,7 +2249,7 @@ function SystemSettingsTab() {
   
   const saveXpConfigMutation = useMutation({
     mutationFn: (data: typeof xpConfig) => 
-      apiRequest('/api/admin/system/xp-config', { method: 'POST', data }),
+      apiRequest('POST', '/api/admin/system/xp-config', data),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['/api/admin/system/xp-config'] });
       toast({
@@ -2269,7 +2269,7 @@ function SystemSettingsTab() {
   
   const saveNotificationSettingsMutation = useMutation({
     mutationFn: (data: typeof notificationConfig) => 
-      apiRequest('/api/admin/system/notification-settings', { method: 'POST', data }),
+      apiRequest('POST', '/api/admin/system/notification-settings', data),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['/api/admin/system/notification-settings'] });
       toast({
