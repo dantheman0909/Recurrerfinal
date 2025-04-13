@@ -1,168 +1,123 @@
-// Chargebee integration service
+import fetch from 'node-fetch';
+import { Buffer } from 'buffer';
+import { storage } from './storage';
 
-export interface ChargebeeConfig {
+// ChargebeeService configuration interface
+interface ChargebeeConfig {
   site: string;
   apiKey: string;
 }
 
-export interface ChargebeeSubscription {
-  id: string;
-  customer_id: string;
-  status: string;
-  plan_id: string;
-  plan_amount: number;
-  currency_code: string;
-  next_billing_at: number;
-  created_at: number;
-  started_at: number;
-  updated_at: number;
-  billing_period?: number;
-  billing_period_unit?: string;
-}
-
-export interface ChargebeeCustomer {
-  id: string;
-  first_name: string;
-  last_name: string;
-  email: string;
-  company: string;
-  created_at: number;
-  updated_at: number;
-}
-
-export interface ChargebeeInvoice {
-  id: string;
-  subscription_id: string;
-  customer_id: string;
-  amount: number;
-  amount_paid: number;
-  amount_due: number;
-  status: string;
-  date: number;
-  due_date: number;
-  paid_at?: number;
-  total: number;
-}
-
-// Chargebee Service Class
+/**
+ * A service for interacting with the Chargebee API
+ */
 export class ChargebeeService {
-  private apiKey: string;
-  private site: string;
   private baseUrl: string;
+  private authHeader: string;
 
   constructor(config: ChargebeeConfig) {
-    this.apiKey = config.apiKey;
-    this.site = config.site;
-    this.baseUrl = `https://${this.site}.chargebee.com/api/v2`;
+    this.baseUrl = `https://${config.site}.chargebee.com/api/v2`;
+    this.authHeader = `Basic ${Buffer.from(config.apiKey + ':').toString('base64')}`;
   }
 
-  private async makeRequest(endpoint: string, method: string = 'GET', data?: any): Promise<any> {
+  /**
+   * Helper method to make authenticated requests to the Chargebee API
+   */
+  private async request<T>(endpoint: string, method = 'GET', data?: any): Promise<T> {
     const url = `${this.baseUrl}${endpoint}`;
-    const auth = Buffer.from(`${this.apiKey}:`).toString('base64');
     
-    const headers: HeadersInit = {
-      'Authorization': `Basic ${auth}`,
-      'Accept': 'application/json',
+    const headers = {
+      'Authorization': this.authHeader,
+      'Content-Type': 'application/json',
+      'Accept': 'application/json'
+    };
+    
+    const options = {
+      method,
+      headers,
+      body: data ? JSON.stringify(data) : undefined
     };
 
-    if (method !== 'GET' && data) {
-      headers['Content-Type'] = 'application/json';
+    const response = await fetch(url, options);
+    
+    if (!response.ok) {
+      const errorText = await response.text();
+      throw new Error(`Chargebee API request failed: ${response.status} ${response.statusText} - ${errorText}`);
     }
 
-    try {
-      const response = await fetch(url, {
-        method,
-        headers,
-        body: method !== 'GET' && data ? JSON.stringify(data) : undefined,
-      });
-
-      if (!response.ok) {
-        throw new Error(`Chargebee API error: ${response.status} ${response.statusText}`);
-      }
-
-      return await response.json();
-    } catch (error) {
-      console.error('Error calling Chargebee API:', error);
-      throw error;
-    }
+    return await response.json() as T;
   }
 
-  // Get all subscriptions
-  async getSubscriptions(limit: number = 100, offset: string = ''): Promise<ChargebeeSubscription[]> {
-    const queryParams = new URLSearchParams();
-    queryParams.append('limit', limit.toString());
-    if (offset) {
-      queryParams.append('offset', offset);
-    }
-
-    const response = await this.makeRequest(`/subscriptions?${queryParams.toString()}`);
-    return response.list.map((item: any) => item.subscription);
-  }
-
-  // Get subscription by ID
-  async getSubscription(id: string): Promise<ChargebeeSubscription> {
-    const response = await this.makeRequest(`/subscriptions/${id}`);
-    return response.subscription;
-  }
-
-  // Get all customers
-  async getCustomers(limit: number = 100, offset: string = ''): Promise<ChargebeeCustomer[]> {
-    const queryParams = new URLSearchParams();
-    queryParams.append('limit', limit.toString());
-    if (offset) {
-      queryParams.append('offset', offset);
-    }
-
-    const response = await this.makeRequest(`/customers?${queryParams.toString()}`);
+  /**
+   * Get a list of customers from Chargebee
+   */
+  async getCustomers(limit = 10): Promise<any[]> {
+    const response: any = await this.request(`/customers?limit=${limit}`);
     return response.list.map((item: any) => item.customer);
   }
 
-  // Get customer by ID
-  async getCustomer(id: string): Promise<ChargebeeCustomer> {
-    const response = await this.makeRequest(`/customers/${id}`);
-    return response.customer;
+  /**
+   * Get a list of subscriptions from Chargebee
+   */
+  async getSubscriptions(limit = 10): Promise<any[]> {
+    const response: any = await this.request(`/subscriptions?limit=${limit}`);
+    return response.list.map((item: any) => item.subscription);
   }
 
-  // Get all invoices
-  async getInvoices(limit: number = 100, offset: string = ''): Promise<ChargebeeInvoice[]> {
-    const queryParams = new URLSearchParams();
-    queryParams.append('limit', limit.toString());
-    if (offset) {
-      queryParams.append('offset', offset);
-    }
-
-    const response = await this.makeRequest(`/invoices?${queryParams.toString()}`);
+  /**
+   * Get a list of invoices from Chargebee
+   */
+  async getInvoices(limit = 10): Promise<any[]> {
+    const response: any = await this.request(`/invoices?limit=${limit}`);
     return response.list.map((item: any) => item.invoice);
   }
 
-  // Get invoice by ID
-  async getInvoice(id: string): Promise<ChargebeeInvoice> {
-    const response = await this.makeRequest(`/invoices/${id}`);
+  /**
+   * Get a customer by ID
+   */
+  async getCustomer(customerId: string): Promise<any> {
+    const response: any = await this.request(`/customers/${customerId}`);
+    return response.customer;
+  }
+
+  /**
+   * Get a subscription by ID
+   */
+  async getSubscription(subscriptionId: string): Promise<any> {
+    const response: any = await this.request(`/subscriptions/${subscriptionId}`);
+    return response.subscription;
+  }
+
+  /**
+   * Get an invoice by ID
+   */
+  async getInvoice(invoiceId: string): Promise<any> {
+    const response: any = await this.request(`/invoices/${invoiceId}`);
     return response.invoice;
   }
 
-  // Get invoices for a specific subscription
-  async getInvoicesForSubscription(subscriptionId: string): Promise<ChargebeeInvoice[]> {
-    const queryParams = new URLSearchParams();
-    queryParams.append('subscription_id[is]', subscriptionId);
-
-    const response = await this.makeRequest(`/invoices?${queryParams.toString()}`);
+  /**
+   * Get invoices for a subscription
+   */
+  async getInvoicesForSubscription(subscriptionId: string): Promise<any[]> {
+    const response: any = await this.request(`/invoices?subscription_id[is]=${subscriptionId}`);
     return response.list.map((item: any) => item.invoice);
   }
 }
 
-// Initialize chargebee service
-export const initChargebeeService = (): ChargebeeService | null => {
-  const apiKey = process.env.CHARGEBEE_API_KEY;
-  const site = process.env.CHARGEBEE_SITE || 'getreelo';
-
-  if (!apiKey) {
-    console.error('Chargebee API key not found. Set CHARGEBEE_API_KEY environment variable.');
-    return null;
+/**
+ * Get a singleton instance of the ChargebeeService
+ * Throws an error if Chargebee is not configured
+ */
+export async function getChargebeeService(): Promise<ChargebeeService> {
+  const config = await storage.getChargebeeConfig();
+  
+  if (!config) {
+    throw new Error('Chargebee not configured');
   }
-
-  return new ChargebeeService({ apiKey, site });
-};
-
-// Export singleton instance
-export const chargebeeService = initChargebeeService();
+  
+  return new ChargebeeService({
+    site: config.site,
+    apiKey: config.api_key
+  });
+}

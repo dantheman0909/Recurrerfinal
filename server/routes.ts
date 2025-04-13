@@ -444,6 +444,57 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
   
+  // MySQL Connection Test Route
+  app.post('/api/admin/mysql-config/test', async (req, res) => {
+    try {
+      const configSchema = z.object({
+        host: z.string(),
+        port: z.number(),
+        username: z.string(),
+        password: z.string(),
+        database: z.string()
+      });
+      
+      const configData = configSchema.parse(req.body);
+      
+      // Test the connection
+      const { host, port, username, password, database } = configData;
+      
+      // Import mysql2 dynamically to avoid issues with requiring it at the top level
+      const mysql = await import('mysql2/promise');
+      
+      // Create a temporary connection to test
+      const connection = await mysql.createConnection({
+        host,
+        port,
+        user: username,
+        password,
+        database
+      });
+      
+      // If connection succeeds, close it and return success
+      await connection.end();
+      
+      res.json({ 
+        success: true, 
+        message: 'Successfully connected to MySQL database',
+        config: {
+          host,
+          port,
+          database,
+          username
+        }
+      });
+    } catch (error) {
+      console.error('MySQL connection test error:', error);
+      res.status(400).json({ 
+        success: false, 
+        message: 'Failed to connect to MySQL database', 
+        error: error.message 
+      });
+    }
+  });
+  
   // MySQL Field Mappings
   app.get('/api/admin/mysql-field-mappings', async (req, res) => {
     const mappings = await storage.getMySQLFieldMappings();
@@ -465,6 +516,159 @@ export async function registerRoutes(app: Express): Promise<Server> {
       res.status(201).json(mapping);
     } catch (error) {
       res.status(400).json({ message: 'Invalid field mapping data', error });
+    }
+  });
+  
+  // Chargebee Config Routes
+  app.get('/api/admin/chargebee-config', async (req, res) => {
+    try {
+      const config = await storage.getChargebeeConfig();
+      // Only return the site name, not the API key for security
+      if (config) {
+        res.json({ id: config.id, site: config.site, created_at: config.created_at });
+      } else {
+        res.json({});
+      }
+    } catch (error) {
+      console.error('Error fetching Chargebee config:', error);
+      res.status(500).json({ message: 'Failed to fetch Chargebee configuration' });
+    }
+  });
+  
+  app.post('/api/admin/chargebee-config', async (req, res) => {
+    try {
+      const configSchema = z.object({
+        site: z.string().regex(/^[a-zA-Z0-9-]+$/, {
+          message: 'Site must contain only letters, numbers, and hyphens'
+        }),
+        api_key: z.string(),
+        created_by: z.number()
+      });
+      
+      const configData = configSchema.parse(req.body);
+      const config = await storage.createChargebeeConfig(configData);
+      
+      // Only return the site name, not the API key for security
+      res.status(201).json({ id: config.id, site: config.site, created_at: config.created_at });
+    } catch (error) {
+      if (error instanceof z.ZodError) {
+        return res.status(400).json({ 
+          message: 'Invalid Chargebee config data', 
+          errors: error.format() 
+        });
+      }
+      res.status(400).json({ message: 'Invalid Chargebee config data', error: String(error) });
+    }
+  });
+  
+  app.post('/api/admin/chargebee-config/test', async (req, res) => {
+    try {
+      const configSchema = z.object({
+        site: z.string().regex(/^[a-zA-Z0-9-]+$/, {
+          message: 'Site must contain only letters, numbers, and hyphens'
+        }),
+        api_key: z.string()
+      });
+      
+      const { site, api_key } = configSchema.parse(req.body);
+      
+      // Import chargebee dynamically
+      const { ChargebeeService } = await import('./chargebee');
+      
+      // Create a test service instance
+      const testService = new ChargebeeService({ site, apiKey: api_key });
+      
+      // Try to make a simple API call to verify
+      try {
+        // Fetch just one customer to verify connection works
+        await testService.getCustomers(1);
+        
+        res.json({ 
+          success: true, 
+          message: 'Successfully connected to Chargebee API',
+          site
+        });
+      } catch (apiError) {
+        console.error('Chargebee API test error:', apiError);
+        res.status(400).json({ 
+          success: false, 
+          message: 'Failed to connect to Chargebee API. Please verify your site and API key.', 
+          error: apiError.message 
+        });
+      }
+    } catch (error) {
+      if (error instanceof z.ZodError) {
+        return res.status(400).json({ 
+          success: false,
+          message: 'Invalid Chargebee configuration', 
+          errors: error.format() 
+        });
+      }
+      
+      console.error('Chargebee test error:', error);
+      res.status(400).json({ 
+        success: false, 
+        message: 'Failed to test Chargebee connection', 
+        error: String(error) 
+      });
+    }
+  });
+  
+  // Chargebee Data Preview Route
+  app.get('/api/admin/chargebee-tables', async (req, res) => {
+    try {
+      const tables = [
+        { id: 'customers', name: 'Customers', description: 'Chargebee customer accounts' },
+        { id: 'subscriptions', name: 'Subscriptions', description: 'Customer subscription data' },
+        { id: 'invoices', name: 'Invoices', description: 'Customer billing invoices' }
+      ];
+      
+      res.json(tables);
+    } catch (error) {
+      console.error('Error fetching Chargebee tables:', error);
+      res.status(500).json({ message: 'Failed to fetch Chargebee tables' });
+    }
+  });
+  
+  app.get('/api/admin/chargebee-tables/:tableId/sample', async (req, res) => {
+    try {
+      const { tableId } = req.params;
+      const config = await storage.getChargebeeConfig();
+      
+      if (!config) {
+        return res.status(400).json({ message: 'Chargebee not configured' });
+      }
+      
+      // Import chargebee service
+      const { ChargebeeService } = await import('./chargebee');
+      const chargebeeService = new ChargebeeService({ 
+        site: config.site, 
+        apiKey: config.api_key 
+      });
+      
+      let data = [];
+      
+      switch (tableId) {
+        case 'customers':
+          data = await chargebeeService.getCustomers(10);
+          break;
+        case 'subscriptions':
+          data = await chargebeeService.getSubscriptions(10);
+          break;
+        case 'invoices':
+          data = await chargebeeService.getInvoices(10);
+          break;
+        default:
+          return res.status(404).json({ message: 'Table not found' });
+      }
+      
+      res.json(data);
+    } catch (error) {
+      console.error(`Error fetching Chargebee ${req.params.tableId} sample:`, error);
+      res.status(500).json({ 
+        message: `Failed to fetch Chargebee ${req.params.tableId} sample data`, 
+        error: String(error) 
+      });
     }
   });
   

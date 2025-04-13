@@ -1,5 +1,5 @@
 import { Request, Response } from "express";
-import { chargebeeService } from "./chargebee";
+import { getChargebeeService } from "./chargebee";
 import { mysqlService } from "./mysql-service";
 import { log } from "./vite";
 import { db } from "./db";
@@ -9,14 +9,14 @@ import { eq } from "drizzle-orm";
 // Chargebee Routes
 export const getChargebeeSubscriptions = async (req: Request, res: Response) => {
   try {
+    const chargebeeService = await getChargebeeService().catch(() => null);
     if (!chargebeeService) {
-      return res.status(500).json({ error: "Chargebee service not initialized" });
+      return res.status(500).json({ error: "Chargebee not configured" });
     }
     
     const limit = req.query.limit ? parseInt(req.query.limit as string) : 100;
-    const offset = req.query.offset as string || '';
     
-    const subscriptions = await chargebeeService.getSubscriptions(limit, offset);
+    const subscriptions = await chargebeeService.getSubscriptions(limit);
     res.json(subscriptions);
   } catch (error) {
     log(`Error fetching Chargebee subscriptions: ${error}`, 'chargebee');
@@ -26,8 +26,9 @@ export const getChargebeeSubscriptions = async (req: Request, res: Response) => 
 
 export const getChargebeeSubscription = async (req: Request, res: Response) => {
   try {
+    const chargebeeService = await getChargebeeService().catch(() => null);
     if (!chargebeeService) {
-      return res.status(500).json({ error: "Chargebee service not initialized" });
+      return res.status(500).json({ error: "Chargebee not configured" });
     }
     
     const id = req.params.id;
@@ -46,14 +47,15 @@ export const getChargebeeSubscription = async (req: Request, res: Response) => {
 
 export const getChargebeeCustomers = async (req: Request, res: Response) => {
   try {
+    const chargebeeService = await getChargebeeService().catch(() => null);
     if (!chargebeeService) {
-      return res.status(500).json({ error: "Chargebee service not initialized" });
+      return res.status(500).json({ error: "Chargebee not configured" });
     }
     
     const limit = req.query.limit ? parseInt(req.query.limit as string) : 100;
     const offset = req.query.offset as string || '';
     
-    const customers = await chargebeeService.getCustomers(limit, offset);
+    const customers = await chargebeeService.getCustomers(limit);
     res.json(customers);
   } catch (error) {
     log(`Error fetching Chargebee customers: ${error}`, 'chargebee');
@@ -63,8 +65,9 @@ export const getChargebeeCustomers = async (req: Request, res: Response) => {
 
 export const getChargebeeCustomer = async (req: Request, res: Response) => {
   try {
+    const chargebeeService = await getChargebeeService().catch(() => null);
     if (!chargebeeService) {
-      return res.status(500).json({ error: "Chargebee service not initialized" });
+      return res.status(500).json({ error: "Chargebee not configured" });
     }
     
     const id = req.params.id;
@@ -83,14 +86,14 @@ export const getChargebeeCustomer = async (req: Request, res: Response) => {
 
 export const getChargebeeInvoices = async (req: Request, res: Response) => {
   try {
+    const chargebeeService = await getChargebeeService().catch(() => null);
     if (!chargebeeService) {
-      return res.status(500).json({ error: "Chargebee service not initialized" });
+      return res.status(500).json({ error: "Chargebee not configured" });
     }
     
     const limit = req.query.limit ? parseInt(req.query.limit as string) : 100;
-    const offset = req.query.offset as string || '';
     
-    const invoices = await chargebeeService.getInvoices(limit, offset);
+    const invoices = await chargebeeService.getInvoices(limit);
     res.json(invoices);
   } catch (error) {
     log(`Error fetching Chargebee invoices: ${error}`, 'chargebee');
@@ -100,8 +103,9 @@ export const getChargebeeInvoices = async (req: Request, res: Response) => {
 
 export const getChargebeeInvoice = async (req: Request, res: Response) => {
   try {
+    const chargebeeService = await getChargebeeService().catch(() => null);
     if (!chargebeeService) {
-      return res.status(500).json({ error: "Chargebee service not initialized" });
+      return res.status(500).json({ error: "Chargebee not configured" });
     }
     
     const id = req.params.id;
@@ -120,8 +124,9 @@ export const getChargebeeInvoice = async (req: Request, res: Response) => {
 
 export const getInvoicesForSubscription = async (req: Request, res: Response) => {
   try {
+    const chargebeeService = await getChargebeeService().catch(() => null);
     if (!chargebeeService) {
-      return res.status(500).json({ error: "Chargebee service not initialized" });
+      return res.status(500).json({ error: "Chargebee not configured" });
     }
     
     const id = req.params.id;
@@ -151,17 +156,22 @@ export const getCustomerExternalData = async (req: Request, res: Response) => {
     };
     
     // Get Chargebee data if we have a Chargebee customer ID
-    if (customer.chargebee_customer_id && chargebeeService) {
+    if (customer.chargebee_customer_id) {
       try {
-        const chargebeeCustomer = await chargebeeService.getCustomer(customer.chargebee_customer_id);
-        externalData.chargebee = { customer: chargebeeCustomer };
-        
-        // If we have a subscription ID, get that data too
-        if (customer.chargebee_subscription_id) {
-          const subscription = await chargebeeService.getSubscription(customer.chargebee_subscription_id);
-          const invoices = await chargebeeService.getInvoicesForSubscription(customer.chargebee_subscription_id);
-          externalData.chargebee.subscription = subscription;
-          externalData.chargebee.invoices = invoices;
+        const chargebeeService = await getChargebeeService().catch(() => null);
+        if (!chargebeeService) {
+          externalData.chargebee = { error: "Chargebee not configured" };
+        } else {
+          const chargebeeCustomer = await chargebeeService.getCustomer(customer.chargebee_customer_id);
+          externalData.chargebee = { customer: chargebeeCustomer };
+          
+          // If we have a subscription ID, get that data too
+          if (customer.chargebee_subscription_id) {
+            const subscription = await chargebeeService.getSubscription(customer.chargebee_subscription_id);
+            const invoices = await chargebeeService.getInvoicesForSubscription(customer.chargebee_subscription_id);
+            externalData.chargebee.subscription = subscription;
+            externalData.chargebee.invoices = invoices;
+          }
         }
       } catch (chargebeeError) {
         log(`Error fetching Chargebee data for customer ${customerId}: ${chargebeeError}`, 'chargebee');

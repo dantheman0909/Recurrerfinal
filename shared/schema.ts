@@ -202,6 +202,15 @@ export const mysqlFieldMappings = pgTable("mysql_field_mappings", {
   created_at: timestamp("created_at").defaultNow(),
 });
 
+// Chargebee Configuration
+export const chargebeeConfig = pgTable("chargebee_config", {
+  id: serial("id").primaryKey(),
+  site: text("site").notNull(),
+  api_key: text("api_key").notNull(),
+  created_by: integer("created_by").references(() => users.id),
+  created_at: timestamp("created_at").defaultNow(),
+});
+
 // Relations
 export const usersRelations = relations(users, ({ one, many }) => ({
   teamLead: one(users, { fields: [users.team_lead_id], references: [users.id], relationName: "csm_team_lead" }),
@@ -287,3 +296,12 @@ export type CustomerMetric = typeof customerMetrics.$inferSelect;
 
 export type MySQLConfig = typeof mysqlConfig.$inferSelect;
 export type MySQLFieldMapping = typeof mysqlFieldMappings.$inferSelect;
+export type ChargebeeConfig = typeof chargebeeConfig.$inferSelect;
+
+// Create insert schemas for configuration tables
+export const insertMySQLConfigSchema = createInsertSchema(mysqlConfig).omit({ id: true, created_at: true });
+export const insertChargebeeConfigSchema = createInsertSchema(chargebeeConfig).omit({ id: true, created_at: true });
+
+// Create insert types
+export type InsertMySQLConfig = z.infer<typeof insertMySQLConfigSchema>;
+export type InsertChargebeeConfig = z.infer<typeof insertChargebeeConfigSchema>;
