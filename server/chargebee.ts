@@ -149,6 +149,60 @@ export class ChargebeeService {
     const response = await this.makeRequest(`/invoices?${queryParams.toString()}`);
     return response.list.map((item: any) => item.invoice);
   }
+  
+  // Get available fields for mapping for each entity type
+  getAvailableFields(): Record<string, Array<{ name: string, description: string }>> {
+    return {
+      customer: [
+        { name: 'id', description: 'Customer ID' },
+        { name: 'first_name', description: 'First Name' },
+        { name: 'last_name', description: 'Last Name' },
+        { name: 'email', description: 'Email Address' },
+        { name: 'company', description: 'Company Name' },
+        { name: 'created_at', description: 'Created Date' },
+        { name: 'updated_at', description: 'Last Updated Date' },
+        { name: 'billing_address', description: 'Billing Address' },
+        { name: 'auto_collection', description: 'Auto Collection Method' },
+        { name: 'net_term_days', description: 'Payment Terms (Days)' },
+        { name: 'allow_direct_debit', description: 'Allow Direct Debit' },
+        { name: 'taxability', description: 'Tax Status' },
+        { name: 'phone', description: 'Phone Number' },
+      ],
+      subscription: [
+        { name: 'id', description: 'Subscription ID' },
+        { name: 'customer_id', description: 'Customer ID' },
+        { name: 'status', description: 'Subscription Status' },
+        { name: 'plan_id', description: 'Plan ID' },
+        { name: 'plan_amount', description: 'Plan Amount' },
+        { name: 'currency_code', description: 'Currency' },
+        { name: 'next_billing_at', description: 'Next Billing Date' },
+        { name: 'created_at', description: 'Created Date' },
+        { name: 'started_at', description: 'Start Date' },
+        { name: 'updated_at', description: 'Last Updated Date' },
+        { name: 'billing_period', description: 'Billing Period' },
+        { name: 'billing_period_unit', description: 'Billing Period Unit' },
+        { name: 'plan_quantity', description: 'Quantity' },
+        { name: 'trial_start', description: 'Trial Start Date' },
+        { name: 'trial_end', description: 'Trial End Date' },
+      ],
+      invoice: [
+        { name: 'id', description: 'Invoice ID' },
+        { name: 'subscription_id', description: 'Subscription ID' },
+        { name: 'customer_id', description: 'Customer ID' },
+        { name: 'status', description: 'Invoice Status' },
+        { name: 'amount', description: 'Amount' },
+        { name: 'amount_paid', description: 'Amount Paid' },
+        { name: 'amount_due', description: 'Amount Due' },
+        { name: 'date', description: 'Invoice Date' },
+        { name: 'due_date', description: 'Due Date' },
+        { name: 'paid_at', description: 'Payment Date' },
+        { name: 'total', description: 'Total Amount' },
+        { name: 'recurring', description: 'Is Recurring' },
+        { name: 'first_invoice', description: 'Is First Invoice' },
+        { name: 'has_advance_charges', description: 'Has Advance Charges' },
+      ]
+    };
+  }
 }
 
 // Initialize chargebee service

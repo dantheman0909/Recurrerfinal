@@ -14,6 +14,17 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { 
+  Table, 
+  TableBody, 
+  TableCaption, 
+  TableCell, 
+  TableHead, 
+  TableHeader, 
+  TableRow 
+} from "@/components/ui/table";
+import { Checkbox } from "@/components/ui/checkbox";
+import { Badge } from "@/components/ui/badge";
 import { useToast } from "@/hooks/use-toast";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 import { queryClient, apiRequest } from "@/lib/queryClient";
@@ -23,13 +34,14 @@ import {
   Upload,
   User,
   Users,
+  Loader2,
+  Trash2,
   RefreshCw,
-  Save,
-  Link as LinkIcon,
+  AlertTriangle,
   FileText,
-  AlertTriangle
+  Save,
+  Link as LinkIcon
 } from "lucide-react";
-import { Badge } from "@/components/ui/badge";
 import { UserRole } from "@shared/types";
 import { AvatarWithInitials } from "@/components/ui/avatar-with-initials";
 
@@ -558,14 +570,31 @@ function ChargebeeConfigTab() {
   const [chargebeeConfig, setChargebeeConfig] = useState({
     site: "",
     apiKey: "",
+    sync_frequency: 24
   });
   
   const [isConnected, setIsConnected] = useState(false);
   const { toast } = useToast();
+  const [activeTab, setActiveTab] = useState<string>("connection");
   
   // Fetch existing Chargebee configuration
   const { data: existingConfig, isLoading: isLoadingConfig } = useQuery({
     queryKey: ['/api/admin/chargebee-config'],
+  });
+  
+  // Field mappings state
+  const [selectedEntityType, setSelectedEntityType] = useState<string>("customer");
+  
+  // Fetch field mappings
+  const { data: fieldMappings, isLoading: isLoadingMappings, refetch: refetchMappings } = useQuery({
+    queryKey: ['/api/admin/chargebee-field-mappings'],
+    enabled: activeTab === "mappings"
+  });
+  
+  // Fetch available Chargebee fields
+  const { data: availableFields = {}, isLoading: isLoadingFields } = useQuery({
+    queryKey: ['/api/admin/chargebee-available-fields'],
+    enabled: activeTab === "mappings"
   });
   
   // Set form fields if we have existing config
@@ -577,6 +606,7 @@ function ChargebeeConfigTab() {
         setChargebeeConfig({
           site: config.site || "",
           apiKey: config.apiKey || "",
+          sync_frequency: config.sync_frequency || 24
         });
         
         // Only set as connected if we have actual values
@@ -589,7 +619,17 @@ function ChargebeeConfigTab() {
   
   const handleConfigChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const { name, value } = e.target;
-    setChargebeeConfig(prev => ({ ...prev, [name]: value }));
+    
+    if (name === "sync_frequency") {
+      // Ensure sync_frequency is between 1 and 168 hours (1 week)
+      const numValue = parseInt(value);
+      if (!isNaN(numValue)) {
+        const boundedValue = Math.min(Math.max(numValue, 1), 168);
+        setChargebeeConfig(prev => ({ ...prev, [name]: boundedValue }));
+      }
+    } else {
+      setChargebeeConfig(prev => ({ ...prev, [name]: value }));
+    }
   };
   
   const testConnectionMutation = useMutation({
@@ -635,6 +675,48 @@ function ChargebeeConfigTab() {
     },
   });
   
+  const addFieldMappingMutation = useMutation({
+    mutationFn: async (mapping: any) => {
+      const response = await apiRequest("POST", "/api/admin/chargebee-field-mappings", mapping);
+      return response.json();
+    },
+    onSuccess: () => {
+      toast({
+        title: "Mapping Added",
+        description: "Field mapping has been added successfully.",
+      });
+      refetchMappings();
+    },
+    onError: (error) => {
+      toast({
+        title: "Error",
+        description: error.message || "Failed to add field mapping",
+        variant: "destructive",
+      });
+    },
+  });
+  
+  const deleteFieldMappingMutation = useMutation({
+    mutationFn: async (id: number) => {
+      const response = await apiRequest("DELETE", `/api/admin/chargebee-field-mappings/${id}`);
+      return response.json();
+    },
+    onSuccess: () => {
+      toast({
+        title: "Mapping Deleted",
+        description: "Field mapping has been deleted successfully.",
+      });
+      refetchMappings();
+    },
+    onError: (error) => {
+      toast({
+        title: "Error",
+        description: error.message || "Failed to delete field mapping",
+        variant: "destructive",
+      });
+    },
+  });
+  
   const handleTestConnection = () => {
     testConnectionMutation.mutate();
   };
@@ -643,81 +725,425 @@ function ChargebeeConfigTab() {
     saveConfigMutation.mutate();
   };
   
+  const handleAddMapping = (mapping: any) => {
+    addFieldMappingMutation.mutate(mapping);
+  };
+  
+  const handleDeleteMapping = (id: number) => {
+    deleteFieldMappingMutation.mutate(id);
+  };
+  
   return (
-    <Card>
-      <CardHeader>
-        <CardTitle>Chargebee Integration</CardTitle>
-        <CardDescription>
-          Connect to Chargebee for financial data (read-only access)
-        </CardDescription>
-      </CardHeader>
-      <CardContent>
-        {isLoadingConfig ? (
-          <div className="flex items-center justify-center py-8">
-            <div className="animate-spin mr-2">
-              <RefreshCw className="h-5 w-5 text-gray-400" />
-            </div>
-            <p>Loading configuration...</p>
-          </div>
-        ) : (
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-            <div className="space-y-4">
-              <div className="grid gap-2">
-                <Label htmlFor="site">Chargebee Site</Label>
-                <Input 
-                  id="site" 
-                  name="site" 
-                  placeholder="e.g., yourcompany" 
-                  value={chargebeeConfig.site}
-                  onChange={handleConfigChange}
-                />
-                <p className="text-xs text-gray-500">
-                  Your Chargebee site name (yourcompany.chargebee.com)
-                </p>
-              </div>
-            </div>
-            
-            <div className="space-y-4">
-              <div className="grid gap-2">
-                <Label htmlFor="apiKey">API Key</Label>
-                <Input 
-                  id="apiKey" 
-                  name="apiKey" 
-                  type="password" 
-                  placeholder="Chargebee API Key" 
-                  value={chargebeeConfig.apiKey}
-                  onChange={handleConfigChange}
-                />
-                <p className="text-xs text-gray-500">
-                  Create a read-only API key in your Chargebee dashboard
-                </p>
-              </div>
-              
-              <div className="flex items-center justify-between mt-6">
-                <div>
-                  {isConnected && (
-                    <Badge className="bg-green-100 text-green-800">
-                      Connected
-                    </Badge>
-                  )}
+    <div className="space-y-6">
+      <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
+        <TabsList className="grid w-full grid-cols-2">
+          <TabsTrigger value="connection">Connection</TabsTrigger>
+          <TabsTrigger value="mappings">Field Mappings</TabsTrigger>
+        </TabsList>
+        
+        <TabsContent value="connection">
+          <Card>
+            <CardHeader>
+              <CardTitle>Chargebee Integration</CardTitle>
+              <CardDescription>
+                Connect to Chargebee for financial data (read-only access)
+              </CardDescription>
+            </CardHeader>
+            <CardContent>
+              {isLoadingConfig ? (
+                <div className="flex items-center justify-center py-8">
+                  <div className="animate-spin mr-2">
+                    <RefreshCw className="h-5 w-5 text-gray-400" />
+                  </div>
+                  <p>Loading configuration...</p>
                 </div>
-                <div className="space-x-2">
-                  <Button 
-                    variant="outline" 
-                    onClick={handleTestConnection}
-                  >
-                    Test Connection
-                  </Button>
-                  <Button onClick={handleSaveConfig}>
-                    Save Configuration
-                  </Button>
+              ) : (
+                <div className="space-y-6">
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    <div className="space-y-4">
+                      <div className="grid gap-2">
+                        <Label htmlFor="site">Chargebee Site</Label>
+                        <Input 
+                          id="site" 
+                          name="site" 
+                          placeholder="e.g., yourcompany" 
+                          value={chargebeeConfig.site}
+                          onChange={handleConfigChange}
+                        />
+                        <p className="text-xs text-gray-500">
+                          Your Chargebee site name (yourcompany.chargebee.com)
+                        </p>
+                      </div>
+                    </div>
+                    
+                    <div className="space-y-4">
+                      <div className="grid gap-2">
+                        <Label htmlFor="apiKey">API Key</Label>
+                        <Input 
+                          id="apiKey" 
+                          name="apiKey" 
+                          type="password" 
+                          placeholder="Chargebee API Key" 
+                          value={chargebeeConfig.apiKey}
+                          onChange={handleConfigChange}
+                        />
+                        <p className="text-xs text-gray-500">
+                          Create a read-only API key in your Chargebee dashboard
+                        </p>
+                      </div>
+                    </div>
+                  </div>
+                  
+                  <div className="grid gap-2">
+                    <Label htmlFor="sync_frequency">Sync Frequency (hours)</Label>
+                    <Input 
+                      id="sync_frequency" 
+                      name="sync_frequency"
+                      type="number"
+                      min="1"
+                      max="168"
+                      value={chargebeeConfig.sync_frequency}
+                      onChange={handleConfigChange}
+                    />
+                    <p className="text-xs text-gray-500">
+                      How often to sync data from Chargebee (1-168 hours)
+                    </p>
+                  </div>
+                  
+                  <div className="flex items-center justify-between mt-6">
+                    <div>
+                      {isConnected && (
+                        <Badge className="bg-green-100 text-green-800">
+                          Connected
+                        </Badge>
+                      )}
+                    </div>
+                    <div className="space-x-2">
+                      <Button 
+                        variant="outline" 
+                        onClick={handleTestConnection}
+                        disabled={testConnectionMutation.isPending}
+                      >
+                        {testConnectionMutation.isPending ? (
+                          <>
+                            <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                            Testing...
+                          </>
+                        ) : (
+                          "Test Connection"
+                        )}
+                      </Button>
+                      <Button 
+                        onClick={handleSaveConfig}
+                        disabled={saveConfigMutation.isPending}
+                      >
+                        {saveConfigMutation.isPending ? (
+                          <>
+                            <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                            Saving...
+                          </>
+                        ) : (
+                          "Save Configuration"
+                        )}
+                      </Button>
+                    </div>
+                  </div>
                 </div>
-              </div>
-            </div>
-          </div>
-        )}
-      </CardContent>
-    </Card>
+              )}
+            </CardContent>
+          </Card>
+        </TabsContent>
+        
+        <TabsContent value="mappings">
+          <Card>
+            <CardHeader>
+              <CardTitle>Field Mappings</CardTitle>
+              <CardDescription>
+                Map Chargebee fields to Recurrer database fields for selective data synchronization
+              </CardDescription>
+            </CardHeader>
+            <CardContent>
+              {isLoadingMappings || isLoadingFields ? (
+                <div className="flex items-center justify-center py-8">
+                  <div className="animate-spin mr-2">
+                    <RefreshCw className="h-5 w-5 text-gray-400" />
+                  </div>
+                  <p>Loading field mappings...</p>
+                </div>
+              ) : (
+                <div className="space-y-6">
+                  <div className="space-y-4">
+                    <Label>Entity Type</Label>
+                    <Select value={selectedEntityType} onValueChange={setSelectedEntityType}>
+                      <SelectTrigger>
+                        <SelectValue placeholder="Select an entity type" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="customer">Customer</SelectItem>
+                        <SelectItem value="subscription">Subscription</SelectItem>
+                        <SelectItem value="invoice">Invoice</SelectItem>
+                      </SelectContent>
+                    </Select>
+                    <p className="text-sm text-gray-500">
+                      Select the type of Chargebee entity to map fields from
+                    </p>
+                  </div>
+                  
+                  <div className="space-y-4">
+                    <div className="flex items-center justify-between">
+                      <h3 className="text-lg font-semibold">Current Mappings</h3>
+                    </div>
+                    
+                    {!fieldMappings || fieldMappings.length === 0 ? (
+                      <div className="text-center py-6 bg-gray-50 rounded-md">
+                        <p className="text-gray-500">No field mappings configured yet</p>
+                        <p className="text-sm text-gray-400">
+                          Add mappings below to specify which Chargebee data to import
+                        </p>
+                      </div>
+                    ) : (
+                      <div className="border rounded-md overflow-hidden">
+                        <Table>
+                          <TableHeader>
+                            <TableRow>
+                              <TableHead>Entity</TableHead>
+                              <TableHead>Chargebee Field</TableHead>
+                              <TableHead>Local Table</TableHead>
+                              <TableHead>Local Field</TableHead>
+                              <TableHead>Key Field</TableHead>
+                              <TableHead className="w-[80px]">Actions</TableHead>
+                            </TableRow>
+                          </TableHeader>
+                          <TableBody>
+                            {fieldMappings.map((mapping: any) => (
+                              <TableRow key={mapping.id}>
+                                <TableCell>{mapping.chargebee_entity}</TableCell>
+                                <TableCell>{mapping.chargebee_field}</TableCell>
+                                <TableCell>{mapping.local_table}</TableCell>
+                                <TableCell>{mapping.local_field}</TableCell>
+                                <TableCell>{mapping.is_key_field ? "Yes" : "No"}</TableCell>
+                                <TableCell>
+                                  <Button
+                                    variant="ghost"
+                                    size="icon"
+                                    onClick={() => handleDeleteMapping(mapping.id)}
+                                    disabled={deleteFieldMappingMutation.isPending}
+                                  >
+                                    <Trash2 className="h-4 w-4" />
+                                  </Button>
+                                </TableCell>
+                              </TableRow>
+                            ))}
+                          </TableBody>
+                        </Table>
+                      </div>
+                    )}
+                  </div>
+                  
+                  <div className="space-y-4 mt-6">
+                    <h3 className="text-lg font-semibold">Add New Mapping</h3>
+                    <AddFieldMappingForm 
+                      entityType={selectedEntityType}
+                      availableFields={availableFields[selectedEntityType] || []}
+                      onAddMapping={handleAddMapping}
+                      isLoading={addFieldMappingMutation.isPending}
+                    />
+                  </div>
+                </div>
+              )}
+            </CardContent>
+          </Card>
+        </TabsContent>
+      </Tabs>
+    </div>
+  );
+}
+
+// Field mapping form component
+function AddFieldMappingForm({
+  entityType,
+  availableFields,
+  onAddMapping,
+  isLoading
+}: {
+  entityType: string;
+  availableFields: any[];
+  onAddMapping: (mapping: any) => void;
+  isLoading: boolean;
+}) {
+  const [chargebeeField, setChargebeeField] = useState("");
+  const [localTable, setLocalTable] = useState("customers");
+  const [localField, setLocalField] = useState("");
+  const [isKeyField, setIsKeyField] = useState(false);
+  
+  // Reset field when entity type changes
+  React.useEffect(() => {
+    setChargebeeField("");
+  }, [entityType]);
+  
+  // Reset local field when table changes
+  React.useEffect(() => {
+    setLocalField("");
+  }, [localTable]);
+  
+  // Local table options based on entity type
+  const getLocalTables = () => {
+    if (entityType === "customer") {
+      return [{ value: "customers", label: "Customers" }];
+    } else if (entityType === "subscription") {
+      return [
+        { value: "customers", label: "Customers" },
+        { value: "subscriptions", label: "Subscriptions" }
+      ];
+    } else {
+      return [
+        { value: "customers", label: "Customers" },
+        { value: "invoices", label: "Invoices" }
+      ];
+    }
+  };
+  
+  // Local field options based on table
+  const getLocalFields = () => {
+    if (localTable === "customers") {
+      return [
+        { value: "recurrer_id", label: "Recurrer ID" },
+        { value: "name", label: "Name" },
+        { value: "contact_email", label: "Email" },
+        { value: "industry", label: "Industry" },
+        { value: "mrr", label: "MRR" },
+        { value: "arr", label: "ARR" },
+        { value: "chargebee_id", label: "Chargebee ID" }
+      ];
+    } else if (localTable === "subscriptions") {
+      return [
+        { value: "subscription_id", label: "Subscription ID" },
+        { value: "customer_id", label: "Customer ID" },
+        { value: "plan_name", label: "Plan Name" },
+        { value: "amount", label: "Amount" },
+        { value: "status", label: "Status" },
+        { value: "next_billing_at", label: "Next Billing Date" }
+      ];
+    } else {
+      return [
+        { value: "invoice_id", label: "Invoice ID" },
+        { value: "customer_id", label: "Customer ID" },
+        { value: "amount", label: "Amount" },
+        { value: "status", label: "Status" },
+        { value: "due_date", label: "Due Date" }
+      ];
+    }
+  };
+  
+  const handleSubmit = (e: React.FormEvent) => {
+    e.preventDefault();
+    
+    const mapping = {
+      chargebee_entity: entityType,
+      chargebee_field: chargebeeField,
+      local_table: localTable,
+      local_field: localField,
+      is_key_field: isKeyField
+    };
+    
+    onAddMapping(mapping);
+    
+    // Reset form fields
+    setChargebeeField("");
+    setLocalField("");
+    setIsKeyField(false);
+  };
+  
+  return (
+    <form onSubmit={handleSubmit} className="border rounded-md p-6 space-y-6">
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+        <div className="space-y-2">
+          <Label htmlFor="chargebee_field">Chargebee Field</Label>
+          <Select value={chargebeeField} onValueChange={setChargebeeField}>
+            <SelectTrigger id="chargebee_field" className="w-full">
+              <SelectValue placeholder="Select a field" />
+            </SelectTrigger>
+            <SelectContent>
+              {availableFields.map((field: any) => (
+                <SelectItem key={field.name} value={field.name}>
+                  {field.description || field.name}
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+          <p className="text-xs text-gray-500">
+            The field from Chargebee to import
+          </p>
+        </div>
+        
+        <div className="space-y-2">
+          <Label htmlFor="local_table">Local Table</Label>
+          <Select value={localTable} onValueChange={setLocalTable}>
+            <SelectTrigger id="local_table" className="w-full">
+              <SelectValue placeholder="Select a table" />
+            </SelectTrigger>
+            <SelectContent>
+              {getLocalTables().map(table => (
+                <SelectItem key={table.value} value={table.value}>
+                  {table.label}
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+          <p className="text-xs text-gray-500">
+            The table in Recurrer where data will be stored
+          </p>
+        </div>
+      </div>
+      
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+        <div className="space-y-2">
+          <Label htmlFor="local_field">Local Field</Label>
+          <Select value={localField} onValueChange={setLocalField}>
+            <SelectTrigger id="local_field" className="w-full">
+              <SelectValue placeholder="Select a field" />
+            </SelectTrigger>
+            <SelectContent>
+              {getLocalFields().map(field => (
+                <SelectItem key={field.value} value={field.value}>
+                  {field.label}
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+          <p className="text-xs text-gray-500">
+            The field in the local table to store the data
+          </p>
+        </div>
+        
+        <div className="flex items-center space-x-2 pt-8">
+          <Checkbox
+            id="is_key_field"
+            checked={isKeyField}
+            onCheckedChange={(checked) => setIsKeyField(checked === true)}
+          />
+          <Label htmlFor="is_key_field" className="font-normal cursor-pointer">
+            Key Field (used for record matching)
+          </Label>
+        </div>
+      </div>
+      
+      <div className="flex justify-end">
+        <Button 
+          type="submit" 
+          disabled={!chargebeeField || !localTable || !localField || isLoading}
+        >
+          {isLoading ? (
+            <>
+              <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+              Adding...
+            </>
+          ) : (
+            "Add Mapping"
+          )}
+        </Button>
+      </div>
+    </form>
   );
 }
 

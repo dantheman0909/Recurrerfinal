@@ -70,6 +70,14 @@ export interface IStorage {
   getChargebeeConfig(): Promise<ChargebeeConfig | undefined>;
   createChargebeeConfig(config: Omit<ChargebeeConfig, 'id' | 'created_at' | 'last_synced_at'>): Promise<ChargebeeConfig>;
   
+  // Chargebee Field Mappings
+  getChargebeeFieldMappings(): Promise<ChargebeeFieldMapping[]>;
+  getChargebeeFieldMappingsByEntity(entity: string): Promise<ChargebeeFieldMapping[]>;
+  getChargebeeFieldMapping(id: number): Promise<ChargebeeFieldMapping | undefined>;
+  createChargebeeFieldMapping(mapping: Omit<ChargebeeFieldMapping, 'id' | 'created_at'>): Promise<ChargebeeFieldMapping>;
+  updateChargebeeFieldMapping(id: number, mapping: Partial<Omit<ChargebeeFieldMapping, 'id' | 'created_at'>>): Promise<ChargebeeFieldMapping | undefined>;
+  deleteChargebeeFieldMapping(id: number): Promise<boolean>;
+  
   // Dashboard
   getDashboardStats(timeframe: MetricTimeframe): Promise<any>;
 }
