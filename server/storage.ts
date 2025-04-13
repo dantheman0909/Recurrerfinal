@@ -1283,7 +1283,7 @@ export class DatabaseStorage implements IStorage {
       .where(
         and(
           eq(notifications.user_id, userId),
-          isNull(notifications.read_at)
+          eq(notifications.is_read, false)
         )
       );
     
@@ -1309,10 +1309,9 @@ export class DatabaseStorage implements IStorage {
   }
   
   async markNotificationAsRead(id: number): Promise<Notification | undefined> {
-    const now = new Date();
     const [updatedNotification] = await db
       .update(notifications)
-      .set({ read_at: now })
+      .set({ is_read: true })
       .where(eq(notifications.id, id))
       .returning();
     
@@ -1320,14 +1319,13 @@ export class DatabaseStorage implements IStorage {
   }
   
   async markAllNotificationsAsRead(userId: number): Promise<void> {
-    const now = new Date();
     await db
       .update(notifications)
-      .set({ read_at: now })
+      .set({ is_read: true })
       .where(
         and(
           eq(notifications.user_id, userId),
-          isNull(notifications.read_at)
+          eq(notifications.is_read, false)
         )
       );
   }
@@ -1348,7 +1346,7 @@ export class DatabaseStorage implements IStorage {
       .where(
         and(
           eq(userAchievements.user_id, userId),
-          isNull(userAchievements.viewed_at)
+          eq(userAchievements.is_viewed, false)
         )
       );
     
@@ -1374,10 +1372,9 @@ export class DatabaseStorage implements IStorage {
   }
   
   async markAchievementAsViewed(id: number): Promise<UserAchievement | undefined> {
-    const now = new Date();
     const [updatedAchievement] = await db
       .update(userAchievements)
-      .set({ viewed_at: now })
+      .set({ is_viewed: true })
       .where(eq(userAchievements.id, id))
       .returning();
     
