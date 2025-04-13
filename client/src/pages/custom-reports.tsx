@@ -1230,7 +1230,7 @@ export default function CustomReports() {
                                 </Badge>
                               </div>
                               <div className="text-sm text-gray-500 space-y-1">
-                                <p>Recipients: {schedule.recipients.join(", ")}</p>
+                                <p>Recipients: {schedule.recipients && schedule.recipients.length > 0 ? schedule.recipients.join(", ") : "None"}</p>
                                 {schedule.last_sent_at && (
                                   <p>Last sent: {format(new Date(schedule.last_sent_at), 'MMM d, yyyy HH:mm')}</p>
                                 )}
