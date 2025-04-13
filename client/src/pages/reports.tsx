@@ -214,7 +214,7 @@ export default function Reports() {
                         <Bar 
                           dataKey="incomplete" 
                           stackId="a" 
-                          fill="#E5E7EB" 
+                          fill="#9CA3AF" 
                           name="Incomplete"
                           radius={[4, 4, 0, 0]}
                         />
@@ -277,7 +277,7 @@ export default function Reports() {
                         <Bar 
                           dataKey="incomplete" 
                           stackId="a" 
-                          fill="#E5E7EB" 
+                          fill="#9CA3AF" 
                           name="Incomplete"
                           radius={[4, 4, 0, 0]}
                         />
@@ -346,7 +346,7 @@ export default function Reports() {
                           labelLine={false}
                         >
                           <Cell fill="#0D9298" />
-                          <Cell fill="#E5E7EB" />
+                          <Cell fill="#9CA3AF" />
                         </Pie>
                         <Tooltip 
                           formatter={(value, name) => [`${value}%`, name]}

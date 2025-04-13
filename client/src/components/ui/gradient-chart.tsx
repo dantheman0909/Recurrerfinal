@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from "react";
+import React from "react";
 import { 
   Area, 
   AreaChart, 
@@ -20,7 +20,6 @@ interface GradientChartProps {
   gradientTo?: string;
   strokeColor?: string;
   valueFormatter?: (value: number) => string;
-  animationDuration?: number;
 }
 
 export function GradientChart({ 
@@ -29,61 +28,21 @@ export function GradientChart({
   height = 200,
   showGrid = false,
   showAxis = true,
-  gradientFrom = "#4338ca", // Updated to indigo
-  gradientTo = "rgba(67, 56, 202, 0)", // Updated to indigo
-  strokeColor = "#4f46e5", // Updated to indigo
-  valueFormatter,
-  animationDuration = 1500
+  gradientFrom = "#1E99A0", // Keeping the original color
+  gradientTo = "rgba(13, 146, 152, 0)", // Keeping the original color
+  strokeColor = "#0D9298", // Keeping the original color
+  valueFormatter
 }: GradientChartProps) {
-  // Animation states
-  const [animationComplete, setAnimationComplete] = useState(false);
-  const [animatedData, setAnimatedData] = useState<Array<{ name: string; value: number }>>([]);
-  
-  // Create animation effect
-  useEffect(() => {
-    // Reset animation when data changes
-    setAnimationComplete(false);
-    const initialData = data.map(item => ({ ...item, value: 0 }));
-    setAnimatedData(initialData);
-    
-    // Animate data points
-    const interval = 30; // ms between animation frames
-    const frames = animationDuration / interval;
-    let frame = 0;
-    
-    const timer = setInterval(() => {
-      frame++;
-      const progress = frame / frames;
-      
-      if (progress >= 1) {
-        clearInterval(timer);
-        setAnimatedData(data);
-        setAnimationComplete(true);
-      } else {
-        const newData = data.map((item, idx) => ({
-          name: item.name,
-          value: Math.floor(item.value * progress)
-        }));
-        setAnimatedData(newData);
-      }
-    }, interval);
-    
-    return () => clearInterval(timer);
-  }, [data, animationDuration]);
-  
   // Generate unique ID for this gradient to avoid conflicts
   const gradientId = React.useMemo(() => `colorGradient_${Math.floor(Math.random() * 1000)}`, []);
   
   return (
     <div className={cn("w-full", className)}>
       <ResponsiveContainer width="100%" height={height}>
-        <AreaChart 
-          data={animatedData} 
-          margin={{ top: 10, right: 30, left: 0, bottom: 0 }}
-        >
+        <AreaChart data={data} margin={{ top: 10, right: 30, left: 0, bottom: 0 }}>
           <defs>
             <linearGradient id={gradientId} x1="0" y1="0" x2="0" y2="1">
-              <stop offset="0%" stopColor={gradientFrom} stopOpacity={0.5} /> {/* Increased opacity */}
+              <stop offset="0%" stopColor={gradientFrom} stopOpacity={0.4} /> {/* Slightly increased opacity */}
               <stop offset="90%" stopColor={gradientTo} stopOpacity={0} />
             </linearGradient>
           </defs>
@@ -119,8 +78,8 @@ export function GradientChart({
             strokeWidth={2}
             fillOpacity={1} 
             fill={`url(#${gradientId})`}
-            isAnimationActive={!animationComplete}
-            animationDuration={300}
+            isAnimationActive={true}
+            animationDuration={800}
             animationEasing="ease-out"
           />
         </AreaChart>
