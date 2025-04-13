@@ -475,6 +475,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const configSchema = z.object({
         site: z.string(),
         apiKey: z.string(),
+        status: z.enum(['active', 'pending', 'error']).optional().default('active'),
         created_by: z.number().optional().default(1)
       });
       
@@ -510,11 +511,11 @@ export async function registerRoutes(app: Express): Promise<Server> {
       await chargebeeService.getSubscriptions(1);
       
       res.json({ success: true, message: 'Connection successful' });
-    } catch (error) {
+    } catch (error: any) {
       res.status(400).json({ 
         success: false, 
         message: 'Chargebee connection failed', 
-        error: error.message || 'Unknown error' 
+        errorMessage: error.message || 'Unknown error' 
       });
     }
   });

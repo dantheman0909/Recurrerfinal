@@ -570,10 +570,10 @@ function ChargebeeConfigTab() {
   
   // Set form fields if we have existing config
   React.useEffect(() => {
-    if (existingConfig && existingConfig.site && existingConfig.api_key) {
+    if (existingConfig && existingConfig.site && existingConfig.apiKey) {
       setChargebeeConfig({
         site: existingConfig.site || "",
-        apiKey: existingConfig.api_key || "", // Fixed: api_key instead of apiKey to match database schema
+        apiKey: existingConfig.apiKey || "", // Using apiKey to match the database schema
       });
       setIsConnected(true);
     }
