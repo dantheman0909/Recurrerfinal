@@ -702,9 +702,9 @@ function DatabaseConfigTab() {
                   </div>
                 ))}
                 
-                <Dialog>
+                <Dialog open={mappingDialogOpen} onOpenChange={setMappingDialogOpen}>
                   <DialogTrigger asChild>
-                    <Button className="w-full">Add Field Mapping</Button>
+                    <Button className="w-full" onClick={() => setMappingDialogOpen(true)}>Add Field Mapping</Button>
                   </DialogTrigger>
                   <DialogContent>
                     <DialogHeader>
@@ -714,18 +714,31 @@ function DatabaseConfigTab() {
                       <div className="grid grid-cols-2 gap-4">
                         <div className="grid gap-2">
                           <Label htmlFor="mysql-table">MySQL Table</Label>
-                          <Input id="mysql-table" placeholder="e.g., customers" />
+                          <Input 
+                            id="mysql-table" 
+                            placeholder="e.g., customers" 
+                            value={newMapping.mysql_table}
+                            onChange={(e) => handleMappingChange('mysql_table', e.target.value)}
+                          />
                         </div>
                         <div className="grid gap-2">
                           <Label htmlFor="mysql-field">MySQL Field</Label>
-                          <Input id="mysql-field" placeholder="e.g., customer_name" />
+                          <Input 
+                            id="mysql-field" 
+                            placeholder="e.g., customer_name" 
+                            value={newMapping.mysql_field}
+                            onChange={(e) => handleMappingChange('mysql_field', e.target.value)}
+                          />
                         </div>
                       </div>
                       <div className="grid grid-cols-2 gap-4">
                         <div className="grid gap-2">
-                          <Label htmlFor="recurrer-table">Recurrer Table</Label>
-                          <Select>
-                            <SelectTrigger id="recurrer-table">
+                          <Label htmlFor="local-table">Recurrer Table</Label>
+                          <Select 
+                            value={newMapping.local_table} 
+                            onValueChange={(value) => handleMappingChange('local_table', value)}
+                          >
+                            <SelectTrigger id="local-table">
                               <SelectValue placeholder="Select table" />
                             </SelectTrigger>
                             <SelectContent>
@@ -736,9 +749,12 @@ function DatabaseConfigTab() {
                           </Select>
                         </div>
                         <div className="grid gap-2">
-                          <Label htmlFor="recurrer-field">Recurrer Field</Label>
-                          <Select>
-                            <SelectTrigger id="recurrer-field">
+                          <Label htmlFor="local-field">Recurrer Field</Label>
+                          <Select 
+                            value={newMapping.local_field}
+                            onValueChange={(value) => handleMappingChange('local_field', value)}
+                          >
+                            <SelectTrigger id="local-field">
                               <SelectValue placeholder="Select field" />
                             </SelectTrigger>
                             <SelectContent>
@@ -756,7 +772,10 @@ function DatabaseConfigTab() {
                       <div className="grid grid-cols-2 gap-4">
                         <div className="grid gap-2">
                           <Label htmlFor="field-type">Data Type</Label>
-                          <Select>
+                          <Select 
+                            value={newMapping.field_type}
+                            onValueChange={(value) => handleMappingChange('field_type', value)}
+                          >
                             <SelectTrigger id="field-type">
                               <SelectValue placeholder="Select data type" />
                             </SelectTrigger>
@@ -808,15 +827,18 @@ function DatabaseConfigTab() {
                         </div>
                         
                         <div className="grid gap-2">
-                          <Label htmlFor="is-primary-key" className="flex items-center space-x-2">
+                          <Label htmlFor="is_key_field" className="flex items-center space-x-2">
                             <div>Primary Key</div>
                             <div className="text-gray-500 text-xs">(Unique identifier)</div>
                           </Label>
                           <div className="flex items-center space-x-2 h-10 px-2 border rounded-md">
                             <input
                               type="checkbox"
-                              id="is-primary-key"
+                              id="is_key_field"
+                              name="is_key_field"
                               className="h-4 w-4 rounded border-gray-300 text-primary"
+                              checked={newMapping.is_key_field}
+                              onChange={handleCheckboxChange}
                             />
                             <div className="text-sm text-gray-600">
                               Mark as primary key for matching records
@@ -826,8 +848,18 @@ function DatabaseConfigTab() {
                       </div>
                       
                       <div className="flex justify-end mt-4 space-x-2">
-                        <Button variant="outline">Cancel</Button>
-                        <Button>Save Mapping</Button>
+                        <Button 
+                          variant="outline" 
+                          onClick={() => setMappingDialogOpen(false)}
+                        >
+                          Cancel
+                        </Button>
+                        <Button 
+                          onClick={handleSubmitMapping}
+                          disabled={!newMapping.mysql_table || !newMapping.mysql_field || !newMapping.local_table || !newMapping.local_field}
+                        >
+                          Save Mapping
+                        </Button>
                       </div>
                     </div>
                   </DialogContent>
