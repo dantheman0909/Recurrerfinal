@@ -691,7 +691,7 @@ export class MemStorage implements IStorage {
   
   async getUnreadNotificationsCount(userId: number): Promise<number> {
     return Array.from(this.notifications.values())
-      .filter(notification => notification.user_id === userId && !notification.read_at)
+      .filter(notification => notification.user_id === userId && !notification.is_read)
       .length;
   }
   
@@ -702,7 +702,7 @@ export class MemStorage implements IStorage {
   async createNotification(notification: InsertNotification): Promise<Notification> {
     const id = this.notificationId++;
     const timestamp = new Date();
-    const newNotification = { ...notification, id, created_at: timestamp, read_at: null };
+    const newNotification = { ...notification, id, created_at: timestamp, is_read: false };
     this.notifications.set(id, newNotification);
     return newNotification;
   }
@@ -711,18 +711,17 @@ export class MemStorage implements IStorage {
     const notification = this.notifications.get(id);
     if (!notification) return undefined;
     
-    const updatedNotification = { ...notification, read_at: new Date() };
+    const updatedNotification = { ...notification, is_read: true };
     this.notifications.set(id, updatedNotification);
     return updatedNotification;
   }
   
   async markAllNotificationsAsRead(userId: number): Promise<void> {
     const userNotifications = Array.from(this.notifications.values())
-      .filter(notification => notification.user_id === userId && !notification.read_at);
+      .filter(notification => notification.user_id === userId && !notification.is_read);
     
-    const timestamp = new Date();
     for (const notification of userNotifications) {
-      this.notifications.set(notification.id, { ...notification, read_at: timestamp });
+      this.notifications.set(notification.id, { ...notification, is_read: true });
     }
   }
   
