@@ -2,14 +2,17 @@ import {
   users, customers, tasks, taskComments, playbooks, playbookTasks, 
   redZoneAlerts, customerMetrics, mysqlConfig, mysqlFieldMappings, mysqlSavedQueries,
   chargebeeConfig, chargebeeFieldMappings, notifications, userAchievements,
+  customReports, customMetrics, reportSchedules,
   type User, type Customer, type Task, type TaskComment, type Playbook, 
   type PlaybookTask, type RedZoneAlert, type CustomerMetric, 
   type MySQLConfig, type MySQLFieldMapping, type MySQLSavedQuery,
   type ChargebeeConfig, type ChargebeeFieldMapping, type Notification, type UserAchievement,
+  type CustomReport, type CustomMetric, type ReportSchedule,
   type InsertUser, type InsertCustomer, type InsertTask, type InsertPlaybook,
   type InsertRedZoneAlert, type InsertMySQLSavedQuery,
   type InsertChargebeeConfig, type InsertChargebeeFieldMapping,
-  type InsertNotification, type InsertUserAchievement
+  type InsertNotification, type InsertUserAchievement,
+  type InsertCustomReport, type InsertCustomMetric, type InsertReportSchedule
 } from "@shared/schema";
 import { db } from "./db";
 import { eq, and, isNull, desc, gte, lt, count } from "drizzle-orm";
