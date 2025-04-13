@@ -690,6 +690,15 @@ export class DatabaseStorage implements IStorage {
       .returning();
     return updatedCustomer;
   }
+  
+  async getCustomerTableFields(): Promise<string[]> {
+    // Use Drizzle's introspection capabilities to get column names from the customers table
+    // This returns all fields from the customers schema
+    const columns = Object.keys(customers);
+    
+    // Filter out any non-string properties (like methods)
+    return columns.filter(key => typeof key === 'string' && key !== 'name');
+  }
 
   // Task Methods
   async getTasks(): Promise<Task[]> {
