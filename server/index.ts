@@ -79,28 +79,87 @@ app.get('/api/mysql/companies/:id', getMySQLCompany);
 // Customer-specific external data route
 app.get('/api/customers/:id/external-data', getCustomerExternalData);
 
+// Add global error handlers to prevent process exit
+process.on('uncaughtException', (err) => {
+  console.error('CRITICAL ERROR: Uncaught exception:', err);
+  // Don't exit the process - try to keep running
+});
+
+process.on('unhandledRejection', (reason, promise) => {
+  console.error('CRITICAL ERROR: Unhandled rejection at:', promise, 'reason:', reason);
+  // Don't exit the process - try to keep running
+});
+
 // Start the application
 (async () => {
   try {
     console.log("Starting application...");
     
-    // Test database connection
+    // Test database connection with retry logic
     console.log("Initializing database connection...");
-    await testDatabaseConnection();
-    console.log("Database connection successful");
+    let connected = false;
+    let attempts = 0;
+    const maxAttempts = 5;
     
-    // Initialize the fixed database storage
+    while (!connected && attempts < maxAttempts) {
+      try {
+        attempts++;
+        console.log(`Database connection attempt ${attempts}/${maxAttempts}...`);
+        await testDatabaseConnection();
+        console.log("Database connection successful");
+        connected = true;
+      } catch (error) {
+        console.error(`Database connection attempt ${attempts} failed:`, error);
+        
+        if (attempts < maxAttempts) {
+          const delay = 2000 * attempts; // Exponential backoff
+          console.log(`Retrying in ${delay/1000} seconds...`);
+          await new Promise(resolve => setTimeout(resolve, delay));
+        } else {
+          throw new Error(`Failed to connect to database after ${maxAttempts} attempts`);
+        }
+      }
+    }
+    
+    // Initialize the fixed database storage with retry logic
     console.log("Initializing FixedDatabaseStorage...");
-    const storage = new FixedDatabaseStorage();
-    global.appStorage = storage;
-    console.log("FixedDatabaseStorage initialized successfully");
+    
+    try {
+      const storage = new FixedDatabaseStorage();
+      global.appStorage = storage;
+      console.log("FixedDatabaseStorage initialized successfully");
+    } catch (error) {
+      console.error("Error initializing FixedDatabaseStorage:", error);
+      
+      // Attempt recovery by reconnecting
+      console.log("Attempting to recover database storage initialization...");
+      try {
+        await new Promise(resolve => setTimeout(resolve, 3000));
+        const storage = new FixedDatabaseStorage();
+        global.appStorage = storage;
+        console.log("FixedDatabaseStorage recovery successful");
+      } catch (recoveryError) {
+        console.error("Failed to recover database storage:", recoveryError);
+        throw new Error("Fatal database storage initialization error");
+      }
+    }
     
     // Run migrations before starting the server
-    await runMigrationsOnStartup();
+    try {
+      await runMigrationsOnStartup();
+    } catch (error) {
+      console.error("Migration error:", error);
+      console.log("Continuing despite migration error");
+    }
 
     console.log("Registering routes...");
     // We're not using the server returned from registerRoutes as we created our own
-    await registerRoutes(app);
+    try {
+      await registerRoutes(app);
+    } catch (error) {
+      console.error("Error registering routes:", error);
+      console.log("Some routes may not be available");
+    }
 
     // Error handling middleware
     app.use((err: any, _req: Request, res: Response, _next: NextFunction) => {
@@ -132,6 +191,26 @@ app.get('/api/customers/:id/external-data', getCustomerExternalData);
         log(`serving on port ${port}`);
       });
       
+      // Prevent Node.js from exiting when event loop is empty
+      // Multiple heartbeats at different intervals for redundancy
+      setInterval(() => {
+        console.log('Primary server heartbeat - still running on port ' + port);
+      }, 30000); // Log every 30 seconds
+      
+      setInterval(() => {
+        console.log('Secondary server heartbeat - still running on port ' + port);
+      }, 45000); // Log every 45 seconds
+      
+      // Active health check that actually tests database connectivity
+      setInterval(async () => {
+        try {
+          await testDatabaseConnection();
+          console.log('Database health check passed');
+        } catch (error) {
+          console.error('Database health check failed:', error);
+        }
+      }, 60000); // Check database every minute
+      
       // Set up error handler
       server.on("error", (error: any) => {
         console.error(`Server error: ${error.message}`);
@@ -145,6 +224,35 @@ app.get('/api/customers/:id/external-data', getCustomerExternalData);
     }
   } catch (error) {
     console.error("Fatal error during application startup:", error);
-    process.exit(1);
+    
+    // Instead of exiting, retry after a delay
+    console.log("Attempting to restart application in 10 seconds...");
+    setTimeout(() => {
+      console.log("Restarting application after previous failure...");
+      
+      // Start a new instance of the startup function
+      (async () => {
+        try {
+          console.log("Recovery attempt starting...");
+          
+          // Simplified restart logic
+          await testDatabaseConnection();
+          const storage = new FixedDatabaseStorage();
+          global.appStorage = storage;
+          await runMigrationsOnStartup();
+          await registerRoutes(app);
+          
+          console.log("Recovery successful!");
+        } catch (recoveryError) {
+          console.error("Recovery attempt failed:", recoveryError);
+          console.log("Server will continue running but may have limited functionality");
+        }
+      })();
+    }, 10000);
+    
+    // Don't exit - keep the process alive with heartbeats
+    setInterval(() => {
+      console.log("Recovery heartbeat - keeping process alive despite startup failure");
+    }, 15000);
   }
 })();

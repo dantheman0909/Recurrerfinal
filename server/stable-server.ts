@@ -125,6 +125,11 @@ import { Pool } from "@neondatabase/serverless";
           process.exit(0);
         });
       });
+      
+      // Prevent Node.js from exiting when event loop is empty
+      setInterval(() => {
+        console.log('Server heartbeat - still running on port ' + port);
+      }, 60000);  // Log every minute to show server is still alive
     } catch (error) {
       console.error("Critical error during server setup:", error);
       process.exit(1);

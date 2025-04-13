@@ -1,0 +1,67 @@
+Thanks for the breakdown. Here’s the exact next step to send to Replit Agent based on the architecture and current behavior:
+
+⸻
+
+Prompt for Replit Agent (to resolve server persistence issues):
+
+⸻
+
+Issue Context:
+
+You’re using a monolithic setup where frontend + backend run in the same process through Vite’s dev server via npm run dev, as defined in .replit:
+	•	Main command: npm run dev
+	•	Backend listens on port 3001 (via 4567)
+	•	Frontend on port 3000 (via 3456)
+	•	Production port mapped to 5000 -> 80
+
+However, the workflow finishes prematurely and doesn’t keep the server alive — likely due to one of these reasons:
+	•	The dev server doesn’t correctly hook into the Replit process lifecycle.
+	•	The dev process (tsx server/index.ts) completes execution without an active listener (no long-running app.listen()).
+
+⸻
+
+Required Fixes (step-by-step):
+	1.	Ensure server stays alive:
+	•	Confirm that server/index.ts ends with something like:
+
+app.listen(process.env.PORT || 3001, () => {
+  console.log(`Server listening on port ${process.env.PORT || 3001}`);
+});
+
+
+	2.	Fix the Run Lifecycle:
+	•	Since npm run dev currently runs tsx server/index.ts, ensure that the server starts a long-running listener and doesn’t just initialize and exit.
+	•	If necessary, add a setInterval(() => {}, 1000); after listen() to prevent premature exit.
+	3.	Fix .replit or add new workflow:
+	•	You can replace the default run command with the stable server:
+
+run = "npx tsx server/fixed-server.ts"
+
+
+	•	Or create a new workflow (which is preferred):
+
+name = "Stable Backend"
+run = "npx tsx server/fixed-server.ts"
+
+and assign this to the Run button, or use for debugging.
+
+	4.	Make sure server uses the correct port:
+	•	Ensure you’re using process.env.PORT || 3001 consistently in all servers.
+	•	Don’t hardcode port 5000 unless you want to run in production mode.
+	5.	Check Vite Setup (Optional Cleanup):
+	•	If you’re running frontend separately later, you can decouple backend from Vite and use express directly.
+	•	For production, remove or disable Vite middleware if it’s interfering with backend-only execution.
+
+⸻
+
+Confirm or Fix:
+	•	Please confirm:
+	•	Is app.listen() correctly invoked in your server entry (server/index.ts)?
+	•	Do you want to split frontend and backend workflows, or continue using a unified dev server?
+	•	Should we proceed with setting "run": "npx tsx server/fixed-server.ts" in .replit?
+
+Once confirmed, I can send you:
+	•	A clean .replit file suggestion
+	•	Or an updated .config/workflows/stable-backend.toml workflow for backend-only mode
+
+Let me know if you’d also like to separate frontend for cleaner dev/prod deployment.
