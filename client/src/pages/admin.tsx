@@ -29,7 +29,7 @@ import { Checkbox } from "@/components/ui/checkbox";
 import { Badge } from "@/components/ui/badge";
 import { Switch } from "@/components/ui/switch";
 import { useToast } from "@/hooks/use-toast";
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger, DialogDescription, DialogFooter } from "@/components/ui/dialog";
 import { queryClient, apiRequest } from "@/lib/queryClient";
 import {
   Settings,
@@ -212,13 +212,40 @@ function DatabaseConfigTab() {
     }
   }, [existingMappings]);
   
-  // Load the last executed query from local storage when component mounts
+  // Load the last executed query and select the last active saved query when component mounts
   React.useEffect(() => {
     const lastQuery = localStorage.getItem('mysql_last_executed_query');
     if (lastQuery) {
       setSqlQuery(lastQuery);
+      
+      // Also automatically run the query to display the results
+      const runLastQuery = async () => {
+        try {
+          // Run the query to show preview results
+          runQueryMutation.mutate();
+        } catch (error) {
+          console.error("Failed to run last query:", error);
+        }
+      };
+      
+      // Only run if we're connected to MySQL
+      if (isConnected) {
+        runLastQuery();
+      }
     }
-  }, []);
+  }, [isConnected]);
+  
+  // Auto-select the active saved query when saved queries are loaded
+  React.useEffect(() => {
+    if (existingSavedQueries && existingSavedQueries.length > 0) {
+      // Find the active query or the most recently used one
+      const activeQuery = existingSavedQueries.find((q: any) => q.is_active === true);
+      if (activeQuery) {
+        setSelectedSavedQuery(activeQuery.id.toString());
+        setSqlQuery(activeQuery.query);
+      }
+    }
+  }, [existingSavedQueries]);
   
   // Extract available MySQL fields from query results
   React.useEffect(() => {
@@ -510,10 +537,9 @@ function DatabaseConfigTab() {
     },
   });
   
-  // Add Dialog component for confirmation of deletion
-  // This will be shown when a user tries to delete a field mapping
-  const renderDeleteDialog = () => {
-    return (
+  return (
+    <div className="grid grid-cols-1 gap-6">
+      {/* Delete confirmation dialog */}
       <Dialog open={showDeleteDialog} onOpenChange={setShowDeleteDialog}>
         <DialogContent>
           <DialogHeader>
@@ -522,23 +548,16 @@ function DatabaseConfigTab() {
               Are you sure you want to delete this mapping? This will also delete the corresponding column from the database.
             </DialogDescription>
           </DialogHeader>
-          <DialogFooter>
+          <div className="flex justify-end space-x-2 mt-4">
             <Button variant="outline" onClick={() => setShowDeleteDialog(false)}>
               Cancel
             </Button>
             <Button variant="destructive" onClick={confirmDeleteMapping}>
               Delete
             </Button>
-          </DialogFooter>
+          </div>
         </DialogContent>
       </Dialog>
-    );
-  };
-
-  return (
-    <div className="grid grid-cols-1 gap-6">
-      {/* Render the delete confirmation dialog */}
-      {renderDeleteDialog()}
       
       <Card>
         <CardHeader>
