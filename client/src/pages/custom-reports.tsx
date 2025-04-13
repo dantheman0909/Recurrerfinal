@@ -864,7 +864,15 @@ export default function CustomReports() {
                                     render={({ field }) => (
                                       <FormItem>
                                         <FormLabel>Data Source</FormLabel>
-                                        <Select onValueChange={field.onChange} defaultValue={field.value}>
+                                        <Select 
+                                          onValueChange={(value) => {
+                                            field.onChange(value);
+                                            // Reset SQL query when data source changes
+                                            metricForm.setValue("sql_query", "");
+                                            metricForm.setValue("field_mapping", null);
+                                          }} 
+                                          defaultValue={field.value}
+                                        >
                                           <FormControl>
                                             <SelectTrigger>
                                               <SelectValue placeholder="Select data source" />
