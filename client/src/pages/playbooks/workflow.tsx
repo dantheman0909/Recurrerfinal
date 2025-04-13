@@ -8,6 +8,12 @@ import { format, addDays } from "date-fns";
 
 // UI Components
 import {
+  Accordion,
+  AccordionContent,
+  AccordionItem,
+  AccordionTrigger,
+} from "@/components/ui/accordion";
+import {
   Card,
   CardContent,
   CardDescription,
@@ -73,7 +79,8 @@ import {
   ClipboardCheck,
   Phone,
   Mail,
-  FileQuestion
+  FileQuestion,
+  Split
 } from "lucide-react";
 
 // API and types
