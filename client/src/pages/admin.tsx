@@ -612,17 +612,18 @@ function DatabaseConfigTab() {
                   <div className="grid gap-2">
                     <Label htmlFor="saved-query">Saved Queries</Label>
                     <Select 
-                      value={selectedSavedQuery || ""} 
+                      value={selectedSavedQuery || "create_new"} 
                       onValueChange={(value) => {
-                        if (value) {
+                        if (value === "create_new") {
+                          setSelectedSavedQuery(null);
+                          setSqlQuery("SELECT * FROM customers LIMIT 10");
+                        } else if (value) {
                           setSelectedSavedQuery(value);
                           // Find and set the query from the saved queries
                           const selectedQuery = existingSavedQueries.find((q: any) => q.id.toString() === value);
                           if (selectedQuery) {
                             setSqlQuery(selectedQuery.query);
                           }
-                        } else {
-                          setSelectedSavedQuery(null);
                         }
                       }}
                     >
@@ -630,7 +631,7 @@ function DatabaseConfigTab() {
                         <SelectValue placeholder="Select a saved query or create a new one" />
                       </SelectTrigger>
                       <SelectContent>
-                        <SelectItem value="">-- Create new query --</SelectItem>
+                        <SelectItem value="create_new">-- Create new query --</SelectItem>
                         {existingSavedQueries.map((query: any) => (
                           <SelectItem key={query.id} value={query.id.toString()}>
                             {query.name} {query.is_active && "(Active)"}
