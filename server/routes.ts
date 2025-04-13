@@ -885,7 +885,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
         return res.status(400).json({ message: 'User ID is required' });
       }
       
-      const notifications = await storage.getNotificationsByUser(userId);
+      const notifications = await storage.getNotifications(userId);
       res.json(notifications);
     } catch (error) {
       console.error('Error fetching notifications:', error);
@@ -942,7 +942,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
         return res.status(400).json({ message: 'User ID is required' });
       }
       
-      const achievements = await storage.getAchievementsByUser(userId);
+      const achievements = await storage.getUserAchievements(userId);
       res.json(achievements);
     } catch (error) {
       console.error('Error fetching achievements:', error);
@@ -984,7 +984,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       }
       
       // Get user achievements
-      const achievements = await storage.getAchievementsByUser(userId);
+      const achievements = await storage.getUserAchievements(userId);
       
       // Calculate stats
       const totalXp = achievements.reduce((sum, achievement) => sum + (achievement.xp_earned || 0), 0);

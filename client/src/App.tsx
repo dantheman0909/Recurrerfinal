@@ -9,6 +9,7 @@ import PlaybookWorkflow from "@/pages/playbooks/workflow";
 import Reports from "@/pages/reports";
 import RedZone from "@/pages/red-zone";
 import Admin from "@/pages/admin";
+import Achievements from "@/pages/achievements";
 import AppLayout from "@/components/layouts/app-layout";
 
 function App() {
@@ -24,6 +25,7 @@ function App() {
         <Route path="/reports" component={Reports} />
         <Route path="/red-zone" component={RedZone} />
         <Route path="/admin" component={Admin} />
+        <Route path="/achievements" component={Achievements} />
         <Route component={NotFound} />
       </Switch>
     </AppLayout>
