@@ -360,7 +360,7 @@ export default function Dashboard() {
                 </div>
               </div>
               <div className="bg-gray-50 rounded-lg p-4 text-center">
-                <p className="text-sm text-gray-500 flex items-center justify-center gap-1">
+                <div className="text-sm text-gray-500 flex items-center justify-center gap-1">
                   Avg. Revenue Per Customer
                   <HelpTooltip
                     content={
@@ -374,13 +374,13 @@ export default function Dashboard() {
                       </div>
                     }
                   />
-                </p>
+                </div>
                 <p className="text-2xl font-semibold">
                   {formatCurrency(dashboardData?.revenuePerCustomer || 0)}
                 </p>
               </div>
               <div className="bg-gray-50 rounded-lg p-4 text-center">
-                <p className="text-sm text-gray-500 flex items-center justify-center gap-1">
+                <div className="text-sm text-gray-500 flex items-center justify-center gap-1">
                   Growth Rate
                   <HelpTooltip
                     content={
@@ -395,7 +395,7 @@ export default function Dashboard() {
                       </div>
                     }
                   />
-                </p>
+                </div>
                 <p className="text-2xl font-semibold">
                   {dashboardData?.growthRate || 0}%
                 </p>
