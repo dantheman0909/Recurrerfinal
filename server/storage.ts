@@ -52,6 +52,16 @@ interface XpConfiguration {
 }
 
 export interface IStorage {
+  // Achievement System Configuration
+  getAchievementThresholds(): Promise<AchievementThresholds>;
+  saveAchievementThresholds(thresholds: AchievementThresholds): Promise<AchievementThresholds>;
+  getBadgeConfiguration(): Promise<BadgeConfiguration>;
+  saveBadgeConfiguration(config: BadgeConfiguration): Promise<BadgeConfiguration>;
+  getNotificationSettings(): Promise<NotificationSettings>;
+  saveNotificationSettings(settings: NotificationSettings): Promise<NotificationSettings>;
+  getXpConfiguration(): Promise<XpConfiguration>;
+  saveXpConfiguration(config: XpConfiguration): Promise<XpConfiguration>;
+  
   // Users
   getUser(id: number): Promise<User | undefined>;
   getUserByEmail(email: string): Promise<User | undefined>;

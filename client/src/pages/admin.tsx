@@ -2142,50 +2142,172 @@ function SystemSettingsTab() {
     { id: 3, name: 'Task Completion Rate', formula: 'completed_tasks / total_tasks * 100', target: 85, display: true }
   ]);
   
-  // Dummy fetch for settings
-  React.useEffect(() => {
-    // In a real app, this would be a fetch to get saved settings
-    const fetchSettings = async () => {
-      try {
-        // Simulated successful fetch
-        toast({
-          title: "Settings Loaded",
-          description: "System settings have been loaded successfully.",
-        });
-      } catch (error) {
-        console.error("Error loading settings:", error);
-        toast({
-          title: "Failed to Load Settings",
-          description: "There was an error loading system settings.",
-          variant: "destructive",
-        });
-      }
-    };
-    
-    fetchSettings();
-  }, [toast]);
+  // Fetch achievement threshold settings
+  const { data: thresholdsData, isLoading: thresholdsLoading, error: thresholdsError } = useQuery({
+    queryKey: ['/api/admin/system/achievement-thresholds'],
+    onSuccess: (data) => {
+      setThresholds(data);
+    },
+    onError: (error) => {
+      console.error('Error fetching achievement thresholds:', error);
+      toast({
+        title: "Failed to Load Settings",
+        description: "There was an error loading achievement thresholds.",
+        variant: "destructive",
+      });
+    }
+  });
   
-  // Save changes handler
-  const handleSaveSettings = () => {
+  // Fetch badge configuration
+  const { data: badgeData, isLoading: badgeLoading, error: badgeError } = useQuery({
+    queryKey: ['/api/admin/system/badge-config'],
+    onSuccess: (data) => {
+      setBadgeConfig(data);
+    },
+    onError: (error) => {
+      console.error('Error fetching badge configuration:', error);
+      toast({
+        title: "Failed to Load Settings",
+        description: "There was an error loading badge configuration.",
+        variant: "destructive",
+      });
+    }
+  });
+  
+  // Fetch XP configuration
+  const { data: xpData, isLoading: xpLoading, error: xpError } = useQuery({
+    queryKey: ['/api/admin/system/xp-config'],
+    onSuccess: (data) => {
+      setXpConfig(data);
+    },
+    onError: (error) => {
+      console.error('Error fetching XP configuration:', error);
+      toast({
+        title: "Failed to Load Settings",
+        description: "There was an error loading XP configuration.",
+        variant: "destructive",
+      });
+    }
+  });
+  
+  // Fetch notification settings
+  const { data: notificationData, isLoading: notificationLoading, error: notificationError } = useQuery({
+    queryKey: ['/api/admin/system/notification-settings'],
+    onSuccess: (data) => {
+      setNotificationConfig(data);
+    },
+    onError: (error) => {
+      console.error('Error fetching notification settings:', error);
+      toast({
+        title: "Failed to Load Settings",
+        description: "There was an error loading notification settings.",
+        variant: "destructive",
+      });
+    }
+  });
+  
+  // Mutations for saving settings
+  const saveThresholdsMutation = useMutation({
+    mutationFn: (data: typeof thresholds) => 
+      apiRequest('/api/admin/system/achievement-thresholds', { method: 'POST', data }),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['/api/admin/system/achievement-thresholds'] });
+      toast({
+        title: "Thresholds Saved",
+        description: "Achievement thresholds have been updated successfully.",
+      });
+    },
+    onError: (error) => {
+      console.error("Error saving thresholds:", error);
+      toast({
+        title: "Failed to Save Thresholds",
+        description: "There was an error saving achievement thresholds.",
+        variant: "destructive",
+      });
+    }
+  });
+  
+  const saveBadgeConfigMutation = useMutation({
+    mutationFn: (data: typeof badgeConfig) => 
+      apiRequest('/api/admin/system/badge-config', { method: 'POST', data }),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['/api/admin/system/badge-config'] });
+      toast({
+        title: "Badge Config Saved",
+        description: "Badge configuration has been updated successfully.",
+      });
+    },
+    onError: (error) => {
+      console.error("Error saving badge config:", error);
+      toast({
+        title: "Failed to Save Badge Config",
+        description: "There was an error saving badge configuration.",
+        variant: "destructive",
+      });
+    }
+  });
+  
+  const saveXpConfigMutation = useMutation({
+    mutationFn: (data: typeof xpConfig) => 
+      apiRequest('/api/admin/system/xp-config', { method: 'POST', data }),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['/api/admin/system/xp-config'] });
+      toast({
+        title: "XP Config Saved",
+        description: "XP configuration has been updated successfully.",
+      });
+    },
+    onError: (error) => {
+      console.error("Error saving XP config:", error);
+      toast({
+        title: "Failed to Save XP Config",
+        description: "There was an error saving XP configuration.",
+        variant: "destructive",
+      });
+    }
+  });
+  
+  const saveNotificationSettingsMutation = useMutation({
+    mutationFn: (data: typeof notificationConfig) => 
+      apiRequest('/api/admin/system/notification-settings', { method: 'POST', data }),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['/api/admin/system/notification-settings'] });
+      toast({
+        title: "Notification Settings Saved",
+        description: "Notification settings have been updated successfully.",
+      });
+    },
+    onError: (error) => {
+      console.error("Error saving notification settings:", error);
+      toast({
+        title: "Failed to Save Notification Settings",
+        description: "There was an error saving notification settings.",
+        variant: "destructive",
+      });
+    }
+  });
+  
+  // Save all settings
+  const handleSaveSettings = async () => {
     try {
-      // In a real app, this would be a POST request to save all settings
-      localStorage.setItem('achievement_thresholds', JSON.stringify(thresholds));
-      localStorage.setItem('badge_config', JSON.stringify(badgeConfig));
-      localStorage.setItem('xp_config', JSON.stringify(xpConfig));
-      localStorage.setItem('notification_config', JSON.stringify(notificationConfig));
+      // Custom metrics still use localStorage until we create an API endpoint for them
       localStorage.setItem('custom_metrics', JSON.stringify(customMetrics));
       
+      // Save all configurations via API
+      await Promise.all([
+        saveThresholdsMutation.mutateAsync(thresholds),
+        saveBadgeConfigMutation.mutateAsync(badgeConfig),
+        saveXpConfigMutation.mutateAsync(xpConfig),
+        saveNotificationSettingsMutation.mutateAsync(notificationConfig)
+      ]);
+      
       toast({
-        title: "Settings Saved",
+        title: "All Settings Saved",
         description: "System settings have been saved successfully.",
       });
     } catch (error) {
       console.error("Error saving settings:", error);
-      toast({
-        title: "Failed to Save",
-        description: "There was an error saving system settings.",
-        variant: "destructive",
-      });
+      // Individual error toasts are already shown by each mutation
     }
   };
   
