@@ -329,10 +329,9 @@ export default function Dashboard() {
                   Growth Rate
                   <HelpTooltip 
                     content={
-                      <div>
-                        <p className="font-medium mb-1">Growth Rate</p>
-                        <p>Percentage increase in MRR compared to previous period.</p>
-                        <p className="mt-1 italic text-xs">Positive values indicate growth, negative values indicate contraction.</p>
+                      <div className="space-y-1">
+                        <div className="font-semibold text-gray-800">Growth Rate</div>
+                        <div>Percentage increase in MRR compared to previous period.</div>
                       </div>
                     } 
                   />
@@ -355,10 +354,9 @@ export default function Dashboard() {
                     Monthly Key Metrics
                     <HelpTooltip 
                       content={
-                        <div>
-                          <p className="font-medium mb-1">Monthly Key Metrics</p>
-                          <p>Trends of important business metrics over time, showing month-by-month performance.</p>
-                          <p className="mt-1 italic text-xs">Helps identify patterns and seasonal trends across your customer base.</p>
+                        <div className="space-y-1">
+                          <div className="font-semibold text-gray-800">Monthly Key Metrics</div>
+                          <div>Trends of important business metrics over time, showing month-by-month performance.</div>
                         </div>
                       } 
                     />
@@ -378,10 +376,9 @@ export default function Dashboard() {
                   Customer Health Distribution
                   <HelpTooltip 
                     content={
-                      <div>
-                        <p className="font-medium mb-1">Customer Health Distribution</p>
-                        <p>Breakdown of customer health across different market segments (Enterprise, Mid-Market, Small Business).</p>
-                        <p className="mt-1 italic text-xs">Higher proportions of "Excellent" and "Good" indicate a healthy customer portfolio.</p>
+                      <div className="space-y-1">
+                        <div className="font-semibold text-gray-800">Customer Health Distribution</div>
+                        <div>Breakdown of customer health across different market segments.</div>
                       </div>
                     } 
                   />
