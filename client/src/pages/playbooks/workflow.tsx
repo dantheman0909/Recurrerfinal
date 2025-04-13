@@ -286,10 +286,12 @@ export default function PlaybookWorkflow() {
           ...task,
           order: index,
           required_fields: task.required_fields || [],
+          // Serialize properly for API request
+          condition_field: task.condition_field ? JSON.stringify(task.condition_field) : null,
         })),
       };
 
-      return await apiRequest('/api/playbooks/workflow', 'POST', formattedData);
+      return await apiRequest('/api/playbooks', 'POST', formattedData);
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['/api/playbooks'] });

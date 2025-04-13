@@ -20,9 +20,16 @@ export const users = pgTable("users", {
   name: text("name").notNull(),
   avatar_url: text("avatar_url"),
   role: userRoleEnum("role").notNull().default('csm'),
-  team_lead_id: integer("team_lead_id").references(() => users.id), // ID of the team lead for CSMs
+  team_lead_id: integer("team_lead_id"), // ID of the team lead for CSMs
   created_at: timestamp("created_at").defaultNow(),
 });
+
+// After users table is defined, add self-reference 
+// This needs to be done separately to avoid TypeScript circular reference issues
+export const updateUserReferences = (): void => {
+  // Instead of using alter (which is for migrations), we'll set up the relation through relations
+  // The actual self-reference is handled in usersRelations
+};
 
 // Customers
 export const customers = pgTable("customers", {
@@ -42,11 +49,22 @@ export const customers = pgTable("customers", {
   health_status: accountHealthEnum("health_status").default('healthy'),
   created_at: timestamp("created_at").defaultNow(),
   assigned_csm: integer("assigned_csm").references(() => users.id),
+  csm_name: text("csm_name"),
+  pod_name: text("pod_name"),
   // External IDs
   chargebee_customer_id: text("chargebee_customer_id"),
   chargebee_subscription_id: text("chargebee_subscription_id"),
+  reelo_id: text("reelo_id"),
+  hubspot_id: text("hubspot_id"),
   mysql_company_id: text("mysql_company_id"),
-  // MySQL company fields
+  // Customer status fields
+  onboarding_start_date: timestamp("onboarding_start_date"),
+  onboarding_completed_date: timestamp("onboarding_completed_date"),
+  days_to_complete_onboarding: integer("days_to_complete_onboarding"),
+  referral_status: text("referral_status"),
+  whatsapp_header_status: text("whatsapp_header_status"),
+  whatsapp_marketing_credits: integer("whatsapp_marketing_credits"),
+  // Usage and activity metrics
   active_stores: integer("active_stores"),
   growth_subscription_count: integer("growth_subscription_count"),
   loyalty_active_store_count: integer("loyalty_active_store_count"),
@@ -64,6 +82,8 @@ export const customers = pgTable("customers", {
   percentage_of_inactive_customers: integer("percentage_of_inactive_customers"),
   negative_feedbacks_count: integer("negative_feedbacks_count"),
   campaigns_sent_last_90_days: integer("campaigns_sent_last_90_days"),
+  campaigns_sent_total: integer("campaigns_sent_total"),
+  campaigns_sent_last_30_days: integer("campaigns_sent_last_30_days"),
   bills_received_last_30_days: integer("bills_received_last_30_days"),
   customers_acquired_last_30_days: integer("customers_acquired_last_30_days"),
   loyalty_type: text("loyalty_type"),
