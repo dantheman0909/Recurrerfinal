@@ -12,7 +12,7 @@ import {
   type InsertNotification, type InsertUserAchievement
 } from "@shared/schema";
 import { db } from "./db";
-import { eq, and, isNull, desc, gte, lt } from "drizzle-orm";
+import { eq, and, isNull, desc, gte, lt, count } from "drizzle-orm";
 import { AccountHealth, MetricTimeframe } from "@shared/types";
 import { generateTimeseriesData } from "./utils/chart-data";
 
@@ -1265,6 +1265,123 @@ export class DatabaseStorage implements IStorage {
       },
       monthlyMetrics: generateTimeseriesData(timeframe)
     };
+  }
+  
+  // Notifications Methods
+  async getNotifications(userId: number): Promise<Notification[]> {
+    return await db
+      .select()
+      .from(notifications)
+      .where(eq(notifications.user_id, userId))
+      .orderBy(desc(notifications.created_at));
+  }
+  
+  async getUnreadNotificationsCount(userId: number): Promise<number> {
+    const unreadNotifications = await db
+      .select({ count: count() })
+      .from(notifications)
+      .where(
+        and(
+          eq(notifications.user_id, userId),
+          isNull(notifications.read_at)
+        )
+      );
+    
+    return unreadNotifications[0]?.count || 0;
+  }
+  
+  async getNotification(id: number): Promise<Notification | undefined> {
+    const [notification] = await db
+      .select()
+      .from(notifications)
+      .where(eq(notifications.id, id));
+    
+    return notification;
+  }
+  
+  async createNotification(notification: InsertNotification): Promise<Notification> {
+    const [newNotification] = await db
+      .insert(notifications)
+      .values(notification)
+      .returning();
+    
+    return newNotification;
+  }
+  
+  async markNotificationAsRead(id: number): Promise<Notification | undefined> {
+    const now = new Date();
+    const [updatedNotification] = await db
+      .update(notifications)
+      .set({ read_at: now })
+      .where(eq(notifications.id, id))
+      .returning();
+    
+    return updatedNotification;
+  }
+  
+  async markAllNotificationsAsRead(userId: number): Promise<void> {
+    const now = new Date();
+    await db
+      .update(notifications)
+      .set({ read_at: now })
+      .where(
+        and(
+          eq(notifications.user_id, userId),
+          isNull(notifications.read_at)
+        )
+      );
+  }
+  
+  // User Achievements Methods
+  async getUserAchievements(userId: number): Promise<UserAchievement[]> {
+    return await db
+      .select()
+      .from(userAchievements)
+      .where(eq(userAchievements.user_id, userId))
+      .orderBy(desc(userAchievements.earned_at));
+  }
+  
+  async getUnviewedAchievementsCount(userId: number): Promise<number> {
+    const unviewedAchievements = await db
+      .select({ count: count() })
+      .from(userAchievements)
+      .where(
+        and(
+          eq(userAchievements.user_id, userId),
+          isNull(userAchievements.viewed_at)
+        )
+      );
+    
+    return unviewedAchievements[0]?.count || 0;
+  }
+  
+  async getUserAchievement(id: number): Promise<UserAchievement | undefined> {
+    const [achievement] = await db
+      .select()
+      .from(userAchievements)
+      .where(eq(userAchievements.id, id));
+    
+    return achievement;
+  }
+  
+  async createUserAchievement(achievement: InsertUserAchievement): Promise<UserAchievement> {
+    const [newAchievement] = await db
+      .insert(userAchievements)
+      .values(achievement)
+      .returning();
+    
+    return newAchievement;
+  }
+  
+  async markAchievementAsViewed(id: number): Promise<UserAchievement | undefined> {
+    const now = new Date();
+    const [updatedAchievement] = await db
+      .update(userAchievements)
+      .set({ viewed_at: now })
+      .where(eq(userAchievements.id, id))
+      .returning();
+    
+    return updatedAchievement;
   }
 }
 
