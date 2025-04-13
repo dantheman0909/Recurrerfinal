@@ -100,6 +100,27 @@ export class MySQLService {
       throw error;
     }
   }
+  
+  // Execute a custom query and return both results and field metadata
+  async executeQuery(sql: string, params: any[] = []): Promise<{ rows: any[], fields: any[] }> {
+    if (!this.connection) {
+      await this.connect();
+    }
+
+    try {
+      // Execute the query and get both rows and fields
+      const [rows, fields] = await this.connection!.query(sql, params);
+      
+      // Return both the data and the field information
+      return {
+        rows: rows as any[],
+        fields: fields as any[]
+      };
+    } catch (error) {
+      console.error('Error executing custom MySQL query:', error);
+      throw error;
+    }
+  }
 
   async getCompanyData(): Promise<CompanyData[]> {
     const query = `

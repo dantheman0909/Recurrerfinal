@@ -9,7 +9,8 @@ import {
   insertTaskSchema,
   insertPlaybookSchema,
   insertPlaybookTaskSchema,
-  insertRedZoneAlertSchema
+  insertRedZoneAlertSchema,
+  insertMySQLSavedQuerySchema
 } from "@shared/schema";
 import {
   getChargebeeSubscriptions,
@@ -678,6 +679,107 @@ export async function registerRoutes(app: Express): Promise<Server> {
       res.json({ success });
     } catch (error) {
       res.status(500).json({ message: 'Failed to delete field mapping', error });
+    }
+  });
+
+  // MySQL Saved Queries
+  app.get('/api/admin/mysql-saved-queries', async (req, res) => {
+    try {
+      const queries = await storage.getMySQLSavedQueries();
+      res.json(queries);
+    } catch (error) {
+      console.error('Error getting MySQL saved queries:', error);
+      res.status(500).json({ message: 'Failed to fetch saved queries', error: (error as Error).message });
+    }
+  });
+
+  app.get('/api/admin/mysql-saved-queries/:id', async (req, res) => {
+    try {
+      const id = parseInt(req.params.id);
+      const query = await storage.getMySQLSavedQuery(id);
+      
+      if (!query) {
+        return res.status(404).json({ message: 'Saved query not found' });
+      }
+      
+      res.json(query);
+    } catch (error) {
+      res.status(500).json({ message: 'Failed to fetch saved query', error: (error as Error).message });
+    }
+  });
+
+  app.post('/api/admin/mysql-saved-queries', async (req, res) => {
+    try {
+      const queryData = insertMySQLSavedQuerySchema.parse(req.body);
+      const savedQuery = await storage.createMySQLSavedQuery(queryData);
+      res.status(201).json(savedQuery);
+    } catch (error) {
+      res.status(400).json({ message: 'Invalid saved query data', error });
+    }
+  });
+
+  app.put('/api/admin/mysql-saved-queries/:id', async (req, res) => {
+    try {
+      const id = parseInt(req.params.id);
+      const queryData = insertMySQLSavedQuerySchema.partial().parse(req.body);
+      const updatedQuery = await storage.updateMySQLSavedQuery(id, queryData);
+      
+      if (!updatedQuery) {
+        return res.status(404).json({ message: 'Saved query not found' });
+      }
+      
+      res.json(updatedQuery);
+    } catch (error) {
+      res.status(400).json({ message: 'Invalid saved query data', error });
+    }
+  });
+
+  app.delete('/api/admin/mysql-saved-queries/:id', async (req, res) => {
+    try {
+      const id = parseInt(req.params.id);
+      const success = await storage.deleteMySQLSavedQuery(id);
+      
+      if (!success) {
+        return res.status(404).json({ message: 'Saved query not found' });
+      }
+      
+      res.json({ success });
+    } catch (error) {
+      res.status(500).json({ message: 'Failed to delete saved query', error });
+    }
+  });
+
+  app.post('/api/admin/mysql-saved-queries/:id/run', async (req, res) => {
+    try {
+      const id = parseInt(req.params.id);
+      const savedQuery = await storage.getMySQLSavedQuery(id);
+      
+      if (!savedQuery) {
+        return res.status(404).json({ message: 'Saved query not found' });
+      }
+      
+      // Import the MySQL service to execute the query
+      const { mysqlService } = await import('./mysql-service');
+      
+      // Execute the saved query
+      const result = await mysqlService.executeQuery(savedQuery.query);
+      
+      // Update the last run timestamp
+      await storage.updateMySQLSavedQueryLastRun(id);
+      
+      // Return the query results
+      res.json({
+        success: true,
+        query: savedQuery,
+        results: result.rows,
+        fields: result.fields
+      });
+    } catch (error) {
+      console.error('Error executing saved query:', error);
+      res.status(500).json({ 
+        success: false, 
+        message: `Error executing saved query: ${error instanceof Error ? error.message : String(error)}` 
+      });
     }
   });
   
