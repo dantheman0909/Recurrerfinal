@@ -194,7 +194,8 @@ export default function Reports() {
                         <XAxis dataKey="name" />
                         <YAxis domain={[0, 100]} label={{ value: '%', position: 'insideLeft', offset: -5 }} />
                         <Tooltip 
-                          formatter={(value) => [`${value}%`, 'Completion Rate']}
+                          formatter={(value, name) => [`${value}%`, name]}
+                          labelFormatter={(label) => `Category: ${label}`}
                           contentStyle={{ 
                             backgroundColor: "white", 
                             borderRadius: "0.375rem", 
@@ -256,7 +257,8 @@ export default function Reports() {
                         <XAxis dataKey="name" />
                         <YAxis domain={[0, 100]} label={{ value: '%', position: 'insideLeft', offset: -5 }} />
                         <Tooltip 
-                          formatter={(value) => [`${value}%`, 'Completion Rate']}
+                          formatter={(value, name) => [`${value}%`, name]}
+                          labelFormatter={(label) => `Category: ${label}`}
                           contentStyle={{ 
                             backgroundColor: "white", 
                             borderRadius: "0.375rem", 
@@ -301,6 +303,8 @@ export default function Reports() {
                       <XAxis dataKey="name" />
                       <YAxis />
                       <Tooltip 
+                        formatter={(value, name) => [value, name]}
+                        labelFormatter={(label) => `Month: ${label}`}
                         contentStyle={{ 
                           backgroundColor: "white", 
                           borderRadius: "0.375rem", 
@@ -345,7 +349,8 @@ export default function Reports() {
                           <Cell fill="#E5E7EB" />
                         </Pie>
                         <Tooltip 
-                          formatter={(value) => [`${value}%`, 'Percentage']}
+                          formatter={(value, name) => [`${value}%`, name]}
+                          labelFormatter={() => 'Customer Renewal'}
                           contentStyle={{ 
                             backgroundColor: "white", 
                             borderRadius: "0.375rem", 
@@ -383,7 +388,8 @@ export default function Reports() {
                           <Cell fill="#1E99A0" />
                         </Pie>
                         <Tooltip 
-                          formatter={(value) => [`${value}%`, 'Percentage']}
+                          formatter={(value, name) => [`${value}%`, name]}
+                          labelFormatter={() => 'Revenue Distribution'}
                           contentStyle={{ 
                             backgroundColor: "white", 
                             borderRadius: "0.375rem", 
@@ -403,8 +409,8 @@ export default function Reports() {
             <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
               <Card>
                 <CardHeader>
-                  <CardTitle>NPS Scores</CardTitle>
-                  <CardDescription>Average NPS score over time</CardDescription>
+                  <CardTitle>NPS Score Trend</CardTitle>
+                  <CardDescription>Quarterly NPS score averages</CardDescription>
                 </CardHeader>
                 <CardContent>
                   <div className="h-80">
@@ -412,6 +418,8 @@ export default function Reports() {
                       data={mockNpsData} 
                       height={300} 
                       showGrid={true}
+                      gradientFrom="#0D9298"
+                      gradientTo="rgba(13, 146, 152, 0)"
                     />
                   </div>
                 </CardContent>
@@ -419,40 +427,38 @@ export default function Reports() {
               
               <Card>
                 <CardHeader>
-                  <CardTitle>Customer Feedback Summary</CardTitle>
-                  <CardDescription>Recent customer feedback activity</CardDescription>
+                  <CardTitle>Feedback Categories</CardTitle>
+                  <CardDescription>Most common feedback themes</CardDescription>
                 </CardHeader>
-                <CardContent className="space-y-4">
-                  <FeedbackItem 
-                    customer="ABC Corp"
-                    feedback="The new campaign builder is amazing! Makes it so much easier to set up our messages."
-                    date="2 days ago"
-                    sentiment="positive"
-                  />
-                  <FeedbackItem 
-                    customer="XYZ Solutions"
-                    feedback="Would like to see more data export options in the reporting section."
-                    date="3 days ago"
-                    sentiment="neutral"
-                  />
-                  <FeedbackItem 
-                    customer="123 Industries"
-                    feedback="Our team found the onboarding process to be very intuitive."
-                    date="1 week ago"
-                    sentiment="positive"
-                  />
-                  <FeedbackItem 
-                    customer="Tech Partners"
-                    feedback="Having issues with the contact sync feature, need urgent assistance."
-                    date="2 weeks ago"
-                    sentiment="negative"
-                  />
-                  <FeedbackItem 
-                    customer="Global Foods"
-                    feedback="Love the QR code analytics, it's helping us track campaigns effectively."
-                    date="3 weeks ago"
-                    sentiment="positive"
-                  />
+                <CardContent>
+                  <div className="h-80">
+                    <ResponsiveContainer width="100%" height="100%">
+                      <BarChart 
+                        data={[
+                          { name: 'Product Quality', value: 87 },
+                          { name: 'Customer Service', value: 82 },
+                          { name: 'Ease of Use', value: 78 },
+                          { name: 'Value', value: 72 },
+                          { name: 'Reliability', value: 92 },
+                        ]} 
+                        layout="vertical"
+                      >
+                        <CartesianGrid strokeDasharray="3 3" horizontal={true} vertical={false} />
+                        <XAxis type="number" domain={[0, 100]} />
+                        <YAxis dataKey="name" type="category" width={120} />
+                        <Tooltip 
+                          formatter={(value) => [`${value}%`, 'Satisfaction']}
+                          contentStyle={{ 
+                            backgroundColor: "white", 
+                            borderRadius: "0.375rem", 
+                            boxShadow: "0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06)",
+                            border: "none"
+                          }}
+                        />
+                        <Bar dataKey="value" fill="#0D9298" barSize={24} radius={[0, 4, 4, 0]} />
+                      </BarChart>
+                    </ResponsiveContainer>
+                  </div>
                 </CardContent>
               </Card>
             </div>
@@ -463,56 +469,30 @@ export default function Reports() {
   );
 }
 
-interface MetricCardProps {
+// Component for metric cards
+function MetricCard({ title, value, change, description }: {
   title: string;
-  value: string;
+  value: string | number;
   change: number;
   description: string;
-}
-
-function MetricCard({ title, value, change, description }: MetricCardProps) {
+}) {
   return (
     <Card>
-      <CardContent className="pt-6">
+      <CardContent className="p-6">
         <div className="flex justify-between items-start">
           <div>
             <p className="text-sm font-medium text-gray-500">{title}</p>
             <p className="mt-2 text-3xl font-semibold text-gray-900">{value}</p>
           </div>
-          <Badge variant={change >= 0 ? "default" : "destructive"} className="flex items-center">
-            {change >= 0 ? "+" : ""}{change}%
+          <Badge className={cn(
+            "mt-1 px-2 py-1",
+            change > 0 ? "bg-green-100 text-green-800" : "bg-red-100 text-red-800"
+          )}>
+            {change > 0 ? '+' : ''}{change}%
           </Badge>
         </div>
         <p className="mt-2 text-sm text-gray-500">{description}</p>
       </CardContent>
     </Card>
-  );
-}
-
-interface FeedbackItemProps {
-  customer: string;
-  feedback: string;
-  date: string;
-  sentiment: "positive" | "negative" | "neutral";
-}
-
-function FeedbackItem({ customer, feedback, date, sentiment }: FeedbackItemProps) {
-  const sentimentColor = {
-    positive: "bg-green-100 text-green-800",
-    negative: "bg-red-100 text-red-800",
-    neutral: "bg-gray-100 text-gray-800",
-  };
-  
-  return (
-    <div className="border rounded-lg p-3">
-      <div className="flex justify-between items-start">
-        <p className="font-medium">{customer}</p>
-        <Badge className={cn(sentimentColor[sentiment])}>
-          {sentiment.charAt(0).toUpperCase() + sentiment.slice(1)}
-        </Badge>
-      </div>
-      <p className="mt-1 text-sm text-gray-700">{feedback}</p>
-      <p className="mt-2 text-xs text-gray-500">{date}</p>
-    </div>
   );
 }
