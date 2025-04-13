@@ -12,7 +12,10 @@ import {
   insertRedZoneAlertSchema,
   insertMySQLSavedQuerySchema,
   insertNotificationSchema,
-  insertUserAchievementSchema
+  insertUserAchievementSchema,
+  insertCustomReportSchema,
+  insertCustomMetricSchema,
+  insertReportScheduleSchema
 } from "@shared/schema";
 import {
   getChargebeeSubscriptions,

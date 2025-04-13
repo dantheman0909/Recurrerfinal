@@ -65,6 +65,29 @@ export interface IStorage {
   getXpConfiguration(): Promise<XpConfiguration>;
   saveXpConfiguration(config: XpConfiguration): Promise<XpConfiguration>;
   
+  // Custom Reports
+  getCustomReports(): Promise<CustomReport[]>;
+  getCustomReport(id: number): Promise<CustomReport | undefined>;
+  createCustomReport(report: InsertCustomReport): Promise<CustomReport>;
+  updateCustomReport(id: number, report: Partial<CustomReport>): Promise<CustomReport | undefined>;
+  deleteCustomReport(id: number): Promise<boolean>;
+  updateCustomReportLastRun(id: number): Promise<CustomReport | undefined>;
+  
+  // Custom Metrics
+  getCustomMetrics(reportId: number): Promise<CustomMetric[]>;
+  getCustomMetric(id: number): Promise<CustomMetric | undefined>;
+  createCustomMetric(metric: InsertCustomMetric): Promise<CustomMetric>;
+  updateCustomMetric(id: number, metric: Partial<CustomMetric>): Promise<CustomMetric | undefined>;
+  deleteCustomMetric(id: number): Promise<boolean>;
+  
+  // Report Schedules
+  getReportSchedules(reportId: number): Promise<ReportSchedule[]>;
+  getReportSchedule(id: number): Promise<ReportSchedule | undefined>;
+  createReportSchedule(schedule: InsertReportSchedule): Promise<ReportSchedule>;
+  updateReportSchedule(id: number, schedule: Partial<ReportSchedule>): Promise<ReportSchedule | undefined>;
+  deleteReportSchedule(id: number): Promise<boolean>;
+  updateReportScheduleLastSent(id: number): Promise<ReportSchedule | undefined>;
+  
   // Users
   getUser(id: number): Promise<User | undefined>;
   getUserByEmail(email: string): Promise<User | undefined>;
@@ -230,22 +253,22 @@ export class MemStorage implements IStorage {
   private scheduleId: number = 1;
 
   constructor() {
-    this.users = new Map();
-    this.customers = new Map();
-    this.tasks = new Map();
-    this.taskComments = new Map();
-    this.playbooks = new Map();
-    this.playbookTasks = new Map();
-    this.redZoneAlerts = new Map();
-    this.customerMetrics = new Map();
-    this.mysqlConfigs = new Map();
-    this.mysqlFieldMappings = new Map();
-    this.mysqlSavedQueries = new Map();
-    this.notifications = new Map();
-    this.userAchievements = new Map();
-    this.customReports = new Map();
-    this.customMetrics = new Map();
-    this.reportSchedules = new Map();
+    this.users = new Map<number, User>();
+    this.customers = new Map<number, Customer>();
+    this.tasks = new Map<number, Task>();
+    this.taskComments = new Map<number, TaskComment>();
+    this.playbooks = new Map<number, Playbook>();
+    this.playbookTasks = new Map<number, PlaybookTask>();
+    this.redZoneAlerts = new Map<number, RedZoneAlert>();
+    this.customerMetrics = new Map<number, CustomerMetric>();
+    this.mysqlConfigs = new Map<number, MySQLConfig>();
+    this.mysqlFieldMappings = new Map<number, MySQLFieldMapping>();
+    this.mysqlSavedQueries = new Map<number, MySQLSavedQuery>();
+    this.notifications = new Map<number, Notification>();
+    this.userAchievements = new Map<number, UserAchievement>();
+    this.customReports = new Map<number, CustomReport>();
+    this.customMetrics = new Map<number, CustomMetric>();
+    this.reportSchedules = new Map<number, ReportSchedule>();
     
     // Initialize with mock data
     this.initMockData();
