@@ -232,6 +232,19 @@ app.get('/api/customers/:id/external-data', getCustomerExternalData);
       } catch (error) {
         console.error('Error updating MySQL tables:', error);
       }
+      
+      try {
+        // Create notifications and achievements tables
+        const createAchievementTables = (await import('./create-achievement-tables')).default;
+        const achievementResult = await createAchievementTables();
+        if (achievementResult.success) {
+          log('Notifications and achievements tables created successfully');
+        } else {
+          console.warn('Notifications and achievements tables warning:', achievementResult.error);
+        }
+      } catch (error) {
+        console.error('Error creating notifications and achievements tables:', error);
+      }
     }
   } catch (error) {
     console.error('Error during database initialization:', error);
