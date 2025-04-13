@@ -20,6 +20,7 @@ import {
 import { runMigrationsOnStartup } from "./run-migrations-startup";
 import { db, testDatabaseConnection } from "./db-fixed";
 import { FixedDatabaseStorage } from "./fixed-storage";
+import { healthCheckHandler, incrementRequestCounters } from "./health-endpoint";
 
 // Initialize Express app
 const app = express();
@@ -35,6 +36,13 @@ app.use((req, res, next) => {
   const start = Date.now();
   const path = req.path;
   let capturedJsonResponse: Record<string, any> | undefined = undefined;
+
+  // Track API requests for health monitoring
+  if (path.startsWith("/api")) {
+    incrementRequestCounters(true);
+  } else {
+    incrementRequestCounters(false);
+  }
 
   const originalResJson = res.json;
   res.json = function (bodyJson, ...args) {
@@ -78,6 +86,9 @@ app.get('/api/mysql/companies/:id', getMySQLCompany);
 
 // Customer-specific external data route
 app.get('/api/customers/:id/external-data', getCustomerExternalData);
+
+// Health check endpoint
+app.get('/health', healthCheckHandler);
 
 // Add global error handlers to prevent process exit
 process.on('uncaughtException', (err) => {

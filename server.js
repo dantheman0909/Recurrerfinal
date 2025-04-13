@@ -2,12 +2,17 @@
  * Simple Express server with database connection for Recurrer platform
  */
 
-const express = require('express');
-const { Pool } = require('@neondatabase/serverless');
-const cors = require('cors');
-const path = require('path');
-const fs = require('fs');
-const http = require('http');
+import express from 'express';
+import { Pool } from '@neondatabase/serverless';
+import cors from 'cors';
+import path from 'path';
+import fs from 'fs';
+import http from 'http';
+import { fileURLToPath } from 'url';
+
+// ES Module compatibility fixes
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = path.dirname(__filename);
 
 // Setup database connection
 const pool = new Pool({ 

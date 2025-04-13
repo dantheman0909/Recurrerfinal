@@ -1,108 +1,129 @@
 /**
- * Standalone server for the Recurrer platform
- * This server is designed to be run directly with Node.js
- * and provides basic API endpoints for health checks and system status
+ * Standalone Express server for the Recurrer platform
+ * Simple, minimal dependencies, focused on reliability
  */
 
 import express from 'express';
+import http from 'http';
+import { fileURLToPath } from 'url';
+import path from 'path';
 import cors from 'cors';
-import { pool, testDatabaseConnection, db } from './db.js';
 
-// Create Express application
+// ES Module compatibility fixes
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = path.dirname(__filename);
+
+// Create Express app
 const app = express();
 
-// Apply middleware
+// Basic middleware
 app.use(express.json());
 app.use(cors());
 
-// Basic routes
-app.get('/', (req, res) => {
-  res.send('Recurrer API Server - Standalone Mode');
+// Request logging
+app.use((req, res, next) => {
+  console.log(`${new Date().toISOString()} - ${req.method} ${req.url}`);
+  next();
+});
+
+// Basic API routes
+app.get('/api/status', (req, res) => {
+  res.json({
+    status: 'ok',
+    time: new Date().toISOString(),
+    uptime: process.uptime(),
+    memory: process.memoryUsage()
+  });
 });
 
 // Health check endpoint
-app.get('/api/health', async (req, res) => {
-  try {
-    const dbStatus = await testDatabaseConnection();
-    res.json({
-      status: 'healthy',
-      server: 'standalone',
-      version: '1.0.0',
-      timestamp: new Date().toISOString(),
-      uptime: process.uptime(),
-      database: {
-        connected: true,
-        timestamp: dbStatus.now
-      }
-    });
-  } catch (error) {
-    res.status(500).json({
-      status: 'unhealthy',
-      server: 'standalone',
-      version: '1.0.0',
-      timestamp: new Date().toISOString(),
-      uptime: process.uptime(),
-      database: {
-        connected: false,
-        error: error.message
-      }
-    });
-  }
+app.get('/health', (req, res) => {
+  res.json({
+    status: 'ok',
+    time: new Date().toISOString(),
+    uptime: process.uptime(),
+    memory: process.memoryUsage(),
+    server: {
+      platform: process.platform,
+      nodeVersion: process.version
+    }
+  });
 });
 
-// Status endpoint
-app.get('/api/status', (req, res) => {
-  res.json({
-    status: 'running',
-    server: 'standalone',
-    mode: process.env.NODE_ENV || 'development',
-    timestamp: new Date().toISOString(),
-    uptime: process.uptime()
-  });
+// Serve static files if available
+const staticPath = path.join(__dirname, '..', 'client/public');
+app.use(express.static(staticPath));
+
+// Catch-all route
+app.get('*', (req, res) => {
+  res.send(`
+    <html>
+      <head>
+        <title>Recurrer Platform</title>
+        <style>
+          body { font-family: Arial, sans-serif; max-width: 800px; margin: 0 auto; padding: 20px; }
+          .header { background-color: #f0f0f0; padding: 20px; border-radius: 5px; margin-bottom: 20px; }
+          .endpoint { background-color: #f9f9f9; padding: 10px; border-radius: 5px; margin-bottom: 10px; }
+          h1 { color: #333; }
+          h2 { color: #666; }
+          code { background-color: #eee; padding: 2px 4px; border-radius: 3px; }
+        </style>
+      </head>
+      <body>
+        <div class="header">
+          <h1>Recurrer Platform - Standalone Server</h1>
+          <p>The standalone server is running successfully.</p>
+        </div>
+        
+        <h2>Available Endpoints:</h2>
+        <div class="endpoint">
+          <h3><code>GET /health</code></h3>
+          <p>Health check endpoint</p>
+        </div>
+        
+        <div class="endpoint">
+          <h3><code>GET /api/status</code></h3>
+          <p>Server status information</p>
+        </div>
+        
+        <h2>Server Information:</h2>
+        <ul>
+          <li>Time: ${new Date().toISOString()}</li>
+          <li>Uptime: ${process.uptime()} seconds</li>
+          <li>Node.js: ${process.version}</li>
+          <li>Platform: ${process.platform}</li>
+        </ul>
+      </body>
+    </html>
+  `);
 });
 
 // Error handling middleware
 app.use((err, req, res, next) => {
-  console.error('Server Error:', err);
-  res.status(500).json({
-    error: 'Internal Server Error',
-    message: err.message
-  });
+  console.error('Error:', err);
+  res.status(500).json({ error: 'Internal server error', message: err.message });
 });
 
-// Start server
-const PORT = process.env.PORT || 5001;
-app.listen(PORT, '0.0.0.0', async () => {
-  console.log(`Standalone server running on port ${PORT}`);
-  
-  try {
-    // Test database connection on startup
-    await testDatabaseConnection();
-  } catch (error) {
-    console.error('Failed to connect to database:', error.message);
-  }
+// Start the server
+const PORT = process.env.PORT || 7000;
+const server = http.createServer(app);
+
+server.listen(PORT, '0.0.0.0', () => {
+  console.log(`Standalone server running on http://0.0.0.0:${PORT}`);
 });
 
-// Keep the server alive with heartbeat
+// Heartbeat to keep the process alive
 setInterval(() => {
-  console.log(`Heartbeat check at ${new Date().toISOString()} - Server uptime: ${process.uptime()}s`);
+  console.log(`Standalone server heartbeat - running on port ${PORT}`);
 }, 30000);
 
-// Periodically test database connection
-setInterval(async () => {
-  try {
-    await testDatabaseConnection();
-  } catch (error) {
-    console.error('Database connection check failed:', error.message);
-  }
-}, 60000);
-
-// Handle uncaught exceptions
+// Handle unhandled errors
 process.on('uncaughtException', (err) => {
   console.error('Uncaught exception:', err);
+  // Keep the server running
 });
 
-// Handle unhandled promise rejections
 process.on('unhandledRejection', (reason, promise) => {
   console.error('Unhandled rejection at:', promise, 'reason:', reason);
+  // Keep the server running
 });
