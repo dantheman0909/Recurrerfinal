@@ -214,8 +214,8 @@ export default function Dashboard() {
             iconBgColor="bg-teal-100"
             helpText={
               <div className="space-y-1">
-                <div className="font-semibold text-gray-800">Open Tasks</div>
-                <div>Tasks pending or in progress across all customers.</div>
+                <h5 className="font-semibold text-gray-800">Open Tasks</h5>
+                <p>Tasks pending or in progress across all customers.</p>
               </div>
             }
           />
@@ -230,8 +230,8 @@ export default function Dashboard() {
             iconBgColor="bg-indigo-100"
             helpText={
               <div className="space-y-1">
-                <div className="font-semibold text-gray-800">Campaign Gaps</div>
-                <div>Customers without campaigns in the last 30 days.</div>
+                <h5 className="font-semibold text-gray-800">Campaign Gaps</h5>
+                <p>Customers without campaigns in the last 30 days.</p>
               </div>
             }
           />
@@ -246,11 +246,11 @@ export default function Dashboard() {
             iconBgColor="bg-yellow-100"
             helpText={
               <div className="space-y-1">
-                <div className="font-semibold text-gray-800">Renewal Alerts</div>
-                <div>
+                <h5 className="font-semibold text-gray-800">Renewal Alerts</h5>
+                <p>
                   Subscriptions due for renewal in the next 60 days that require
                   attention.
-                </div>
+                </p>
               </div>
             }
           />
@@ -265,8 +265,8 @@ export default function Dashboard() {
             iconBgColor="bg-red-100"
             helpText={
               <div className="space-y-1">
-                <div className="font-semibold text-gray-800">Red Zone Count</div>
-                <div>High-risk customers requiring immediate intervention.</div>
+                <h5 className="font-semibold text-gray-800">Red Zone Count</h5>
+                <p>High-risk customers requiring immediate intervention.</p>
               </div>
             }
           />
@@ -298,11 +298,11 @@ export default function Dashboard() {
                   Total MRR
                   <HelpTooltip
                     content={
-                      <div className="space-y-1 w-full">
+                      <div className="space-y-1">
                         <div className="font-semibold text-gray-800">
                           Monthly Recurring Revenue
                         </div>
-                        <div className="break-words">
+                        <div>
                           Total revenue generated each month from all active
                           subscriptions.
                         </div>
@@ -331,11 +331,11 @@ export default function Dashboard() {
                   Total ARR
                   <HelpTooltip
                     content={
-                      <div className="space-y-1 w-full">
+                      <div className="space-y-1">
                         <div className="font-semibold text-gray-800">
                           Annual Recurring Revenue
                         </div>
-                        <div className="break-words">
+                        <div>
                           Total revenue expected over the next 12 months (MRR ×
                           12).
                         </div>
@@ -360,42 +360,42 @@ export default function Dashboard() {
                 </div>
               </div>
               <div className="bg-gray-50 rounded-lg p-4 text-center">
-                <div className="text-sm text-gray-500 flex items-center justify-center gap-1">
+                <p className="text-sm text-gray-500 flex items-center justify-center gap-1">
                   Avg. Revenue Per Customer
                   <HelpTooltip
                     content={
-                      <div className="space-y-1 w-full">
+                      <div className="space-y-1">
                         <div className="font-semibold text-gray-800">
                           Average Revenue Per Customer
                         </div>
-                        <div className="break-words">
+                        <div>
                           Monthly revenue per customer (MRR ÷ active customers).
                         </div>
                       </div>
                     }
                   />
-                </div>
+                </p>
                 <p className="text-2xl font-semibold">
                   {formatCurrency(dashboardData?.revenuePerCustomer || 0)}
                 </p>
               </div>
               <div className="bg-gray-50 rounded-lg p-4 text-center">
-                <div className="text-sm text-gray-500 flex items-center justify-center gap-1">
+                <p className="text-sm text-gray-500 flex items-center justify-center gap-1">
                   Growth Rate
                   <HelpTooltip
                     content={
-                      <div className="space-y-1 w-full">
+                      <div className="space-y-1">
                         <div className="font-semibold text-gray-800">
                           Growth Rate
                         </div>
-                        <div className="break-words">
+                        <div>
                           Percentage increase in MRR compared to previous
                           period.
                         </div>
                       </div>
                     }
                   />
-                </div>
+                </p>
                 <p className="text-2xl font-semibold">
                   {dashboardData?.growthRate || 0}%
                 </p>
@@ -409,18 +409,18 @@ export default function Dashboard() {
       <div className="mt-8 px-4 sm:px-6 lg:px-8">
         <div className="grid grid-cols-1 gap-5 lg:grid-cols-2">
           {dashboardData?.monthlyMetrics && (
-            <Card className="flex flex-col h-[500px]">
-              <CardContent className="p-6 flex-1 flex flex-col h-full">
+            <Card>
+              <CardContent className="p-6">
                 <div className="flex items-center justify-between mb-4">
                   <h3 className="text-lg font-medium text-gray-900 flex items-center gap-1">
                     Monthly Key Metrics
                     <HelpTooltip
                       content={
-                        <div className="space-y-1 w-full">
+                        <div className="space-y-1">
                           <div className="font-semibold text-gray-800">
                             Monthly Key Metrics
                           </div>
-                          <div className="break-words">
+                          <div>
                             Trends of important business metrics over time,
                             showing month-by-month performance.
                           </div>
@@ -429,27 +429,25 @@ export default function Dashboard() {
                     />
                   </h3>
                 </div>
-                <div className="flex-1 h-full">
-                  <MonthlyMetricsChart
-                    data={dashboardData.monthlyMetrics}
-                    timeframe={timeframe}
-                  />
-                </div>
+                <MonthlyMetricsChart
+                  data={dashboardData.monthlyMetrics}
+                  timeframe={timeframe}
+                />
               </CardContent>
             </Card>
           )}
-          <Card className="flex flex-col h-[500px]">
-            <CardContent className="p-6 flex-1 flex flex-col h-full">
+          <Card>
+            <CardContent className="p-6">
               <div className="flex items-center justify-between mb-4">
                 <h3 className="text-lg font-medium text-gray-900 flex items-center gap-1">
                   Customer Health Distribution
                   <HelpTooltip
                     content={
-                      <div className="space-y-1 w-full">
+                      <div className="space-y-1">
                         <div className="font-semibold text-gray-800">
                           Customer Health Distribution
                         </div>
-                        <div className="break-words">
+                        <div>
                           Breakdown of customer health across different market
                           segments.
                         </div>

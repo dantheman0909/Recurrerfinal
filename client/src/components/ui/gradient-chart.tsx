@@ -13,7 +13,7 @@ import { cn } from "@/lib/utils";
 interface GradientChartProps {
   data: Array<{ name: string; value: number }>;
   className?: string;
-  height?: number | string;
+  height?: number;
   showGrid?: boolean;
   showAxis?: boolean;
   gradientFrom?: string;
