@@ -214,8 +214,8 @@ export default function Dashboard() {
             iconBgColor="bg-teal-100"
             helpText={
               <div className="space-y-1">
-                <h5 className="font-semibold text-gray-800">Open Tasks</h5>
-                <p>Tasks pending or in progress across all customers.</p>
+                <div className="font-semibold text-gray-800">Open Tasks</div>
+                <div>Tasks pending or in progress across all customers.</div>
               </div>
             }
           />
@@ -230,8 +230,8 @@ export default function Dashboard() {
             iconBgColor="bg-indigo-100"
             helpText={
               <div className="space-y-1">
-                <h5 className="font-semibold text-gray-800">Campaign Gaps</h5>
-                <p>Customers without campaigns in the last 30 days.</p>
+                <div className="font-semibold text-gray-800">Campaign Gaps</div>
+                <div>Customers without campaigns in the last 30 days.</div>
               </div>
             }
           />
@@ -246,11 +246,11 @@ export default function Dashboard() {
             iconBgColor="bg-yellow-100"
             helpText={
               <div className="space-y-1">
-                <h5 className="font-semibold text-gray-800">Renewal Alerts</h5>
-                <p>
+                <div className="font-semibold text-gray-800">Renewal Alerts</div>
+                <div>
                   Subscriptions due for renewal in the next 60 days that require
                   attention.
-                </p>
+                </div>
               </div>
             }
           />
@@ -265,8 +265,8 @@ export default function Dashboard() {
             iconBgColor="bg-red-100"
             helpText={
               <div className="space-y-1">
-                <h5 className="font-semibold text-gray-800">Red Zone Count</h5>
-                <p>High-risk customers requiring immediate intervention.</p>
+                <div className="font-semibold text-gray-800">Red Zone Count</div>
+                <div>High-risk customers requiring immediate intervention.</div>
               </div>
             }
           />
