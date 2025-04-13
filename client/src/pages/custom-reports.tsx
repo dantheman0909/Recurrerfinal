@@ -22,6 +22,14 @@ import {
   DialogTrigger,
 } from "@/components/ui/dialog";
 import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuLabel,
+  DropdownMenuSeparator,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
+import {
   Select,
   SelectContent,
   SelectItem,
@@ -142,18 +150,18 @@ export default function CustomReports() {
   const queryClient = useQueryClient();
 
   // Get all reports
-  const { data: reports = [], isLoading: isLoadingReports, refetch: refetchReports } = useQuery({
+  const { data: reports = [], isLoading: isLoadingReports, refetch: refetchReports } = useQuery<CustomReport[]>({
     queryKey: ['/api/custom-reports'],
   });
 
   // Get metrics for selected report
-  const { data: metrics = [], isLoading: isLoadingMetrics, refetch: refetchMetrics } = useQuery({
+  const { data: metrics = [], isLoading: isLoadingMetrics, refetch: refetchMetrics } = useQuery<CustomMetric[]>({
     queryKey: ['/api/custom-reports', selectedReportId, 'metrics'],
     enabled: !!selectedReportId
   });
 
   // Get schedules for selected report
-  const { data: schedules = [], isLoading: isLoadingSchedules } = useQuery({
+  const { data: schedules = [], isLoading: isLoadingSchedules } = useQuery<ReportSchedule[]>({
     queryKey: ['/api/custom-reports', selectedReportId, 'schedules'],
     enabled: !!selectedReportId
   });
@@ -1299,13 +1307,33 @@ export default function CustomReports() {
                                 <Badge variant="outline" className="mr-2 capitalize">
                                   {metric.data_source}
                                 </Badge>
-                                <Button 
-                                  variant="ghost" 
-                                  size="sm" 
-                                  onClick={() => editMetric(metric.id)}
-                                >
-                                  <Settings className="h-4 w-4" />
-                                </Button>
+                                <DropdownMenu>
+                                  <DropdownMenuTrigger asChild>
+                                    <Button 
+                                      variant="ghost" 
+                                      size="sm"
+                                    >
+                                      <Settings className="h-4 w-4" />
+                                    </Button>
+                                  </DropdownMenuTrigger>
+                                  <DropdownMenuContent align="end">
+                                    <DropdownMenuLabel>Actions</DropdownMenuLabel>
+                                    <DropdownMenuSeparator />
+                                    <DropdownMenuItem
+                                      onClick={() => editMetric(metric.id)}
+                                    >
+                                      <Edit className="h-4 w-4 mr-2" />
+                                      Edit
+                                    </DropdownMenuItem>
+                                    <DropdownMenuItem
+                                      onClick={() => deleteMetric(metric.id)}
+                                      className="text-destructive"
+                                    >
+                                      <Trash2 className="h-4 w-4 mr-2" />
+                                      Delete
+                                    </DropdownMenuItem>
+                                  </DropdownMenuContent>
+                                </DropdownMenu>
                               </div>
                             </div>
                           ))}
@@ -1496,6 +1524,328 @@ export default function CustomReports() {
                 </div>
               </div>
             ))}
+            
+            {/* Edit Metric Dialog */}
+            <Dialog open={openDialog === 'editMetric'} onOpenChange={(open) => {
+              setOpenDialog(open ? 'editMetric' : null);
+              if (!open) {
+                setSelectedMetricId(null);
+                metricForm.reset({
+                  name: "",
+                  description: "",
+                  data_source: "mysql",
+                  metric_type: "count",
+                  sql_query: "",
+                  field_mapping: {},
+                  display_format: "number",
+                  display_color: "#0D9298",
+                  target_value: 0,
+                  is_active: true
+                });
+              }
+            }}>
+              <DialogContent>
+                <DialogHeader>
+                  <DialogTitle>Edit Metric</DialogTitle>
+                  <DialogDescription>
+                    Update the metric details.
+                  </DialogDescription>
+                </DialogHeader>
+                
+                <Form {...metricForm}>
+                  <form onSubmit={metricForm.handleSubmit(onMetricSubmit)} className="space-y-4">
+                    <div className="grid grid-cols-2 gap-4">
+                      <FormField
+                        control={metricForm.control}
+                        name="name"
+                        render={({ field }) => (
+                          <FormItem>
+                            <FormLabel>Name</FormLabel>
+                            <FormControl>
+                              <Input {...field} />
+                            </FormControl>
+                            <FormMessage />
+                          </FormItem>
+                        )}
+                      />
+                      
+                      <FormField
+                        control={metricForm.control}
+                        name="data_source"
+                        render={({ field }) => (
+                          <FormItem>
+                            <FormLabel>Data Source</FormLabel>
+                            <Select onValueChange={field.onChange} defaultValue={field.value}>
+                              <FormControl>
+                                <SelectTrigger>
+                                  <SelectValue placeholder="Select source" />
+                                </SelectTrigger>
+                              </FormControl>
+                              <SelectContent>
+                                <SelectItem value="mysql">MySQL</SelectItem>
+                                <SelectItem value="chargebee">Chargebee</SelectItem>
+                                <SelectItem value="internal">Internal</SelectItem>
+                              </SelectContent>
+                            </Select>
+                            <FormMessage />
+                          </FormItem>
+                        )}
+                      />
+                    </div>
+                    
+                    <FormField
+                      control={metricForm.control}
+                      name="description"
+                      render={({ field }) => (
+                        <FormItem>
+                          <FormLabel>Description</FormLabel>
+                          <FormControl>
+                            <Textarea {...field} />
+                          </FormControl>
+                          <FormMessage />
+                        </FormItem>
+                      )}
+                    />
+                    
+                    <FormField
+                      control={metricForm.control}
+                      name="metric_type"
+                      render={({ field }) => (
+                        <FormItem>
+                          <FormLabel>Metric Type</FormLabel>
+                          <Select onValueChange={field.onChange} defaultValue={field.value}>
+                            <FormControl>
+                              <SelectTrigger>
+                                <SelectValue placeholder="Select type" />
+                              </SelectTrigger>
+                            </FormControl>
+                            <SelectContent>
+                              <SelectItem value="count">Count</SelectItem>
+                              <SelectItem value="sum">Sum</SelectItem>
+                              <SelectItem value="average">Average</SelectItem>
+                              <SelectItem value="percent">Percent</SelectItem>
+                              <SelectItem value="custom">Custom</SelectItem>
+                            </SelectContent>
+                          </Select>
+                          <FormMessage />
+                        </FormItem>
+                      )}
+                    />
+                    
+                    {metricForm.watch("data_source") === "mysql" && (
+                      <FormField
+                        control={metricForm.control}
+                        name="sql_query"
+                        render={({ field }) => (
+                          <FormItem>
+                            <FormLabel>SQL Query</FormLabel>
+                            <FormControl>
+                              <Textarea 
+                                className="font-mono"
+                                placeholder="SELECT COUNT(*) FROM customers WHERE..."
+                                {...field} 
+                              />
+                            </FormControl>
+                            <FormMessage />
+                          </FormItem>
+                        )}
+                      />
+                    )}
+                  
+                    {metricForm.watch("data_source") === "chargebee" && (
+                      <div>
+                        <FormField
+                          control={metricForm.control}
+                          name="field_mapping"
+                          render={({ field }) => (
+                            <FormItem>
+                              <FormLabel>Field Mapping</FormLabel>
+                              <FormDescription>
+                                Define the Chargebee fields to use in this metric
+                              </FormDescription>
+                              <div className="p-3 border rounded">
+                                <div className="space-y-2">
+                                  <div className="grid grid-cols-2 gap-2">
+                                    <Input
+                                      placeholder="Field Name"
+                                      value={field.value?.field_name || ''}
+                                      onChange={(e) => {
+                                        const newMapping = { ...field.value, field_name: e.target.value };
+                                        field.onChange(newMapping);
+                                      }}
+                                    />
+                                    <Input
+                                      placeholder="Filter Value"
+                                      value={field.value?.filter_value || ''}
+                                      onChange={(e) => {
+                                        const newMapping = { ...field.value, filter_value: e.target.value };
+                                        field.onChange(newMapping);
+                                      }}
+                                    />
+                                  </div>
+                                </div>
+                              </div>
+                              <FormMessage />
+                            </FormItem>
+                          )}
+                        />
+                      </div>
+                    )}
+                    
+                    {metricForm.watch("data_source") === "internal" && (
+                      <div>
+                        <FormField
+                          control={metricForm.control}
+                          name="field_mapping"
+                          render={({ field }) => (
+                            <FormItem>
+                              <FormLabel>Field Mapping</FormLabel>
+                              <FormDescription>
+                                Define the internal fields to use in this metric
+                              </FormDescription>
+                              <div className="p-3 border rounded">
+                                <div className="space-y-2">
+                                  <div className="grid grid-cols-2 gap-2">
+                                    <Input
+                                      placeholder="Field Name"
+                                      value={field.value?.field_name || ''}
+                                      onChange={(e) => {
+                                        const newMapping = { ...field.value, field_name: e.target.value };
+                                        field.onChange(newMapping);
+                                      }}
+                                    />
+                                    <Input
+                                      placeholder="Filter Value"
+                                      value={field.value?.filter_value || ''}
+                                      onChange={(e) => {
+                                        const newMapping = { ...field.value, filter_value: e.target.value };
+                                        field.onChange(newMapping);
+                                      }}
+                                    />
+                                  </div>
+                                </div>
+                              </div>
+                              <FormMessage />
+                            </FormItem>
+                          )}
+                        />
+                      </div>
+                    )}
+                    
+                    <div className="grid grid-cols-3 gap-4">
+                      <FormField
+                        control={metricForm.control}
+                        name="display_format"
+                        render={({ field }) => (
+                          <FormItem>
+                            <FormLabel>Display Format</FormLabel>
+                            <Select onValueChange={field.onChange} defaultValue={field.value}>
+                              <FormControl>
+                                <SelectTrigger>
+                                  <SelectValue placeholder="Format" />
+                                </SelectTrigger>
+                              </FormControl>
+                              <SelectContent>
+                                <SelectItem value="number">Number</SelectItem>
+                                <SelectItem value="currency">Currency</SelectItem>
+                                <SelectItem value="percent">Percentage</SelectItem>
+                                <SelectItem value="date">Date</SelectItem>
+                              </SelectContent>
+                            </Select>
+                            <FormMessage />
+                          </FormItem>
+                        )}
+                      />
+                      
+                      <FormField
+                        control={metricForm.control}
+                        name="display_color"
+                        render={({ field }) => (
+                          <FormItem>
+                            <FormLabel>Display Color</FormLabel>
+                            <FormControl>
+                              <div className="flex items-center">
+                                <div 
+                                  className="w-6 h-6 mr-2 rounded-full border border-gray-300" 
+                                  style={{ backgroundColor: field.value }}
+                                />
+                                <Input 
+                                  type="color"
+                                  value={field.value}
+                                  onChange={field.onChange}
+                                />
+                              </div>
+                            </FormControl>
+                            <FormMessage />
+                          </FormItem>
+                        )}
+                      />
+                      
+                      <FormField
+                        control={metricForm.control}
+                        name="target_value"
+                        render={({ field }) => (
+                          <FormItem>
+                            <FormLabel>Target Value</FormLabel>
+                            <FormControl>
+                              <Input
+                                type="number"
+                                {...field}
+                                onChange={(e) => field.onChange(Number(e.target.value))}
+                              />
+                            </FormControl>
+                            <FormMessage />
+                          </FormItem>
+                        )}
+                      />
+                    </div>
+                    
+                    <FormField
+                      control={metricForm.control}
+                      name="is_active"
+                      render={({ field }) => (
+                        <FormItem className="flex flex-row items-start space-x-3 space-y-0 py-1">
+                          <FormControl>
+                            <Checkbox
+                              checked={field.value}
+                              onCheckedChange={field.onChange}
+                            />
+                          </FormControl>
+                          <div className="space-y-1 leading-none">
+                            <FormLabel>Active</FormLabel>
+                            <FormDescription>
+                              Include this metric in the report
+                            </FormDescription>
+                          </div>
+                        </FormItem>
+                      )}
+                    />
+                    
+                    <DialogFooter className="gap-2 sm:gap-0">
+                      <Button
+                        type="button"
+                        variant="destructive"
+                        onClick={() => {
+                          if (selectedMetricId && selectedReportId) {
+                            if (window.confirm("Are you sure you want to delete this metric?")) {
+                              deleteMetricMutation.mutate({
+                                reportId: selectedReportId,
+                                metricId: selectedMetricId
+                              });
+                            }
+                          }
+                        }}
+                      >
+                        Delete Metric
+                      </Button>
+                      <Button type="submit" disabled={updateMetricMutation.isPending}>
+                        {updateMetricMutation.isPending ? "Updating..." : "Update Metric"}
+                      </Button>
+                    </DialogFooter>
+                  </form>
+                </Form>
+              </DialogContent>
+            </Dialog>
           </div>
         )}
       </div>
