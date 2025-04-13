@@ -681,6 +681,84 @@ export class MemStorage implements IStorage {
       monthlyMetrics: generateTimeseriesData(timeframe)
     };
   }
+  
+  // Notifications Methods
+  async getNotifications(userId: number): Promise<Notification[]> {
+    return Array.from(this.notifications.values())
+      .filter(notification => notification.user_id === userId)
+      .sort((a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime());
+  }
+  
+  async getUnreadNotificationsCount(userId: number): Promise<number> {
+    return Array.from(this.notifications.values())
+      .filter(notification => notification.user_id === userId && !notification.read_at)
+      .length;
+  }
+  
+  async getNotification(id: number): Promise<Notification | undefined> {
+    return this.notifications.get(id);
+  }
+  
+  async createNotification(notification: InsertNotification): Promise<Notification> {
+    const id = this.notificationId++;
+    const timestamp = new Date();
+    const newNotification = { ...notification, id, created_at: timestamp, read_at: null };
+    this.notifications.set(id, newNotification);
+    return newNotification;
+  }
+  
+  async markNotificationAsRead(id: number): Promise<Notification | undefined> {
+    const notification = this.notifications.get(id);
+    if (!notification) return undefined;
+    
+    const updatedNotification = { ...notification, read_at: new Date() };
+    this.notifications.set(id, updatedNotification);
+    return updatedNotification;
+  }
+  
+  async markAllNotificationsAsRead(userId: number): Promise<void> {
+    const userNotifications = Array.from(this.notifications.values())
+      .filter(notification => notification.user_id === userId && !notification.read_at);
+    
+    const timestamp = new Date();
+    for (const notification of userNotifications) {
+      this.notifications.set(notification.id, { ...notification, read_at: timestamp });
+    }
+  }
+  
+  // User Achievements Methods
+  async getUserAchievements(userId: number): Promise<UserAchievement[]> {
+    return Array.from(this.userAchievements.values())
+      .filter(achievement => achievement.user_id === userId)
+      .sort((a, b) => new Date(b.earned_at).getTime() - new Date(a.earned_at).getTime());
+  }
+  
+  async getUnviewedAchievementsCount(userId: number): Promise<number> {
+    return Array.from(this.userAchievements.values())
+      .filter(achievement => achievement.user_id === userId && !achievement.viewed_at)
+      .length;
+  }
+  
+  async getUserAchievement(id: number): Promise<UserAchievement | undefined> {
+    return this.userAchievements.get(id);
+  }
+  
+  async createUserAchievement(achievement: InsertUserAchievement): Promise<UserAchievement> {
+    const id = this.achievementId++;
+    const timestamp = new Date();
+    const newAchievement = { ...achievement, id, earned_at: timestamp, viewed_at: null };
+    this.userAchievements.set(id, newAchievement);
+    return newAchievement;
+  }
+  
+  async markAchievementAsViewed(id: number): Promise<UserAchievement | undefined> {
+    const achievement = this.userAchievements.get(id);
+    if (!achievement) return undefined;
+    
+    const updatedAchievement = { ...achievement, viewed_at: new Date() };
+    this.userAchievements.set(id, updatedAchievement);
+    return updatedAchievement;
+  }
 }
 
 export class DatabaseStorage implements IStorage {
