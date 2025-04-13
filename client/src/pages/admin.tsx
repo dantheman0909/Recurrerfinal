@@ -35,7 +35,7 @@ import {
   Settings,
   Database,
   Upload,
-  User,
+  User as UserIcon,
   Users,
   Loader2,
   Trash2,
@@ -48,10 +48,17 @@ import {
   BadgeDollarSign,
   Calendar,
   Clock,
+  Trophy,
+  Bell,
+  Award,
+  Star,
+  Zap,
+  LineChart,
+  Check,
+  BadgeCheck,
   Percent,
   Search,
-  ChevronsUpDown,
-  Check
+  ChevronsUpDown
 } from "lucide-react";
 import { UserRole } from "@shared/types";
 import { AvatarWithInitials } from "@/components/ui/avatar-with-initials";
@@ -95,6 +102,10 @@ export default function Admin() {
               <Upload className="h-4 w-4 mr-2" />
               Data Import
             </TabsTrigger>
+            <TabsTrigger value="system-settings" className="flex items-center">
+              <Settings className="h-4 w-4 mr-2" />
+              System Settings
+            </TabsTrigger>
             <TabsTrigger value="users" className="flex items-center">
               <Users className="h-4 w-4 mr-2" />
               User Management
@@ -111,6 +122,10 @@ export default function Admin() {
           
           <TabsContent value="data-import">
             <DataImportTab setActiveTab={setActiveTab} />
+          </TabsContent>
+          
+          <TabsContent value="system-settings">
+            <SystemSettingsTab />
           </TabsContent>
           
           <TabsContent value="users">
@@ -2079,6 +2094,697 @@ function DataImportTab({ setActiveTab }: { setActiveTab: (tab: string) => void }
   );
 }
 
+function SystemSettingsTab() {
+  const { toast } = useToast();
+  
+  // Achievement threshold settings
+  const [thresholds, setThresholds] = useState({
+    tasks_completed: 10,
+    customer_health_improved: 5,
+    feedback_collected: 5,
+    playbooks_executed: 5,
+    red_zone_resolved: 3,
+    login_streak: 5
+  });
+
+  // Badge configuration
+  const [badgeConfig, setBadgeConfig] = useState({
+    tasks_completed: { icon: 'trophy', color: 'amber' },
+    customer_health_improved: { icon: 'zap', color: 'teal' },
+    feedback_collected: { icon: 'star', color: 'indigo' },
+    playbooks_executed: { icon: 'award', color: 'blue' },
+    red_zone_resolved: { icon: 'clock', color: 'pink' },
+    login_streak: { icon: 'user', color: 'purple' }
+  });
+  
+  // XP configuration
+  const [xpConfig, setXpConfig] = useState({
+    tasks_completed: 100,
+    customer_health_improved: 150,
+    feedback_collected: 75,
+    playbooks_executed: 125,
+    red_zone_resolved: 200,
+    login_streak: 50
+  });
+  
+  // Notification settings
+  const [notificationConfig, setNotificationConfig] = useState({
+    enableAchievementNotifications: true,
+    notifyOnLevelUp: true,
+    showBadgesInProfile: true,
+    showAchievementsInDashboard: true
+  });
+
+  // Custom metrics settings
+  const [customMetrics, setCustomMetrics] = useState([
+    { id: 1, name: 'Customer Retention Rate', formula: 'retained_customers / total_customers * 100', target: 90, display: true },
+    { id: 2, name: 'Average Response Time', formula: 'total_response_time / total_responses', target: 24, display: true },
+    { id: 3, name: 'Task Completion Rate', formula: 'completed_tasks / total_tasks * 100', target: 85, display: true }
+  ]);
+  
+  // Dummy fetch for settings
+  React.useEffect(() => {
+    // In a real app, this would be a fetch to get saved settings
+    const fetchSettings = async () => {
+      try {
+        // Simulated successful fetch
+        toast({
+          title: "Settings Loaded",
+          description: "System settings have been loaded successfully.",
+        });
+      } catch (error) {
+        console.error("Error loading settings:", error);
+        toast({
+          title: "Failed to Load Settings",
+          description: "There was an error loading system settings.",
+          variant: "destructive",
+        });
+      }
+    };
+    
+    fetchSettings();
+  }, [toast]);
+  
+  // Save changes handler
+  const handleSaveSettings = () => {
+    try {
+      // In a real app, this would be a POST request to save all settings
+      localStorage.setItem('achievement_thresholds', JSON.stringify(thresholds));
+      localStorage.setItem('badge_config', JSON.stringify(badgeConfig));
+      localStorage.setItem('xp_config', JSON.stringify(xpConfig));
+      localStorage.setItem('notification_config', JSON.stringify(notificationConfig));
+      localStorage.setItem('custom_metrics', JSON.stringify(customMetrics));
+      
+      toast({
+        title: "Settings Saved",
+        description: "System settings have been saved successfully.",
+      });
+    } catch (error) {
+      console.error("Error saving settings:", error);
+      toast({
+        title: "Failed to Save",
+        description: "There was an error saving system settings.",
+        variant: "destructive",
+      });
+    }
+  };
+  
+  // Handle threshold changes
+  const handleThresholdChange = (key: string, value: string) => {
+    const numValue = parseInt(value);
+    if (!isNaN(numValue)) {
+      setThresholds(prev => ({
+        ...prev,
+        [key]: numValue
+      }));
+    }
+  };
+  
+  // Handle XP config changes
+  const handleXpChange = (key: string, value: string) => {
+    const numValue = parseInt(value);
+    if (!isNaN(numValue)) {
+      setXpConfig(prev => ({
+        ...prev,
+        [key]: numValue
+      }));
+    }
+  };
+  
+  // Handle notification config changes
+  const handleNotificationChange = (key: string, value: boolean) => {
+    setNotificationConfig(prev => ({
+      ...prev,
+      [key]: value
+    }));
+  };
+  
+  // Handle badge config changes
+  const handleBadgeConfigChange = (achievementType: string, field: 'icon' | 'color', value: string) => {
+    setBadgeConfig(prev => ({
+      ...prev,
+      [achievementType]: {
+        ...prev[achievementType as keyof typeof prev],
+        [field]: value
+      }
+    }));
+  };
+  
+  // Add custom metric
+  const [newMetric, setNewMetric] = useState({
+    name: '',
+    formula: '',
+    target: 0,
+    display: true
+  });
+  
+  const handleAddCustomMetric = () => {
+    if (newMetric.name && newMetric.formula) {
+      setCustomMetrics(prev => [
+        ...prev,
+        {
+          id: Date.now(),
+          name: newMetric.name,
+          formula: newMetric.formula,
+          target: newMetric.target,
+          display: newMetric.display
+        }
+      ]);
+      
+      // Reset form
+      setNewMetric({
+        name: '',
+        formula: '',
+        target: 0,
+        display: true
+      });
+      
+      toast({
+        title: "Metric Added",
+        description: `Custom metric "${newMetric.name}" has been added.`,
+      });
+    } else {
+      toast({
+        title: "Validation Error",
+        description: "Name and formula are required for custom metrics.",
+        variant: "destructive",
+      });
+    }
+  };
+  
+  // Delete custom metric
+  const handleDeleteMetric = (id: number) => {
+    setCustomMetrics(prev => prev.filter(metric => metric.id !== id));
+    toast({
+      title: "Metric Deleted",
+      description: "Custom metric has been deleted.",
+    });
+  };
+  
+  // Toggle metric display
+  const handleToggleMetricDisplay = (id: number) => {
+    setCustomMetrics(prev => prev.map(metric => 
+      metric.id === id ? { ...metric, display: !metric.display } : metric
+    ));
+  };
+  
+  return (
+    <div className="space-y-6">
+      <div className="flex items-center justify-between">
+        <h2 className="text-2xl font-bold">System Settings</h2>
+        <Button onClick={handleSaveSettings}>
+          <Save className="h-4 w-4 mr-2" />
+          Save All Settings
+        </Button>
+      </div>
+      
+      <Tabs defaultValue="achievement-settings">
+        <TabsList className="mb-4">
+          <TabsTrigger value="achievement-settings">
+            <Trophy className="h-4 w-4 mr-2" />
+            Achievement Settings
+          </TabsTrigger>
+          <TabsTrigger value="notification-settings">
+            <Bell className="h-4 w-4 mr-2" />
+            Notification Settings
+          </TabsTrigger>
+          <TabsTrigger value="badge-settings">
+            <BadgeCheck className="h-4 w-4 mr-2" />
+            Badge Configuration
+          </TabsTrigger>
+          <TabsTrigger value="custom-metrics">
+            <LineChart className="h-4 w-4 mr-2" />
+            Custom Metrics
+          </TabsTrigger>
+        </TabsList>
+        
+        <TabsContent value="achievement-settings">
+          <Card>
+            <CardHeader>
+              <CardTitle>Achievement Thresholds</CardTitle>
+              <CardDescription>
+                Configure the thresholds for achievement unlocks
+              </CardDescription>
+            </CardHeader>
+            <CardContent className="space-y-4">
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <div className="space-y-2">
+                  <Label htmlFor="tasks_completed_threshold">Tasks Completed</Label>
+                  <div className="flex items-center">
+                    <Input
+                      id="tasks_completed_threshold"
+                      type="number"
+                      value={thresholds.tasks_completed}
+                      onChange={(e) => handleThresholdChange('tasks_completed', e.target.value)}
+                    />
+                    <span className="ml-2 text-sm text-muted-foreground">tasks</span>
+                  </div>
+                  <p className="text-xs text-muted-foreground">
+                    Number of tasks a user needs to complete to earn this achievement
+                  </p>
+                </div>
+                
+                <div className="space-y-2">
+                  <Label htmlFor="customer_health_improved_threshold">Customer Health Improved</Label>
+                  <div className="flex items-center">
+                    <Input
+                      id="customer_health_improved_threshold"
+                      type="number"
+                      value={thresholds.customer_health_improved}
+                      onChange={(e) => handleThresholdChange('customer_health_improved', e.target.value)}
+                    />
+                    <span className="ml-2 text-sm text-muted-foreground">customers</span>
+                  </div>
+                  <p className="text-xs text-muted-foreground">
+                    Number of customer health scores improved to earn this achievement
+                  </p>
+                </div>
+                
+                <div className="space-y-2">
+                  <Label htmlFor="feedback_collected_threshold">Feedback Collected</Label>
+                  <div className="flex items-center">
+                    <Input
+                      id="feedback_collected_threshold"
+                      type="number"
+                      value={thresholds.feedback_collected}
+                      onChange={(e) => handleThresholdChange('feedback_collected', e.target.value)}
+                    />
+                    <span className="ml-2 text-sm text-muted-foreground">feedbacks</span>
+                  </div>
+                  <p className="text-xs text-muted-foreground">
+                    Number of customer feedback collected to earn this achievement
+                  </p>
+                </div>
+                
+                <div className="space-y-2">
+                  <Label htmlFor="playbooks_executed_threshold">Playbooks Executed</Label>
+                  <div className="flex items-center">
+                    <Input
+                      id="playbooks_executed_threshold"
+                      type="number"
+                      value={thresholds.playbooks_executed}
+                      onChange={(e) => handleThresholdChange('playbooks_executed', e.target.value)}
+                    />
+                    <span className="ml-2 text-sm text-muted-foreground">playbooks</span>
+                  </div>
+                  <p className="text-xs text-muted-foreground">
+                    Number of playbooks successfully executed to earn this achievement
+                  </p>
+                </div>
+                
+                <div className="space-y-2">
+                  <Label htmlFor="red_zone_resolved_threshold">Red Zone Resolved</Label>
+                  <div className="flex items-center">
+                    <Input
+                      id="red_zone_resolved_threshold"
+                      type="number"
+                      value={thresholds.red_zone_resolved}
+                      onChange={(e) => handleThresholdChange('red_zone_resolved', e.target.value)}
+                    />
+                    <span className="ml-2 text-sm text-muted-foreground">resolutions</span>
+                  </div>
+                  <p className="text-xs text-muted-foreground">
+                    Number of red zone situations resolved to earn this achievement
+                  </p>
+                </div>
+                
+                <div className="space-y-2">
+                  <Label htmlFor="login_streak_threshold">Login Streak</Label>
+                  <div className="flex items-center">
+                    <Input
+                      id="login_streak_threshold"
+                      type="number"
+                      value={thresholds.login_streak}
+                      onChange={(e) => handleThresholdChange('login_streak', e.target.value)}
+                    />
+                    <span className="ml-2 text-sm text-muted-foreground">days</span>
+                  </div>
+                  <p className="text-xs text-muted-foreground">
+                    Number of consecutive days logged in to earn this achievement
+                  </p>
+                </div>
+              </div>
+            </CardContent>
+          </Card>
+          
+          <Card className="mt-6">
+            <CardHeader>
+              <CardTitle>XP Configuration</CardTitle>
+              <CardDescription>
+                Configure the experience points awarded for each achievement type
+              </CardDescription>
+            </CardHeader>
+            <CardContent className="space-y-4">
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <div className="space-y-2">
+                  <Label htmlFor="tasks_completed_xp">Tasks Completed XP</Label>
+                  <div className="flex items-center">
+                    <Input
+                      id="tasks_completed_xp"
+                      type="number"
+                      value={xpConfig.tasks_completed}
+                      onChange={(e) => handleXpChange('tasks_completed', e.target.value)}
+                    />
+                    <span className="ml-2 text-sm text-muted-foreground">XP</span>
+                  </div>
+                </div>
+                
+                <div className="space-y-2">
+                  <Label htmlFor="customer_health_improved_xp">Customer Health Improved XP</Label>
+                  <div className="flex items-center">
+                    <Input
+                      id="customer_health_improved_xp"
+                      type="number"
+                      value={xpConfig.customer_health_improved}
+                      onChange={(e) => handleXpChange('customer_health_improved', e.target.value)}
+                    />
+                    <span className="ml-2 text-sm text-muted-foreground">XP</span>
+                  </div>
+                </div>
+                
+                <div className="space-y-2">
+                  <Label htmlFor="feedback_collected_xp">Feedback Collected XP</Label>
+                  <div className="flex items-center">
+                    <Input
+                      id="feedback_collected_xp"
+                      type="number"
+                      value={xpConfig.feedback_collected}
+                      onChange={(e) => handleXpChange('feedback_collected', e.target.value)}
+                    />
+                    <span className="ml-2 text-sm text-muted-foreground">XP</span>
+                  </div>
+                </div>
+                
+                <div className="space-y-2">
+                  <Label htmlFor="playbooks_executed_xp">Playbooks Executed XP</Label>
+                  <div className="flex items-center">
+                    <Input
+                      id="playbooks_executed_xp"
+                      type="number"
+                      value={xpConfig.playbooks_executed}
+                      onChange={(e) => handleXpChange('playbooks_executed', e.target.value)}
+                    />
+                    <span className="ml-2 text-sm text-muted-foreground">XP</span>
+                  </div>
+                </div>
+                
+                <div className="space-y-2">
+                  <Label htmlFor="red_zone_resolved_xp">Red Zone Resolved XP</Label>
+                  <div className="flex items-center">
+                    <Input
+                      id="red_zone_resolved_xp"
+                      type="number"
+                      value={xpConfig.red_zone_resolved}
+                      onChange={(e) => handleXpChange('red_zone_resolved', e.target.value)}
+                    />
+                    <span className="ml-2 text-sm text-muted-foreground">XP</span>
+                  </div>
+                </div>
+                
+                <div className="space-y-2">
+                  <Label htmlFor="login_streak_xp">Login Streak XP</Label>
+                  <div className="flex items-center">
+                    <Input
+                      id="login_streak_xp"
+                      type="number"
+                      value={xpConfig.login_streak}
+                      onChange={(e) => handleXpChange('login_streak', e.target.value)}
+                    />
+                    <span className="ml-2 text-sm text-muted-foreground">XP</span>
+                  </div>
+                </div>
+              </div>
+              
+              <div className="pt-4 border-t">
+                <h3 className="font-medium mb-2">Level Configuration</h3>
+                <p className="text-sm text-muted-foreground mb-2">
+                  Users level up every 1000 XP. Configure specific thresholds and rewards for each level.
+                </p>
+              </div>
+            </CardContent>
+          </Card>
+        </TabsContent>
+        
+        <TabsContent value="notification-settings">
+          <Card>
+            <CardHeader>
+              <CardTitle>Notification Settings</CardTitle>
+              <CardDescription>
+                Configure how achievement notifications are displayed to users
+              </CardDescription>
+            </CardHeader>
+            <CardContent className="space-y-6">
+              <div className="flex items-center justify-between">
+                <div className="space-y-0.5">
+                  <Label htmlFor="enable-achievement-notifications">Enable Achievement Notifications</Label>
+                  <p className="text-sm text-muted-foreground">
+                    Show notifications when users earn new achievements
+                  </p>
+                </div>
+                <Switch 
+                  id="enable-achievement-notifications"
+                  checked={notificationConfig.enableAchievementNotifications}
+                  onCheckedChange={(value) => handleNotificationChange('enableAchievementNotifications', value)}
+                />
+              </div>
+              
+              <div className="flex items-center justify-between">
+                <div className="space-y-0.5">
+                  <Label htmlFor="notify-level-up">Notify on Level Up</Label>
+                  <p className="text-sm text-muted-foreground">
+                    Show special notifications when users level up
+                  </p>
+                </div>
+                <Switch 
+                  id="notify-level-up"
+                  checked={notificationConfig.notifyOnLevelUp}
+                  onCheckedChange={(value) => handleNotificationChange('notifyOnLevelUp', value)}
+                />
+              </div>
+              
+              <div className="flex items-center justify-between">
+                <div className="space-y-0.5">
+                  <Label htmlFor="show-badges-profile">Show Badges in Profile</Label>
+                  <p className="text-sm text-muted-foreground">
+                    Display earned badges on user profiles
+                  </p>
+                </div>
+                <Switch 
+                  id="show-badges-profile"
+                  checked={notificationConfig.showBadgesInProfile}
+                  onCheckedChange={(value) => handleNotificationChange('showBadgesInProfile', value)}
+                />
+              </div>
+              
+              <div className="flex items-center justify-between">
+                <div className="space-y-0.5">
+                  <Label htmlFor="show-achievements-dashboard">Show Achievements in Dashboard</Label>
+                  <p className="text-sm text-muted-foreground">
+                    Display recent achievements on the dashboard
+                  </p>
+                </div>
+                <Switch 
+                  id="show-achievements-dashboard"
+                  checked={notificationConfig.showAchievementsInDashboard}
+                  onCheckedChange={(value) => handleNotificationChange('showAchievementsInDashboard', value)}
+                />
+              </div>
+            </CardContent>
+          </Card>
+        </TabsContent>
+        
+        <TabsContent value="badge-settings">
+          <Card>
+            <CardHeader>
+              <CardTitle>Badge Configuration</CardTitle>
+              <CardDescription>
+                Configure icons and colors for achievement badges
+              </CardDescription>
+            </CardHeader>
+            <CardContent>
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                {Object.entries(badgeConfig).map(([type, config]) => (
+                  <Card key={type} className="border-2">
+                    <CardHeader className="pb-2">
+                      <CardTitle className="text-base flex items-center">
+                        {type.split('_').map(word => word.charAt(0).toUpperCase() + word.slice(1)).join(' ')}
+                        <div className="ml-auto p-2 rounded-full bg-primary/10">
+                          {type === 'tasks_completed' && <Trophy className={`h-5 w-5 text-${config.color}-500`} />}
+                          {type === 'customer_health_improved' && <Zap className={`h-5 w-5 text-${config.color}-500`} />}
+                          {type === 'feedback_collected' && <Star className={`h-5 w-5 text-${config.color}-500`} />}
+                          {type === 'playbooks_executed' && <Award className={`h-5 w-5 text-${config.color}-500`} />}
+                          {type === 'red_zone_resolved' && <Clock className={`h-5 w-5 text-${config.color}-500`} />}
+                          {type === 'login_streak' && <UserIcon className={`h-5 w-5 text-${config.color}-500`} />}
+                        </div>
+                      </CardTitle>
+                    </CardHeader>
+                    <CardContent>
+                      <div className="space-y-3">
+                        <div className="space-y-1">
+                          <Label htmlFor={`${type}-icon`}>Icon</Label>
+                          <Select
+                            value={config.icon}
+                            onValueChange={(value) => handleBadgeConfigChange(type, 'icon', value)}
+                          >
+                            <SelectTrigger id={`${type}-icon`}>
+                              <SelectValue placeholder="Select icon" />
+                            </SelectTrigger>
+                            <SelectContent>
+                              <SelectItem value="trophy">Trophy</SelectItem>
+                              <SelectItem value="award">Award</SelectItem>
+                              <SelectItem value="star">Star</SelectItem>
+                              <SelectItem value="zap">Lightning</SelectItem>
+                              <SelectItem value="user">User</SelectItem>
+                              <SelectItem value="clock">Clock</SelectItem>
+                              <SelectItem value="heart">Heart</SelectItem>
+                              <SelectItem value="check">Checkmark</SelectItem>
+                              <SelectItem value="thumbsup">Thumbs Up</SelectItem>
+                            </SelectContent>
+                          </Select>
+                        </div>
+                        
+                        <div className="space-y-1">
+                          <Label htmlFor={`${type}-color`}>Color</Label>
+                          <Select
+                            value={config.color}
+                            onValueChange={(value) => handleBadgeConfigChange(type, 'color', value)}
+                          >
+                            <SelectTrigger id={`${type}-color`}>
+                              <SelectValue placeholder="Select color" />
+                            </SelectTrigger>
+                            <SelectContent>
+                              <SelectItem value="red">Red</SelectItem>
+                              <SelectItem value="amber">Amber</SelectItem>
+                              <SelectItem value="yellow">Yellow</SelectItem>
+                              <SelectItem value="green">Green</SelectItem>
+                              <SelectItem value="teal">Teal</SelectItem>
+                              <SelectItem value="blue">Blue</SelectItem>
+                              <SelectItem value="indigo">Indigo</SelectItem>
+                              <SelectItem value="purple">Purple</SelectItem>
+                              <SelectItem value="pink">Pink</SelectItem>
+                            </SelectContent>
+                          </Select>
+                        </div>
+                      </div>
+                    </CardContent>
+                  </Card>
+                ))}
+              </div>
+            </CardContent>
+          </Card>
+        </TabsContent>
+        
+        <TabsContent value="custom-metrics">
+          <Card>
+            <CardHeader>
+              <CardTitle>Custom Metrics</CardTitle>
+              <CardDescription>
+                Define custom metrics for advanced reporting
+              </CardDescription>
+            </CardHeader>
+            <CardContent>
+              <div className="space-y-6">
+                <div className="grid grid-cols-1 gap-4">
+                  <h3 className="text-lg font-medium">Add New Metric</h3>
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    <div className="space-y-2">
+                      <Label htmlFor="metric-name">Metric Name</Label>
+                      <Input
+                        id="metric-name"
+                        value={newMetric.name}
+                        onChange={(e) => setNewMetric(prev => ({ ...prev, name: e.target.value }))}
+                        placeholder="e.g. Customer Satisfaction Score"
+                      />
+                    </div>
+                    
+                    <div className="space-y-2">
+                      <Label htmlFor="metric-formula">Formula/Calculation</Label>
+                      <Input
+                        id="metric-formula"
+                        value={newMetric.formula}
+                        onChange={(e) => setNewMetric(prev => ({ ...prev, formula: e.target.value }))}
+                        placeholder="e.g. sum(satisfaction_scores) / count(responses)"
+                      />
+                    </div>
+                    
+                    <div className="space-y-2">
+                      <Label htmlFor="metric-target">Target Value</Label>
+                      <Input
+                        id="metric-target"
+                        type="number"
+                        value={newMetric.target}
+                        onChange={(e) => setNewMetric(prev => ({ ...prev, target: parseFloat(e.target.value) || 0 }))}
+                        placeholder="e.g. 90"
+                      />
+                    </div>
+                    
+                    <div className="flex items-center space-x-2 pt-8">
+                      <Checkbox
+                        id="metric-display"
+                        checked={newMetric.display}
+                        onCheckedChange={(checked) => setNewMetric(prev => ({ ...prev, display: checked === true }))}
+                      />
+                      <Label htmlFor="metric-display">Display on dashboard</Label>
+                    </div>
+                  </div>
+                  
+                  <Button className="w-full md:w-auto" onClick={handleAddCustomMetric}>
+                    Add Metric
+                  </Button>
+                </div>
+                
+                <div className="pt-4 border-t">
+                  <h3 className="text-lg font-medium mb-4">Current Custom Metrics</h3>
+                  
+                  <div className="rounded-md border">
+                    <Table>
+                      <TableHeader>
+                        <TableRow>
+                          <TableHead>Name</TableHead>
+                          <TableHead>Formula</TableHead>
+                          <TableHead>Target</TableHead>
+                          <TableHead>Display</TableHead>
+                          <TableHead className="text-right">Actions</TableHead>
+                        </TableRow>
+                      </TableHeader>
+                      <TableBody>
+                        {customMetrics.map((metric) => (
+                          <TableRow key={metric.id}>
+                            <TableCell className="font-medium">{metric.name}</TableCell>
+                            <TableCell>
+                              <code className="p-1 bg-muted rounded text-xs">{metric.formula}</code>
+                            </TableCell>
+                            <TableCell>{metric.target}</TableCell>
+                            <TableCell>
+                              <Switch
+                                checked={metric.display}
+                                onCheckedChange={() => handleToggleMetricDisplay(metric.id)}
+                              />
+                            </TableCell>
+                            <TableCell className="text-right">
+                              <Button
+                                variant="ghost"
+                                size="icon"
+                                onClick={() => handleDeleteMetric(metric.id)}
+                              >
+                                <Trash2 className="h-4 w-4 text-destructive" />
+                              </Button>
+                            </TableCell>
+                          </TableRow>
+                        ))}
+                      </TableBody>
+                    </Table>
+                  </div>
+                </div>
+              </div>
+            </CardContent>
+          </Card>
+        </TabsContent>
+      </Tabs>
+    </div>
+  );
+}
+
 function UserManagementTab() {
   const { data: users, isLoading } = useQuery({
     queryKey: ['/api/users'],
@@ -2139,7 +2845,7 @@ function UserManagementTab() {
           <Dialog open={isCreateDialogOpen} onOpenChange={setIsCreateDialogOpen}>
             <DialogTrigger asChild>
               <Button>
-                <User className="h-4 w-4 mr-2" />
+                <UserIcon className="h-4 w-4 mr-2" />
                 New User
               </Button>
             </DialogTrigger>

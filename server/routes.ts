@@ -1011,6 +1011,99 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
   
+  // System Settings - Achievement Configuration
+  app.get('/api/admin/system/achievement-thresholds', async (req, res) => {
+    try {
+      // Get achievement thresholds from storage
+      const thresholds = await storage.getAchievementThresholds();
+      res.json(thresholds);
+    } catch (error) {
+      console.error('Error fetching achievement thresholds:', error);
+      res.status(500).json({ message: 'Error fetching achievement thresholds' });
+    }
+  });
+  
+  app.post('/api/admin/system/achievement-thresholds', async (req, res) => {
+    try {
+      // Save achievement thresholds to storage
+      const thresholds = req.body;
+      const result = await storage.saveAchievementThresholds(thresholds);
+      res.json(result);
+    } catch (error) {
+      console.error('Error saving achievement thresholds:', error);
+      res.status(500).json({ message: 'Error saving achievement thresholds' });
+    }
+  });
+  
+  app.get('/api/admin/system/badge-config', async (req, res) => {
+    try {
+      // Get badge configuration from storage
+      const badgeConfig = await storage.getBadgeConfiguration();
+      res.json(badgeConfig);
+    } catch (error) {
+      console.error('Error fetching badge configuration:', error);
+      res.status(500).json({ message: 'Error fetching badge configuration' });
+    }
+  });
+  
+  app.post('/api/admin/system/badge-config', async (req, res) => {
+    try {
+      // Save badge configuration to storage
+      const badgeConfig = req.body;
+      const result = await storage.saveBadgeConfiguration(badgeConfig);
+      res.json(result);
+    } catch (error) {
+      console.error('Error saving badge configuration:', error);
+      res.status(500).json({ message: 'Error saving badge configuration' });
+    }
+  });
+  
+  app.get('/api/admin/system/notification-settings', async (req, res) => {
+    try {
+      // Get notification settings from storage
+      const notificationSettings = await storage.getNotificationSettings();
+      res.json(notificationSettings);
+    } catch (error) {
+      console.error('Error fetching notification settings:', error);
+      res.status(500).json({ message: 'Error fetching notification settings' });
+    }
+  });
+  
+  app.post('/api/admin/system/notification-settings', async (req, res) => {
+    try {
+      // Save notification settings to storage
+      const notificationSettings = req.body;
+      const result = await storage.saveNotificationSettings(notificationSettings);
+      res.json(result);
+    } catch (error) {
+      console.error('Error saving notification settings:', error);
+      res.status(500).json({ message: 'Error saving notification settings' });
+    }
+  });
+  
+  app.get('/api/admin/system/xp-config', async (req, res) => {
+    try {
+      // Get XP configuration from storage
+      const xpConfig = await storage.getXpConfiguration();
+      res.json(xpConfig);
+    } catch (error) {
+      console.error('Error fetching XP configuration:', error);
+      res.status(500).json({ message: 'Error fetching XP configuration' });
+    }
+  });
+  
+  app.post('/api/admin/system/xp-config', async (req, res) => {
+    try {
+      // Save XP configuration to storage
+      const xpConfig = req.body;
+      const result = await storage.saveXpConfiguration(xpConfig);
+      res.json(result);
+    } catch (error) {
+      console.error('Error saving XP configuration:', error);
+      res.status(500).json({ message: 'Error saving XP configuration' });
+    }
+  });
+
   // MySQL Saved Queries
   app.get('/api/admin/mysql-saved-queries', async (req, res) => {
     try {
