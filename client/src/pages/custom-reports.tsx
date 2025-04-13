@@ -852,7 +852,18 @@ export default function CustomReports() {
                           size="sm"
                           onClick={(e) => {
                             e.stopPropagation();
-                            // Edit functionality
+                            setSelectedReportId(report.id);
+                            const reportToEdit = reports.find(r => r.id === report.id);
+                            if (reportToEdit) {
+                              reportForm.reset({
+                                name: reportToEdit.name,
+                                description: reportToEdit.description,
+                                chart_type: reportToEdit.chart_type,
+                                is_public: reportToEdit.is_public,
+                                filters: reportToEdit.filters || {}
+                              });
+                              setOpenDialog('report');
+                            }
                           }}
                         >
                           <Edit className="h-4 w-4" />
