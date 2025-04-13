@@ -710,7 +710,7 @@ export default function CustomReports() {
           <TabsContent value="my-reports">
             <div className="flex flex-col items-center justify-center h-64 text-center">
               <div className="bg-gray-100 p-4 rounded-full mb-4">
-                <BarIcon className="h-8 w-8 text-gray-400" />
+                <BarChart2 className="h-8 w-8 text-gray-400" />
               </div>
               <h3 className="text-lg font-medium text-gray-900">My Reports</h3>
               <p className="mt-1 text-sm text-gray-500 max-w-sm">
@@ -767,7 +767,7 @@ export default function CustomReports() {
                     <CardTitle className="flex justify-between items-center">
                       <span>Report Preview</span>
                       {report.chart_type === 'line' && <LineChartIcon className="h-5 w-5" />}
-                      {report.chart_type === 'bar' && <BarIcon className="h-5 w-5" />}
+                      {report.chart_type === 'bar' && <BarChart2 className="h-5 w-5" />}
                       {report.chart_type === 'pie' && <PieChartIcon className="h-5 w-5" />}
                       {report.chart_type === 'area' && <AreaChart className="h-5 w-5" />}
                     </CardTitle>
