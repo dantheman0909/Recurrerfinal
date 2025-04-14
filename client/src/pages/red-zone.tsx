@@ -25,10 +25,12 @@ import { Link } from "wouter";
 import { format } from "date-fns";
 import { RedZoneAlert } from "@shared/schema";
 import { AlertSeverity } from "@shared/types";
+import { ViewReportModal } from "@/components/red-zone/view-report-modal";
 
 export default function RedZone() {
   const [searchTerm, setSearchTerm] = useState("");
   const [severityFilter, setSeverityFilter] = useState<string | null>(null);
+  const [reportModalOpen, setReportModalOpen] = useState(false);
   
   const { data: alerts, isLoading } = useQuery({
     queryKey: ['/api/red-zone'],
@@ -52,7 +54,7 @@ export default function RedZone() {
     const matchesSeverity = !severityFilter || alert.severity === severityFilter;
     
     return matchesSearch && matchesSeverity;
-  });
+  }) || [];
   
   const getSeverityBadgeStyles = (severity: AlertSeverity) => {
     switch (severity) {
@@ -82,9 +84,9 @@ export default function RedZone() {
   
   // Group alerts by severity
   const alertsBySeverity = {
-    critical: filteredAlerts?.filter((alert: RedZoneAlert) => alert.severity === 'critical') || [],
-    high_risk: filteredAlerts?.filter((alert: RedZoneAlert) => alert.severity === 'high_risk') || [],
-    attention_needed: filteredAlerts?.filter((alert: RedZoneAlert) => alert.severity === 'attention_needed') || [],
+    critical: filteredAlerts.filter((alert: RedZoneAlert) => alert.severity === 'critical') || [],
+    high_risk: filteredAlerts.filter((alert: RedZoneAlert) => alert.severity === 'high_risk') || [],
+    attention_needed: filteredAlerts.filter((alert: RedZoneAlert) => alert.severity === 'attention_needed') || [],
   };
   
   // Calculate severity counts for the summary
@@ -92,6 +94,13 @@ export default function RedZone() {
   const highRiskCount = alertsBySeverity.high_risk.length;
   const attentionNeededCount = alertsBySeverity.attention_needed.length;
   const totalAlerts = criticalCount + highRiskCount + attentionNeededCount;
+  
+  // Data for the report modal
+  const alertsData = {
+    critical: criticalCount,
+    highRisk: highRiskCount,
+    attentionNeeded: attentionNeededCount
+  };
 
   return (
     <>
@@ -110,7 +119,7 @@ export default function RedZone() {
               </div>
             </div>
             <div className="mt-4 flex md:mt-0 md:ml-4">
-              <Button variant="outline" className="mr-2">
+              <Button variant="outline" className="mr-2" onClick={() => setReportModalOpen(true)}>
                 <BarChart2 className="h-4 w-4 mr-2" />
                 View Report
               </Button>
@@ -118,6 +127,13 @@ export default function RedZone() {
           </div>
         </div>
       </div>
+      
+      {/* View Report Modal */}
+      <ViewReportModal 
+        open={reportModalOpen}
+        onOpenChange={setReportModalOpen}
+        alertsData={alertsData}
+      />
       
       <div className="px-4 sm:px-6 lg:px-8 py-6">
         {/* Alert Summary Cards */}
