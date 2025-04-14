@@ -217,8 +217,7 @@ export function AnnotationList({
         data: {
           content,
           user_id: currentUserId,
-          entity_type: entityType,
-          entity_id: entityId
+          type: 'comment' // Default to comment type for replies
         }
       });
       return response.json();
