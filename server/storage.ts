@@ -71,6 +71,7 @@ export interface IStorage {
   // Customers
   getCustomers(): Promise<Customer[]>;
   getCustomer(id: number): Promise<Customer | undefined>;
+  getCustomerByRecurrerId(recurrerId: string): Promise<Customer | undefined>;
   createCustomer(customer: InsertCustomer): Promise<Customer>;
   updateCustomer(id: number, customer: Partial<Customer>): Promise<Customer | undefined>;
   getCustomerTableFields(): Promise<string[]>;
@@ -370,6 +371,10 @@ export class MemStorage implements IStorage {
 
   async getCustomer(id: number): Promise<Customer | undefined> {
     return this.customers.get(id);
+  }
+  
+  async getCustomerByRecurrerId(recurrerId: string): Promise<Customer | undefined> {
+    return Array.from(this.customers.values()).find(customer => customer.recurrer_id === recurrerId);
   }
 
   async createCustomer(customer: InsertCustomer): Promise<Customer> {
@@ -924,6 +929,11 @@ export class DatabaseStorage implements IStorage {
 
   async getCustomer(id: number): Promise<Customer | undefined> {
     const [customer] = await db.select().from(customers).where(eq(customers.id, id));
+    return customer;
+  }
+  
+  async getCustomerByRecurrerId(recurrerId: string): Promise<Customer | undefined> {
+    const [customer] = await db.select().from(customers).where(eq(customers.recurrer_id, recurrerId));
     return customer;
   }
 
