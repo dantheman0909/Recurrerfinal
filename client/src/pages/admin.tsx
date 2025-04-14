@@ -2054,24 +2054,76 @@ function DataImportTab({ setActiveTab }: { setActiveTab: (tab: string) => void }
             </div>
             
             <div className="border rounded-md p-5">
-              <h3 className="text-md font-medium mb-4">Required Fields</h3>
+              <h3 className="text-md font-medium mb-4">Required and Optional Fields</h3>
               <div className="grid grid-cols-1 md:grid-cols-2 gap-x-8 gap-y-4">
+                {/* Required Fields - marked with red asterisk */}
                 <div>
                   <div className="flex items-start">
                     <span className="text-red-500 mr-1">*</span>
                     <div>
                       <p className="font-medium text-sm">name</p>
-                      <p className="text-xs text-gray-500">Customer company name (mandatory)</p>
+                      <p className="text-xs text-gray-500">Company or customer name (required)</p>
                     </div>
                   </div>
                 </div>
                 
                 <div>
                   <div className="flex items-start">
-                    <span className="text-red-500 mr-1 opacity-0">*</span>
+                    <span className="text-red-500 mr-1">*</span>
                     <div>
                       <p className="font-medium text-sm">recurrer_id</p>
-                      <p className="text-xs text-gray-500">Auto-assigned by Recurrer (leave blank for new customers)</p>
+                      <p className="text-xs text-gray-500">Unique identifier in Recurrer (auto-generated if missing, required)</p>
+                    </div>
+                  </div>
+                </div>
+                
+                <div>
+                  <div className="flex items-start">
+                    <span className="text-red-500 mr-1">*</span>
+                    <div>
+                      <p className="font-medium text-sm">contact_email</p>
+                      <p className="text-xs text-gray-500">Primary contact email address (required)</p>
+                    </div>
+                  </div>
+                </div>
+                
+                <div>
+                  <div className="flex items-start">
+                    <span className="text-red-500 mr-1">*</span>
+                    <div>
+                      <p className="font-medium text-sm">contact_phone</p>
+                      <p className="text-xs text-gray-500">Primary contact phone number (required)</p>
+                    </div>
+                  </div>
+                </div>
+                
+                <div>
+                  <div className="flex items-start">
+                    <span className="text-red-500 mr-1">*</span>
+                    <div>
+                      <p className="font-medium text-sm">chargebee_customer_id</p>
+                      <p className="text-xs text-gray-500">Chargebee customer identifier (required)</p>
+                    </div>
+                  </div>
+                </div>
+                
+                <div>
+                  <div className="flex items-start">
+                    <span className="text-red-500 mr-1">*</span>
+                    <div>
+                      <p className="font-medium text-sm">chargebee_subscription_id</p>
+                      <p className="text-xs text-gray-500">Chargebee subscription identifier (required)</p>
+                    </div>
+                  </div>
+                </div>
+                
+                {/* Optional Fields */}
+                <div>
+                  <div className="flex items-start">
+                    <span className="text-red-500 mr-1 opacity-0">*</span>
+                    <div>
+                      <p className="font-medium text-sm">reelo_id</p>
+                      <p className="text-xs text-gray-500">Reelo system identifier</p>
                     </div>
                   </div>
                 </div>
@@ -2082,16 +2134,6 @@ function DataImportTab({ setActiveTab }: { setActiveTab: (tab: string) => void }
                     <div>
                       <p className="font-medium text-sm">industry</p>
                       <p className="text-xs text-gray-500">Customer's business industry</p>
-                    </div>
-                  </div>
-                </div>
-                
-                <div>
-                  <div className="flex items-start">
-                    <span className="text-red-500 mr-1 opacity-0">*</span>
-                    <div>
-                      <p className="font-medium text-sm">contact_email</p>
-                      <p className="text-xs text-gray-500">Primary contact email address</p>
                     </div>
                   </div>
                 </div>
@@ -2111,7 +2153,7 @@ function DataImportTab({ setActiveTab }: { setActiveTab: (tab: string) => void }
                     <span className="text-red-500 mr-1 opacity-0">*</span>
                     <div>
                       <p className="font-medium text-sm">renewal_date</p>
-                      <p className="text-xs text-gray-500">Contract renewal date (YYYY-MM-DD)</p>
+                      <p className="text-xs text-gray-500">Contract renewal date (YYYY-MM-DD format)</p>
                     </div>
                   </div>
                 </div>
@@ -2121,7 +2163,7 @@ function DataImportTab({ setActiveTab }: { setActiveTab: (tab: string) => void }
                     <span className="text-red-500 mr-1 opacity-0">*</span>
                     <div>
                       <p className="font-medium text-sm">mrr</p>
-                      <p className="text-xs text-gray-500">Monthly Recurring Revenue</p>
+                      <p className="text-xs text-gray-500">Monthly Recurring Revenue (numeric)</p>
                     </div>
                   </div>
                 </div>
@@ -2131,30 +2173,17 @@ function DataImportTab({ setActiveTab }: { setActiveTab: (tab: string) => void }
                     <span className="text-red-500 mr-1 opacity-0">*</span>
                     <div>
                       <p className="font-medium text-sm">arr</p>
-                      <p className="text-xs text-gray-500">Annual Recurring Revenue</p>
+                      <p className="text-xs text-gray-500">Annual Recurring Revenue (numeric)</p>
                     </div>
                   </div>
                 </div>
-                
-                <div>
-                  <div className="flex items-start">
-                    <span className="text-red-500 mr-1 opacity-0">*</span>
-                    <div>
-                      <p className="font-medium text-sm">health_status</p>
-                      <p className="text-xs text-gray-500">Customer health (healthy, at_risk, red_zone)</p>
-                    </div>
-                  </div>
-                </div>
-                
-                <div>
-                  <div className="flex items-start">
-                    <span className="text-red-500 mr-1 opacity-0">*</span>
-                    <div>
-                      <p className="font-medium text-sm">mysql_company_id</p>
-                      <p className="text-xs text-gray-500">MySQL database unique ID (for integration)</p>
-                    </div>
-                  </div>
-                </div>
+              </div>
+              
+              <div className="mt-4">
+                <p className="text-xs text-gray-500">
+                  <span className="font-medium">Note:</span> CSV import supports over 30 additional fields including growth_subscription_count, active_stores, health_status, 
+                  loyalty metrics, customer engagement metrics, and more. Download the sample file to see all available fields.
+                </p>
               </div>
             </div>
             
