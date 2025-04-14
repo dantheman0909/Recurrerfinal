@@ -123,6 +123,12 @@ export default function RedZone() {
                 <BarChart2 className="h-4 w-4 mr-2" />
                 View Report
               </Button>
+              <Button variant="default" asChild>
+                <Link href="/redzone-settings">
+                  <Filter className="h-4 w-4 mr-2" />
+                  Configure Rules
+                </Link>
+              </Button>
             </div>
           </div>
         </div>

@@ -10,11 +10,26 @@ import {
   BarChart2,
   AlertTriangle,
   Settings,
-  XCircle
+  XCircle,
+  LucideIcon
 } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { GradientCard } from "../ui/gradient-card";
 import { Button } from "../ui/button";
+
+interface SubItem {
+  name: string;
+  href: string;
+  icon: LucideIcon;
+}
+
+interface NavigationItem {
+  name: string;
+  href: string;
+  icon: LucideIcon;
+  badgeCount?: number;
+  subItems?: SubItem[];
+}
 
 interface SidebarProps {
   open: boolean;
@@ -30,13 +45,21 @@ export default function Sidebar({ open, setOpen }: SidebarProps) {
     avatar: ""
   };
 
-  const navigationItems = [
+  const navigationItems: NavigationItem[] = [
     { name: "Dashboard", href: "/", icon: Home },
     { name: "Customer 360", href: "/customers", icon: Users },
     { name: "Task Management", href: "/tasks", icon: CheckSquare },
     { name: "Playbooks", href: "/playbooks", icon: Layers },
     { name: "Reports", href: "/reports", icon: BarChart2 },
-    { name: "Red Zone", href: "/red-zone", icon: AlertTriangle, badgeCount: 12 },
+    { 
+      name: "Red Zone", 
+      href: "/red-zone", 
+      icon: AlertTriangle, 
+      badgeCount: 12,
+      subItems: [
+        { name: "Settings", href: "/redzone-settings", icon: Settings }
+      ]
+    },
     { name: "Admin", href: "/admin", icon: Settings }
   ];
   
@@ -51,10 +74,11 @@ export default function Sidebar({ open, setOpen }: SidebarProps) {
       <nav className="flex-1 px-2 pb-4 space-y-1">
         {navigationItems.map((item) => {
           const isActive = location === item.href;
+          const hasSubItems = item.subItems && item.subItems.length > 0;
           const Icon = item.icon;
           
           return (
-            <div key={item.name}>
+            <div key={item.name} className="space-y-1">
               <Link href={item.href}>
                 <div
                   className={cn(
@@ -81,6 +105,32 @@ export default function Sidebar({ open, setOpen }: SidebarProps) {
                   )}
                 </div>
               </Link>
+              
+              {/* Sub-items */}
+              {hasSubItems && (
+                <div className="ml-4 pl-4 border-l border-gray-200">
+                  {item.subItems.map((subItem) => {
+                    const isSubActive = location === subItem.href;
+                    const SubIcon = subItem.icon;
+                    
+                    return (
+                      <Link key={subItem.name} href={subItem.href}>
+                        <div
+                          className={cn(
+                            "group flex items-center px-3 py-2 text-sm font-medium rounded-md cursor-pointer",
+                            isSubActive
+                              ? "bg-gradient-to-br from-[#1E99A0] via-[#0D9298] to-[#16797E] text-white"
+                              : "text-gray-600 hover:bg-gray-100"
+                          )}
+                        >
+                          <SubIcon className="h-4 w-4 mr-3" />
+                          {subItem.name}
+                        </div>
+                      </Link>
+                    );
+                  })}
+                </div>
+              )}
             </div>
           );
         })}
