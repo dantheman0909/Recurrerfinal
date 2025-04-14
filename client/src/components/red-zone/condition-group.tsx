@@ -161,8 +161,11 @@ export const ConditionGroup: React.FC<ConditionGroupProps> = ({
               render={({ field }) => (
                 <FormItem className="flex-1">
                   <Select 
-                    value={field.value} 
-                    onValueChange={field.onChange}
+                    value={field.value || "__select_field__"} 
+                    onValueChange={(value) => {
+                      // Don't save the placeholder value to the form
+                      field.onChange(value === "__select_field__" ? "" : value);
+                    }}
                   >
                     <FormControl>
                       <SelectTrigger>
@@ -170,11 +173,11 @@ export const ConditionGroup: React.FC<ConditionGroupProps> = ({
                       </SelectTrigger>
                     </FormControl>
                     <SelectContent className="max-h-[300px]">
-                      <SelectItem value="">Select a field</SelectItem>
+                      <SelectItem value="__select_field__">Select a field</SelectItem>
                       
                       {availableFields?.customer && availableFields.customer.length > 0 && (
                         <>
-                          <SelectItem value="" disabled className="font-semibold">
+                          <SelectItem value="__customer_header__" disabled className="font-semibold">
                             Customer Fields
                           </SelectItem>
                           {availableFields.customer.map(field => (
@@ -187,7 +190,7 @@ export const ConditionGroup: React.FC<ConditionGroupProps> = ({
                       
                       {availableFields?.company && availableFields.company.length > 0 && (
                         <>
-                          <SelectItem value="" disabled className="font-semibold">
+                          <SelectItem value="__company_header__" disabled className="font-semibold">
                             Company Fields
                           </SelectItem>
                           {availableFields.company.map(field => (
@@ -200,7 +203,7 @@ export const ConditionGroup: React.FC<ConditionGroupProps> = ({
                       
                       {availableFields?.customer_metrics && availableFields.customer_metrics.length > 0 && (
                         <>
-                          <SelectItem value="" disabled className="font-semibold">
+                          <SelectItem value="__metrics_header__" disabled className="font-semibold">
                             Metrics Fields
                           </SelectItem>
                           {availableFields.customer_metrics.map(field => (
@@ -213,7 +216,7 @@ export const ConditionGroup: React.FC<ConditionGroupProps> = ({
                       
                       {availableFields?.subscription && availableFields.subscription.length > 0 && (
                         <>
-                          <SelectItem value="" disabled className="font-semibold">
+                          <SelectItem value="__subscription_header__" disabled className="font-semibold">
                             Subscription Fields
                           </SelectItem>
                           {availableFields.subscription.map(field => (
@@ -235,7 +238,7 @@ export const ConditionGroup: React.FC<ConditionGroupProps> = ({
               render={({ field }) => (
                 <FormItem className="w-32">
                   <Select 
-                    value={field.value} 
+                    value={field.value || "equals"} 
                     onValueChange={field.onChange}
                   >
                     <FormControl>
