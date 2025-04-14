@@ -24,7 +24,7 @@ type ImportSession = {
   newRecords: number;
   updatedRecords: number;
   errorCount: number;
-  errors: string[];
+  errors: ValidationError[];
 };
 
 // Store the last import session for reporting
@@ -339,17 +339,26 @@ export const importCSV = async (req: Request, res: Response) => {
       });
     }
     
-    // Only display the most important errors in the response
-    const errors: string[] = [];
+    // Store detailed validation errors for session tracking
+    const validationErrors: ValidationError[] = [];
+    if (result.validationErrors && result.validationErrors.length > 0) {
+      validationErrors.push(...result.validationErrors);
+    }
+    
+    // For response display only - conversion to strings
+    const errorStrings: string[] = [];
     if (result.validationErrors && result.validationErrors.length > 0) {
       result.validationErrors.forEach(err => {
-        errors.push(`Row ${err.row}: ${err.message} (${err.field}: ${err.value})`);
+        errorStrings.push(`Row ${err.row}: ${err.message} (${err.field}: ${err.value})`);
       });
     }
     
     // Import records into database
     const importedRecords: any[] = [];
     const updatedRecords: any[] = [];
+    
+    // Process error tracking
+    const errorsList: ValidationError[] = [];
     
     for (const record of result.records) {
       try {
@@ -367,7 +376,21 @@ export const importCSV = async (req: Request, res: Response) => {
         const missingFields = requiredFields.filter(field => !record[field]);
         
         if (missingFields.length > 0) {
-          errors.push(`Row ${record.row}: Missing required fields: ${missingFields.join(', ')}`);
+          // Create validation error for each missing field
+          missingFields.forEach(field => {
+            const validationError = {
+              row: record.row,
+              field,
+              value: '',
+              message: `${field} is required`
+            };
+            
+            validationErrors.push(validationError);
+            errorsList.push(validationError);
+          });
+          
+          // Add to error strings for response
+          errorStrings.push(`Row ${record.row}: Missing required fields: ${missingFields.join(', ')}`);
           continue; // Skip records missing required fields
         }
         
