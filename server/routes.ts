@@ -10,6 +10,8 @@ import {
   insertPlaybookSchema,
   insertPlaybookTaskSchema,
   insertRedZoneAlertSchema,
+  insertRedZoneRuleSchema,
+  insertRedZoneResolutionCriteriaSchema,
   insertMySQLSavedQuerySchema,
   insertNotificationSchema,
   insertUserAchievementSchema
@@ -497,19 +499,65 @@ export async function registerRoutes(app: Express): Promise<Server> {
   
   app.post('/api/red-zone/rules', async (req, res) => {
     try {
-      const ruleData = insertRedZoneRuleSchema.parse(req.body);
+      console.log('Attempting to create RedZone rule with data:', JSON.stringify(req.body));
+      
+      // Convert stringified JSON fields if they're passed as strings
+      const formattedData = {
+        ...req.body,
+        // Ensure conditions is a proper JSON object
+        conditions: typeof req.body.conditions === 'string' 
+          ? JSON.parse(req.body.conditions) 
+          : req.body.conditions,
+        // Ensure resolution_conditions is a proper JSON object or array
+        resolution_conditions: req.body.resolution_conditions && typeof req.body.resolution_conditions === 'string'
+          ? JSON.parse(req.body.resolution_conditions)
+          : req.body.resolution_conditions || []
+      };
+      
+      console.log('Formatted rule data:', JSON.stringify(formattedData));
+      const ruleData = insertRedZoneRuleSchema.parse(formattedData);
+      console.log('Validated rule data:', JSON.stringify(ruleData));
+      
       const rule = await storage.createRedZoneRule(ruleData);
       res.status(201).json(rule);
     } catch (error) {
-      res.status(400).json({ message: 'Invalid rule data', error });
+      console.error('Error creating RedZone rule:', error);
+      
+      // Provide more detailed error information
+      let errorMessage = 'Invalid rule data';
+      if (error.errors) {
+        errorMessage = `Validation failed: ${error.errors.map(e => e.message).join(', ')}`;
+      }
+      
+      res.status(400).json({ 
+        message: errorMessage,
+        error: error.errors || error.message || String(error)
+      });
     }
   });
   
   app.put('/api/red-zone/rules/:id', async (req, res) => {
     try {
       const ruleId = parseInt(req.params.id);
-      const ruleData = req.body;
-      const updatedRule = await storage.updateRedZoneRule(ruleId, ruleData);
+      console.log('Attempting to update RedZone rule with ID:', ruleId);
+      console.log('Rule update data:', JSON.stringify(req.body));
+      
+      // Convert stringified JSON fields if they're passed as strings
+      const formattedData = {
+        ...req.body,
+        // Ensure conditions is a proper JSON object
+        conditions: typeof req.body.conditions === 'string' 
+          ? JSON.parse(req.body.conditions) 
+          : req.body.conditions,
+        // Ensure resolution_conditions is a proper JSON object or array
+        resolution_conditions: req.body.resolution_conditions && typeof req.body.resolution_conditions === 'string'
+          ? JSON.parse(req.body.resolution_conditions)
+          : req.body.resolution_conditions || []
+      };
+      
+      console.log('Formatted update data:', JSON.stringify(formattedData));
+      
+      const updatedRule = await storage.updateRedZoneRule(ruleId, formattedData);
       
       if (!updatedRule) {
         return res.status(404).json({ message: 'RedZone rule not found' });
@@ -517,7 +565,18 @@ export async function registerRoutes(app: Express): Promise<Server> {
       
       res.json(updatedRule);
     } catch (error) {
-      res.status(400).json({ message: 'Invalid rule data', error });
+      console.error('Error updating RedZone rule:', error);
+      
+      // Provide more detailed error information
+      let errorMessage = 'Invalid rule data';
+      if (error.errors) {
+        errorMessage = `Validation failed: ${error.errors.map(e => e.message).join(', ')}`;
+      }
+      
+      res.status(400).json({ 
+        message: errorMessage,
+        error: error.errors || error.message || String(error)
+      });
     }
   });
   
