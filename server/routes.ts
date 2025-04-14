@@ -41,8 +41,8 @@ import {
 } from "./annotations";
 
 export async function registerRoutes(app: Express): Promise<Server> {
-  // Root endpoint for health checks
-  app.get('/', (req, res) => {
+  // Health check endpoint
+  app.get('/api/health', (req, res) => {
     res.status(200).json({ status: 'ok', message: 'Recurrer API is running' });
   });
 
