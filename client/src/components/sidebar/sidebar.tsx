@@ -57,7 +57,7 @@ export default function Sidebar({ open, setOpen }: SidebarProps) {
       icon: AlertTriangle, 
       badgeCount: 12,
       subItems: [
-        { name: "Settings", href: "/redzone-settings", icon: Settings }
+        { name: "Settings", href: "/red-zone/settings", icon: Settings }
       ]
     },
     { name: "Admin", href: "/admin", icon: Settings }
@@ -107,7 +107,7 @@ export default function Sidebar({ open, setOpen }: SidebarProps) {
               </Link>
               
               {/* Sub-items */}
-              {hasSubItems && (
+              {hasSubItems && item.subItems && (
                 <div className="ml-4 pl-4 border-l border-gray-200">
                   {item.subItems.map((subItem) => {
                     const isSubActive = location === subItem.href;

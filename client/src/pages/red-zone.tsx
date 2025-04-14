@@ -124,7 +124,7 @@ export default function RedZone() {
                 View Report
               </Button>
               <Button variant="default" asChild>
-                <Link href="/redzone-settings">
+                <Link href="/red-zone/settings">
                   <Filter className="h-4 w-4 mr-2" />
                   Configure Rules
                 </Link>
