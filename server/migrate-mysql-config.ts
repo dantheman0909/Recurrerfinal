@@ -55,11 +55,15 @@ async function migrateMySQLTables() {
       `));
       
       if (!checkStatusColumn[0]?.exists) {
-        console.log('Adding status column to mysql_config table...');
-        await db.execute(sql.raw(`
-          ALTER TABLE mysql_config
-          ADD COLUMN status TEXT DEFAULT 'active'
-        `));
+        try {
+          console.log('Adding status column to mysql_config table...');
+          await db.execute(sql.raw(`
+            ALTER TABLE mysql_config
+            ADD COLUMN status TEXT DEFAULT 'active'
+          `));
+        } catch (error) {
+          console.log('Status column may already exist in mysql_config');
+        }
       }
       
       // Check if sync_frequency column exists
@@ -71,11 +75,15 @@ async function migrateMySQLTables() {
       `));
       
       if (!checkSyncFrequencyColumn[0]?.exists) {
-        console.log('Adding sync_frequency column to mysql_config table...');
-        await db.execute(sql.raw(`
-          ALTER TABLE mysql_config
-          ADD COLUMN sync_frequency INTEGER DEFAULT 24
-        `));
+        try {
+          console.log('Adding sync_frequency column to mysql_config table...');
+          await db.execute(sql.raw(`
+            ALTER TABLE mysql_config
+            ADD COLUMN sync_frequency INTEGER DEFAULT 24
+          `));
+        } catch (error) {
+          console.log('sync_frequency column may already exist in mysql_config');
+        }
       }
       
       // Check if last_synced_at column exists
@@ -87,11 +95,15 @@ async function migrateMySQLTables() {
       `));
       
       if (!checkLastSyncedColumn[0]?.exists) {
-        console.log('Adding last_synced_at column to mysql_config table...');
-        await db.execute(sql.raw(`
-          ALTER TABLE mysql_config
-          ADD COLUMN last_synced_at TIMESTAMP
-        `));
+        try {
+          console.log('Adding last_synced_at column to mysql_config table...');
+          await db.execute(sql.raw(`
+            ALTER TABLE mysql_config
+            ADD COLUMN last_synced_at TIMESTAMP
+          `));
+        } catch (error) {
+          console.log('last_synced_at column may already exist in mysql_config');
+        }
       }
     }
     
@@ -137,11 +149,15 @@ async function migrateMySQLTables() {
       `));
       
       if (!checkFieldTypeColumn[0]?.exists) {
-        console.log('Adding field_type column to mysql_field_mappings table...');
-        await db.execute(sql.raw(`
-          ALTER TABLE mysql_field_mappings
-          ADD COLUMN field_type TEXT DEFAULT 'text'
-        `));
+        try {
+          console.log('Adding field_type column to mysql_field_mappings table...');
+          await db.execute(sql.raw(`
+            ALTER TABLE mysql_field_mappings
+            ADD COLUMN field_type TEXT DEFAULT 'text'
+          `));
+        } catch (error) {
+          console.log('field_type column may already exist in mysql_field_mappings');
+        }
       }
       
       // Check if is_key_field column exists
@@ -153,11 +169,15 @@ async function migrateMySQLTables() {
       `));
       
       if (!checkIsKeyFieldColumn[0]?.exists) {
-        console.log('Adding is_key_field column to mysql_field_mappings table...');
-        await db.execute(sql.raw(`
-          ALTER TABLE mysql_field_mappings
-          ADD COLUMN is_key_field BOOLEAN DEFAULT false
-        `));
+        try {
+          console.log('Adding is_key_field column to mysql_field_mappings table...');
+          await db.execute(sql.raw(`
+            ALTER TABLE mysql_field_mappings
+            ADD COLUMN is_key_field BOOLEAN DEFAULT false
+          `));
+        } catch (error) {
+          console.log('is_key_field column may already exist in mysql_field_mappings');
+        }
       }
     }
     
@@ -170,11 +190,15 @@ async function migrateMySQLTables() {
     `));
     
     if (!checkUpdatedFromMySQLColumn[0]?.exists) {
-      console.log('Adding updated_from_mysql_at column to customers table...');
-      await db.execute(sql.raw(`
-        ALTER TABLE customers
-        ADD COLUMN updated_from_mysql_at TIMESTAMP
-      `));
+      try {
+        console.log('Adding updated_from_mysql_at column to customers table...');
+        await db.execute(sql.raw(`
+          ALTER TABLE customers
+          ADD COLUMN updated_from_mysql_at TIMESTAMP
+        `));
+      } catch (error) {
+        console.log('updated_from_mysql_at column may already exist in customers table');
+      }
     }
 
     // Create MySQL saved queries table

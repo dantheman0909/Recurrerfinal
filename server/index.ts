@@ -209,6 +209,19 @@ app.post('/api/admin/chargebee-scheduler/:action', async (req, res) => {
 // Customer-specific external data route
 app.get('/api/customers/:id/external-data', getCustomerExternalData);
 
+// Health check endpoint for deployment
+app.get('/health', (req, res) => {
+  res.status(200).json({ status: 'ok', message: 'Service is healthy' });
+});
+
+// Root health check endpoint for deployment
+app.get('/', (req, res, next) => {
+  if (req.headers['user-agent']?.includes('health-check') || req.query.health === 'check') {
+    return res.status(200).json({ status: 'ok', message: 'Service is healthy' });
+  }
+  next();
+});
+
 (async () => {
   try {
     // Run database table alterations to ensure schema is up-to-date
