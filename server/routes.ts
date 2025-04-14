@@ -27,6 +27,13 @@ import {
   importMySQLDataToCustomer,
   getCustomerExternalData
 } from "./external-data";
+import { 
+  importCSV, 
+  exportCustomersCSV, 
+  previewCSVImport, 
+  downloadSampleCSV,
+  upload
+} from "./import";
 
 export async function registerRoutes(app: Express): Promise<Server> {
   // API Routes - All prefixed with /api

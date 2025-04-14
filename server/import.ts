@@ -1,6 +1,6 @@
 import { Request, Response } from 'express';
 import { db } from './db';
-import { customers } from '@shared/schema';
+import { customers, accountHealthEnum } from '@shared/schema';
 import { log } from './vite';
 import { randomUUID } from 'crypto';
 import { storage } from './storage';
@@ -8,6 +8,14 @@ import * as fs from 'fs';
 import * as path from 'path';
 import { fileURLToPath } from 'url';
 import multer from 'multer';
+
+// Define error types for better error reporting
+type ValidationError = {
+  row: number;
+  field: string;
+  value: string;
+  message: string;
+};
 
 // Helper function to sanitize input values
 const sanitizeValue = (value: string | null | undefined): string | null => {
@@ -17,7 +25,7 @@ const sanitizeValue = (value: string | null | undefined): string | null => {
   return value.trim();
 };
 
-// Convert string to proper type based on field name
+// More robust type conversion and validation
 const convertValueType = (field: string, value: string | null): any => {
   if (value === null) return null;
   
@@ -31,20 +39,130 @@ const convertValueType = (field: string, value: string | null): any => {
        'next_month_anniversaries', 'customers_without_min_visits', 'percentage_of_inactive_customers',
        'negative_feedbacks_count', 'campaigns_sent_last_90_days', 'bills_received_last_30_days',
        'customers_acquired_last_30_days'].includes(field)) {
-    return parseInt(value) || null;
+    // Make sure we have a valid number format
+    const parsed = parseInt(value, 10);
+    if (isNaN(parsed)) {
+      return null;
+    }
+    return parsed;
+  }
+  
+  // Decimal/float fields
+  if (['percentage_of_inactive_customers'].includes(field)) {
+    const parsed = parseFloat(value);
+    if (isNaN(parsed)) {
+      return null;
+    }
+    return parsed;
   }
   
   // Date fields
   if (['onboarded_at', 'renewal_date', 'updated_from_mysql_at'].includes(field)) {
     try {
-      return new Date(value);
+      const date = new Date(value);
+      // Validate that it's a proper date
+      if (isNaN(date.getTime())) {
+        return null;
+      }
+      return date;
     } catch (e) {
+      return null;
+    }
+  }
+  
+  // Enum fields
+  if (field === 'health_status' && value) {
+    if (['healthy', 'at_risk', 'red_zone'].includes(value.toLowerCase())) {
+      return value.toLowerCase();
+    }
+    return 'healthy'; // Default to healthy if invalid
+  }
+  
+  // Email validation for contact_email
+  if (field === 'contact_email' && value) {
+    // Basic email validation
+    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+    if (!emailRegex.test(value)) {
       return null;
     }
   }
   
   // Return as string for all other fields
   return value;
+};
+
+// Validate a record and return any validation errors
+const validateRecord = (record: Record<string, any>, rowIndex: number): ValidationError[] => {
+  const errors: ValidationError[] = [];
+  
+  // Required field validation
+  if (!record.name) {
+    errors.push({
+      row: rowIndex,
+      field: 'name',
+      value: String(record.name || ''),
+      message: 'Name is required'
+    });
+  }
+  
+  // Numeric fields validation
+  ['mrr', 'arr'].forEach(field => {
+    const value = record[field];
+    if (value !== null && value !== undefined && isNaN(Number(value))) {
+      errors.push({
+        row: rowIndex,
+        field,
+        value: String(value),
+        message: `${field.toUpperCase()} must be a number`
+      });
+    }
+  });
+  
+  // Email validation
+  if (record.contact_email && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(record.contact_email)) {
+    errors.push({
+      row: rowIndex,
+      field: 'contact_email',
+      value: String(record.contact_email),
+      message: 'Invalid email format'
+    });
+  }
+  
+  // Health status validation
+  if (record.health_status && !['healthy', 'at_risk', 'red_zone'].includes(record.health_status)) {
+    errors.push({
+      row: rowIndex,
+      field: 'health_status',
+      value: String(record.health_status),
+      message: 'Health status must be one of: healthy, at_risk, red_zone'
+    });
+  }
+  
+  // Date validation for renewal_date and onboarded_at
+  ['renewal_date', 'onboarded_at'].forEach(field => {
+    if (record[field]) {
+      try {
+        const date = new Date(record[field]);
+        if (isNaN(date.getTime())) {
+          errors.push({
+            row: rowIndex,
+            field,
+            value: String(record[field]),
+            message: `Invalid date format for ${field}`
+          });
+        }
+      } catch (e) {
+        errors.push({
+          row: rowIndex,
+          field,
+          value: String(record[field]),
+          message: `Invalid date format for ${field}`
+        });
+      }
+    }
+  });
+  
+  return errors;
 };
 
 // Configure multer for file uploads
@@ -62,119 +180,59 @@ export const importCSV = async (req: Request, res: Response) => {
       return res.status(400).json({ success: false, error: 'No file uploaded' });
     }
     
-    // Read and parse CSV file
+    // Read CSV file
     const csvContent = req.file.buffer.toString('utf8');
-    const rows = csvContent.split('\n');
     
-    if (rows.length < 2) {
-      return res.status(400).json({ success: false, error: 'CSV file must contain at least a header row and one data row' });
+    // Get existing customers for recurrer_id comparison
+    const allCustomers = await storage.getCustomers();
+    const customersByRecurrerId: Record<string, any> = {};
+    allCustomers.forEach((customer: any) => {
+      if (customer.recurrer_id) {
+        customersByRecurrerId[customer.recurrer_id] = customer;
+      }
+    });
+    
+    // Process CSV content
+    const result = processCSV(csvContent, customersByRecurrerId);
+    
+    if (!result.success) {
+      return res.status(400).json({ success: false, error: result.error });
     }
     
-    // Get headers from first row
-    const headers = rows[0].split(',').map(h => h.trim());
+    // Only display the most important errors in the response
+    const errors: string[] = [];
+    result.validationErrors.forEach(err => {
+      errors.push(`Row ${err.row}: ${err.message} (${err.field}: ${err.value})`);
+    });
     
-    // Field mappings for case-insensitive matching and aliases
-    const fieldMappings: Record<string, string> = {
-      // Standard fields
-      'name': 'name',
-      'company name': 'name',
-      'recurrer_id': 'recurrer_id',
-      'industry': 'industry',
-      'logo_url': 'logo_url',
-      'contact_name': 'contact_name',
-      'contact_email': 'contact_email',
-      'contact_phone': 'contact_phone',
-      'assigned_csm': 'assigned_csm',
-      'csm_id': 'assigned_csm',
-      'health_status': 'health_status',
-      'health status': 'health_status',
-      'mrr': 'mrr',
-      'arr': 'arr',
-      'currency_code': 'currency_code',
-      'renewal_date': 'renewal_date',
-      'onboarded_at': 'onboarded_at',
-      
-      // External IDs
-      'chargebee_customer_id': 'chargebee_customer_id',
-      'chargebee_subscription_id': 'chargebee_subscription_id',
-      'mysql_company_id': 'mysql_company_id',
-      
-      // MySQL company fields
-      'active_stores': 'active_stores',
-      'growth_subscription_count': 'growth_subscription_count',
-      'loyalty_active_store_count': 'loyalty_active_store_count',
-      'loyalty_inactive_store_count': 'loyalty_inactive_store_count',
-      'loyalty_active_channels': 'loyalty_active_channels',
-      'loyalty_channel_credits': 'loyalty_channel_credits',
-      'loyalty_type': 'loyalty_type', 
-      'loyalty_reward': 'loyalty_reward',
-    };
-    
-    // Process each row
+    // Import records into database
     const importedRecords = [];
-    const errors = [];
     const updatedRecords = [];
     
-    for (let i = 1; i < rows.length; i++) {
-      if (!rows[i].trim()) continue; // Skip empty rows
-      
-      const values = rows[i].split(',');
-      if (values.length !== headers.length) {
-        errors.push(`Row ${i}: Column count mismatch (expected ${headers.length}, got ${values.length})`);
-        continue;
-      }
-      
-      // Create record object with normalized field names
-      const record: Record<string, any> = {};
-      headers.forEach((header, index) => {
-        const normalizedHeader = header.toLowerCase().trim();
-        const mappedField = fieldMappings[normalizedHeader] || normalizedHeader;
-        record[mappedField] = sanitizeValue(values[index]);
-      });
-      
-      // Generate recurrer_id if not present
-      if (!record.recurrer_id) {
-        record.recurrer_id = `rec_${randomUUID().replace(/-/g, '')}`;
-      }
-      
-      // Convert values to appropriate types
-      const convertedRecord: Record<string, any> = {};
-      Object.keys(record).forEach(key => {
-        convertedRecord[key] = convertValueType(key, record[key]);
-      });
-      
-      // Special handling for health_status enum
-      if (convertedRecord.health_status) {
-        // Ensure it's one of: 'healthy', 'at_risk', 'red_zone'
-        if (!['healthy', 'at_risk', 'red_zone'].includes(convertedRecord.health_status)) {
-          convertedRecord.health_status = 'healthy'; // Default to healthy if invalid
-        }
-      }
-      
-      // Make sure the record has a name field (required by the schema)
-      if (!convertedRecord.name) {
-        if (record.company_name) {
-          convertedRecord.name = record.company_name;
-        } else {
-          convertedRecord.name = `Customer-${i}`;
-        }
-      }
-
-      // Check if this is an update (by recurrer_id) or a new record
+    for (const record of result.records) {
       try {
-        const existingCustomer = await storage.getCustomerByRecurrerId(convertedRecord.recurrer_id);
+        // Check if record has validation errors
+        const hasErrors = result.validationErrors.some(err => 
+          err.row === record.row && err.field !== 'format'
+        );
+        
+        if (hasErrors) {
+          continue; // Skip records with validation errors
+        }
+        
+        const existingCustomer = customersByRecurrerId[record.recurrer_id];
         
         if (existingCustomer) {
           // Update existing customer
-          await storage.updateCustomer(existingCustomer.id, convertedRecord);
-          updatedRecords.push(convertedRecord);
+          await storage.updateCustomer(existingCustomer.id, record);
+          updatedRecords.push(record);
         } else {
           // Create new customer
-          const newCustomer = await storage.createCustomer(convertedRecord);
+          const newCustomer = await storage.createCustomer(record);
           importedRecords.push(newCustomer);
         }
       } catch (error: any) {
-        errors.push(`Row ${i}: ${error.message}`);
+        errors.push(`Row error: ${error.message}`);
       }
     }
     
@@ -303,6 +361,198 @@ export const downloadSampleCSV = async (req: Request, res: Response) => {
 };
 
 // Download current customer data as CSV for updates
+// Helper function to process CSV content and return records and errors
+export const processCSV = (csvContent: string, existingCustomers: Record<string, any> = {}) => {
+  const rows = csvContent.split('\n');
+  
+  if (rows.length < 2) {
+    return {
+      success: false,
+      error: 'CSV file must contain at least a header row and one data row',
+      records: [],
+      errors: []
+    };
+  }
+  
+  // Get headers from first row
+  const headers = rows[0].split(',').map(h => h.trim());
+  
+  // Field mappings for case-insensitive matching and aliases
+  const fieldMappings: Record<string, string> = {
+    // Standard fields
+    'name': 'name',
+    'company name': 'name',
+    'recurrer_id': 'recurrer_id',
+    'industry': 'industry',
+    'logo_url': 'logo_url',
+    'contact_name': 'contact_name',
+    'contact_email': 'contact_email',
+    'contact_phone': 'contact_phone',
+    'assigned_csm': 'assigned_csm',
+    'csm_id': 'assigned_csm',
+    'health_status': 'health_status',
+    'health status': 'health_status',
+    'mrr': 'mrr',
+    'arr': 'arr',
+    'currency_code': 'currency_code',
+    'renewal_date': 'renewal_date',
+    'onboarded_at': 'onboarded_at',
+    
+    // External IDs
+    'chargebee_customer_id': 'chargebee_customer_id',
+    'chargebee_subscription_id': 'chargebee_subscription_id',
+    'mysql_company_id': 'mysql_company_id',
+    
+    // MySQL company fields
+    'active_stores': 'active_stores',
+    'growth_subscription_count': 'growth_subscription_count',
+    'loyalty_active_store_count': 'loyalty_active_store_count',
+    'loyalty_inactive_store_count': 'loyalty_inactive_store_count',
+    'loyalty_active_channels': 'loyalty_active_channels',
+    'loyalty_channel_credits': 'loyalty_channel_credits',
+    'loyalty_type': 'loyalty_type', 
+    'loyalty_reward': 'loyalty_reward',
+  };
+  
+  // Process each row
+  const records = [];
+  const validationErrors: ValidationError[] = [];
+  const newRecords = [];
+  const updatedRecords = [];
+  
+  for (let i = 1; i < rows.length; i++) {
+    if (!rows[i].trim()) continue; // Skip empty rows
+    
+    // Handle quoted values in CSV correctly
+    let inQuote = false;
+    let currentValue = '';
+    const values = [];
+    const rowStr = rows[i] + ',';  // Add trailing comma to simplify parsing
+    
+    for (let j = 0; j < rowStr.length; j++) {
+      const char = rowStr[j];
+      
+      if (char === '"' && (j === 0 || rowStr[j-1] !== '\\')) {
+        inQuote = !inQuote;
+      } else if (char === ',' && !inQuote) {
+        values.push(currentValue);
+        currentValue = '';
+      } else {
+        currentValue += char;
+      }
+    }
+    
+    if (values.length !== headers.length) {
+      validationErrors.push({
+        row: i,
+        field: 'format',
+        value: `columns: ${values.length}`,
+        message: `Column count mismatch (expected ${headers.length}, got ${values.length})`
+      });
+      continue;
+    }
+    
+    // Create record object with normalized field names
+    const record: Record<string, any> = {};
+    headers.forEach((header, index) => {
+      const normalizedHeader = header.toLowerCase().trim();
+      const mappedField = fieldMappings[normalizedHeader] || normalizedHeader;
+      record[mappedField] = sanitizeValue(values[index]);
+    });
+    
+    // Generate recurrer_id if not present
+    if (!record.recurrer_id) {
+      record.recurrer_id = `rec_${randomUUID().replace(/-/g, '')}`;
+    }
+    
+    // Convert values to appropriate types
+    const convertedRecord: Record<string, any> = {};
+    Object.keys(record).forEach(key => {
+      convertedRecord[key] = convertValueType(key, record[key]);
+    });
+    
+    // Make sure the record has a name field (required by the schema)
+    if (!convertedRecord.name) {
+      if (record.company_name) {
+        convertedRecord.name = record.company_name;
+      } else {
+        convertedRecord.name = `Customer-${i}`;
+      }
+    }
+    
+    // Run validation on the record
+    const recordErrors = validateRecord(convertedRecord, i);
+    if (recordErrors.length > 0) {
+      validationErrors.push(...recordErrors);
+    }
+    
+    // Check if this is an update or a new record
+    const isExisting = existingCustomers[convertedRecord.recurrer_id];
+    if (isExisting) {
+      updatedRecords.push({
+        ...convertedRecord,
+        id: isExisting.id,
+        is_update: true
+      });
+    } else {
+      newRecords.push({
+        ...convertedRecord,
+        is_new: true
+      });
+    }
+    
+    records.push(convertedRecord);
+  }
+  
+  return {
+    success: true,
+    records,
+    validationErrors,
+    new: newRecords,
+    updated: updatedRecords
+  };
+};
+
+// Preview CSV import without committing to database
+export const previewCSVImport = async (req: Request, res: Response) => {
+  try {
+    if (!req.file) {
+      return res.status(400).json({ success: false, error: 'No file uploaded' });
+    }
+    
+    // Read CSV file
+    const csvContent = req.file.buffer.toString('utf8');
+    
+    // Get existing customers for recurrer_id comparison
+    const allCustomers = await storage.getCustomers();
+    const customersByRecurrerId: Record<string, any> = {};
+    allCustomers.forEach((customer: any) => {
+      if (customer.recurrer_id) {
+        customersByRecurrerId[customer.recurrer_id] = customer;
+      }
+    });
+    
+    // Process CSV content
+    const result = processCSV(csvContent, customersByRecurrerId);
+    
+    // Return preview results
+    res.json({
+      success: true,
+      preview: {
+        total: result.records.length,
+        new: result.new.length,
+        updated: result.updated.length,
+        sample: result.records.slice(0, 10), // First 10 records as preview
+        validation_errors: result.validationErrors
+      }
+    });
+    
+  } catch (error: any) {
+    log(`CSV preview error: ${error}`, 'error');
+    res.status(500).json({ success: false, error: `Failed to preview CSV: ${error.message}` });
+  }
+};
+
 export const exportCustomersCSV = async (req: Request, res: Response) => {
   try {
     // Get all customers
