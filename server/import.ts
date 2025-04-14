@@ -293,79 +293,59 @@ export const importCSV = async (req: Request, res: Response) => {
 // Generate and download sample CSV file with all customer fields
 export const downloadSampleCSV = async (req: Request, res: Response) => {
   try {
-    // Get all customer fields from storage
-    const customerFields = await storage.getCustomerTableFields();
-    
-    // Filter out specific fields we don't want in the CSV
-    const fieldsToExclude = ['id', 'created_at', 'updated_from_mysql_at'];
-    const filteredFields = customerFields
-      .filter(field => !fieldsToExclude.includes(field))
-      .sort(); // Sort fields alphabetically for better organization
-    
-    // Add 'name' field at the beginning as it's required
-    if (!filteredFields.includes('name')) {
-      filteredFields.unshift('name');
-    } else {
-      // Remove and reinsert name at the beginning
-      filteredFields.splice(filteredFields.indexOf('name'), 1);
-      filteredFields.unshift('name');
-    }
-    
-    // Add recurrer_id as the second field for clarity
-    if (filteredFields.includes('recurrer_id')) {
-      filteredFields.splice(filteredFields.indexOf('recurrer_id'), 1);
-      filteredFields.splice(1, 0, 'recurrer_id');
-    }
+    // Define the required fields in the exact order we want them
+    const requiredFields = [
+      'name',
+      'recurrer_id',
+      'industry',
+      'contact_name',
+      'contact_email',
+      'contact_phone',
+      'csm_id',
+      'chargebee_customer_id',
+      'chargebee_subscription_id',
+      'health_status',
+      'mrr',
+      'arr',
+      'renewal_date',
+      'onboarding_stage',
+      'timezone',
+      'tags',
+      'notes'
+    ];
     
     // Create CSV header row from fields
-    const headerRow = filteredFields.join(',');
+    const headerRow = requiredFields.join(',');
     
-    // Create a mapping object with field examples
+    // Create a mapping object with field examples - all with required fields
     const fieldExamples: Record<string, string[]> = {
-      name: ['Acme Tech Solutions', 'Gamma Retail', 'Beta Manufacturing'],
-      recurrer_id: ['', '', ''],  // Empty to demonstrate auto-generation
-      industry: ['Technology', 'Retail', 'Manufacturing'],
+      name: ['Acme Industries', 'Beta Solutions', 'Gamma Foods'],
+      recurrer_id: ['rec_123456', 'rec_234567', 'rec_345678'],  // Include sample IDs for clarity
+      industry: ['Manufacturing', 'Technology', 'Food & Beverage'],
       contact_name: ['John Smith', 'Sarah Lee', 'Raj Kumar'],
-      contact_email: ['john@acmetech.com', 'sarah@gammaretail.com', 'raj@betamfg.com'],
+      contact_email: ['john@acme.com', 'sarah@beta.com', 'raj@gammafoods.com'],
       contact_phone: ['+91 9876543210', '+91 8765432109', '+91 7654321098'],
-      assigned_csm: ['1', '2', '3'],
-      health_status: ['healthy', 'at_risk', 'red_zone'],
+      csm_id: ['1', '2', '1'],
+      chargebee_customer_id: ['cb_cust_123', 'cb_cust_456', 'cb_cust_789'], // Required field
+      chargebee_subscription_id: ['cb_sub_123', 'cb_sub_456', 'cb_sub_789'], // Required field
+      health_status: ['healthy', 'at_risk', 'healthy'],
       mrr: ['54000', '25000', '18000'],
       arr: ['648000', '300000', '216000'],
-      renewal_date: ['2025-12-15', '2025-06-30', '2024-09-10'],
-      currency_code: ['INR', 'INR', 'INR'],
-      chargebee_customer_id: ['', 'cb_cust_123', ''],
-      chargebee_subscription_id: ['', 'cb_sub_456', ''],
-      mysql_company_id: ['sql_123', 'sql_456', 'sql_789'],
-      active_stores: ['20', '15', '10'],
-      growth_subscription_count: ['5', '3', '2'],
-      loyalty_active_store_count: ['3', '2', '1'],
-      loyalty_inactive_store_count: ['1', '0', '0'],
-      loyalty_active_channels: ['WhatsApp|SMS', 'SMS', ''],
-      loyalty_channel_credits: ['200', '100', '50'],
-      negative_feedback_alert_inactive: ['0', '1', '2'],
-      less_than_300_bills: ['0', '2', '5'],
-      active_auto_campaigns_count: ['12', '6', '3'],
-      unique_customers_captured: ['20000', '15000', '8000'],
-      revenue_1_year: ['120000', '90000', '60000'],
-      customers_with_min_one_visit: ['5000', '3000', '2000'],
-      customers_with_min_two_visit: ['1200', '900', '500'],
-      customers_without_min_visits: ['800', '500', '300'],
-      percentage_of_inactive_customers: ['3.2', '2.8', '2.5'],
-      negative_feedbacks_count: ['400', '300', '200'],
-      campaigns_sent_last_90_days: ['150', '100', '50'],
-      bills_received_last_30_days: ['15', '10', '8'],
-      customers_acquired_last_30_days: ['20', '15', '10'],
-      loyalty_type: ['premium', 'basic', 'standard'],
-      loyalty_reward: ['tier2', 'tier1', 'none'],
-      onboarded_at: ['2023-01-15', '2023-02-28', '2023-03-10'],
-      logo_url: ['https://example.com/logo1.png', 'https://example.com/logo2.png', '']
+      renewal_date: ['2025-12-15', '2025-06-30', '2025-09-10'],
+      onboarding_stage: ['completed', 'in_progress', 'completed'],
+      timezone: ['Asia/Kolkata', 'Asia/Kolkata', 'Asia/Kolkata'],
+      tags: ['"enterprise,manufacturing"', '"tech,startup"', '"food,retail"'],
+      notes: ['Enterprise customer with 50+ locations', 'Needs attention for onboarding completion', 'Multiple locations in South India']
     };
     
     // Create sample data rows
     const sampleRows = Array(3).fill(null).map((_, i) => {
-      return filteredFields.map(field => {
+      return requiredFields.map(field => {
         if (fieldExamples[field] && fieldExamples[field][i]) {
+          // Handle fields that might need quoting due to commas
+          if (field === 'tags' || field === 'notes') {
+            return `"${fieldExamples[field][i].replace(/^"|"$/g, '')}"`;
+          }
           return fieldExamples[field][i];
         }
         // Default empty for fields not in the example mapping
@@ -602,35 +582,44 @@ export const exportCustomersCSV = async (req: Request, res: Response) => {
     // Get all customers
     const allCustomers = await storage.getCustomers();
     
-    // Get all customer fields
-    const customerFields = await storage.getCustomerTableFields();
+    // Define required fields in the exact order we want them (must match sample file)
+    const requiredFields = [
+      'name',
+      'recurrer_id',
+      'industry',
+      'contact_name',
+      'contact_email',
+      'contact_phone',
+      'csm_id',
+      'chargebee_customer_id',
+      'chargebee_subscription_id',
+      'health_status',
+      'mrr',
+      'arr',
+      'renewal_date',
+      'onboarding_stage',
+      'timezone',
+      'tags',
+      'notes'
+    ];
     
-    // Filter out specific fields we don't want in the CSV
-    const fieldsToExclude = ['id', 'created_at', 'updated_from_mysql_at'];
-    const filteredFields = customerFields
-      .filter(field => !fieldsToExclude.includes(field))
-      .sort(); // Sort fields alphabetically for better organization
-    
-    // Reorganize fields for better readability
-    // Add 'name' field at the beginning as it's required
-    if (filteredFields.includes('name')) {
-      filteredFields.splice(filteredFields.indexOf('name'), 1);
-      filteredFields.unshift('name');
-    }
-    
-    // Add recurrer_id as the second field for clarity
-    if (filteredFields.includes('recurrer_id')) {
-      filteredFields.splice(filteredFields.indexOf('recurrer_id'), 1);
-      filteredFields.splice(1, 0, 'recurrer_id');
-    }
+    // Create a mapping for field names from database to export (handle field name differences)
+    const fieldMappings: Record<string, string> = {
+      'assigned_csm': 'csm_id',
+      // Add more mappings as needed
+    };
     
     // Create CSV header row
-    const headerRow = filteredFields.join(',');
+    const headerRow = requiredFields.join(',');
     
     // Create a row for each customer
     const customerRows = allCustomers.map(customer => {
-      return filteredFields.map(field => {
-        const value = customer[field as keyof typeof customer]; // Type assertion for TypeScript
+      return requiredFields.map(field => {
+        // Map field names if needed
+        const dbField = fieldMappings[field] || field;
+        
+        // Get the value from the customer record
+        const value = customer[dbField as keyof typeof customer]; // Type assertion for TypeScript
         
         // Handle different value types
         if (value === null || value === undefined) {
@@ -638,14 +627,14 @@ export const exportCustomersCSV = async (req: Request, res: Response) => {
         } else if (typeof value === 'object' && value instanceof Date) {
           return value.toISOString().split('T')[0]; // YYYY-MM-DD format
         } else if (Array.isArray(value)) {
-          return `"${value.join('|')}"`;  // Convert arrays to pipe-delimited strings and quote them
+          return `"${value.join(',')}"`;  // Convert arrays to comma-delimited strings and quote them
         } else {
           // Clean strings and surround with quotes if they contain commas
           const strValue = String(value);
           if (strValue.includes(',')) {
             return `"${strValue}"`;
           }
-          return strValue.replace(/,/g, ''); // Remove commas to prevent CSV parsing issues
+          return strValue;
         }
       }).join(',');
     });
