@@ -62,7 +62,8 @@ import {
   BadgeCheck,
   Percent,
   Search,
-  ChevronsUpDown
+  ChevronsUpDown,
+  Download
 } from "lucide-react";
 import { UserRole } from "@shared/types";
 import { AvatarWithInitials } from "@/components/ui/avatar-with-initials";
@@ -2522,7 +2523,7 @@ function DataImportTab({ setActiveTab }: { setActiveTab: (tab: string) => void }
                 
                 <Button 
                   variant="outline"
-                  onClick={() => window.location.href = '/api/customers/import/sample'}
+                  onClick={() => window.location.href = '/api/customers/sample/csv'}
                 >
                   <Download className="h-4 w-4 mr-2" />
                   Download Template
