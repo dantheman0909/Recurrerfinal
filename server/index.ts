@@ -240,6 +240,19 @@ app.get('/api/customers/:id/external-data', getCustomerExternalData);
       }
       
       try {
+        // Update RedZone rules schema
+        const updateRedZoneRulesSchema = (await import('./update-redzone-rules-schema')).default;
+        const redZoneResult = await updateRedZoneRulesSchema();
+        if (redZoneResult.success) {
+          log('RedZone rules schema updated successfully');
+        } else {
+          console.warn('RedZone rules schema update warning:', redZoneResult.error);
+        }
+      } catch (error) {
+        console.error('Error updating RedZone rules schema:', error);
+      }
+      
+      try {
         // Create notifications and achievements tables
         const createAchievementTables = (await import('./create-achievement-tables')).default;
         const achievementResult = await createAchievementTables();

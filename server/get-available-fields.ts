@@ -17,11 +17,13 @@ export async function getAvailableFields(): Promise<AvailableFields> {
     };
 
     // Get customer fields directly from the schema
-    const customerFields = await db.execute(sql.raw(`
+    const customerFieldsResult = await db.execute(sql.raw(`
       SELECT column_name, data_type 
       FROM information_schema.columns 
       WHERE table_name = 'customers'
     `));
+    
+    const customerFields = customerFieldsResult.rows || [];
 
     // Map customer fields
     if (customerFields.length > 0) {
@@ -38,11 +40,13 @@ export async function getAvailableFields(): Promise<AvailableFields> {
     }
 
     // Get customer metrics fields
-    const metricsFields = await db.execute(sql.raw(`
+    const metricsFieldsResult = await db.execute(sql.raw(`
       SELECT column_name, data_type 
       FROM information_schema.columns 
       WHERE table_name = 'customer_metrics'
     `));
+    
+    const metricsFields = metricsFieldsResult.rows || [];
 
     // Map metrics fields
     if (metricsFields.length > 0) {
@@ -59,11 +63,13 @@ export async function getAvailableFields(): Promise<AvailableFields> {
     }
 
     // Get MySQL field mappings
-    const mysqlMappings = await db.execute(sql.raw(`
+    const mysqlMappingsResult = await db.execute(sql.raw(`
       SELECT mysql_field, local_field, field_type
       FROM mysql_field_mappings
       WHERE local_table = 'customers'
     `));
+    
+    const mysqlMappings = mysqlMappingsResult.rows || [];
 
     // Map MySQL fields to company entity
     if (mysqlMappings.length > 0) {
@@ -80,10 +86,12 @@ export async function getAvailableFields(): Promise<AvailableFields> {
     }
 
     // Get Chargebee field mappings
-    const chargebeeMappings = await db.execute(sql.raw(`
+    const chargebeeMappingsResult = await db.execute(sql.raw(`
       SELECT chargebee_entity, chargebee_field, local_field
       FROM chargebee_field_mappings
     `));
+    
+    const chargebeeMappings = chargebeeMappingsResult.rows || [];
 
     // Map Chargebee fields to their respective entities
     if (chargebeeMappings.length > 0) {
