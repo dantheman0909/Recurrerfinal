@@ -224,18 +224,23 @@ export const createAnnotationReply = async (req: Request, res: Response) => {
   try {
     const { id } = req.params;
     
-    // Use a simplified schema without entity_type since we'll get it from the parent
+    // Use a simplified schema that accepts entity_type/entity_id but ignores them
     const replySchema = z.object({
       content: z.string().min(1),
       type: z.enum(['comment', 'highlight', 'suggestion', 'action_item']).default('comment'),
       position_data: z.any().optional(),
       mentioned_user_ids: z.array(z.number()).optional(),
       user_id: z.number(),
+      // These will be ignored but we accept them to be compatible with the client
+      entity_type: z.string().optional(),
+      entity_id: z.number().optional(),
     });
     
     const validationResult = replySchema.safeParse(req.body);
     
     if (!validationResult.success) {
+      console.log('Reply validation error:', validationResult.error.format());
+      console.log('Request body:', req.body);
       return res.status(400).json({ 
         error: 'Invalid reply data', 
         details: validationResult.error.format() 
