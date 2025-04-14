@@ -1,13 +1,16 @@
 import { 
   users, customers, tasks, taskComments, playbooks, playbookTasks, 
-  redZoneAlerts, customerMetrics, mysqlConfig, mysqlFieldMappings, mysqlSavedQueries,
+  redZoneAlerts, redZoneRules, redZoneResolutionCriteria, redZoneActivityLogs,
+  customerMetrics, mysqlConfig, mysqlFieldMappings, mysqlSavedQueries,
   chargebeeConfig, chargebeeFieldMappings, notifications, userAchievements,
   type User, type Customer, type Task, type TaskComment, type Playbook, 
-  type PlaybookTask, type RedZoneAlert, type CustomerMetric, 
+  type PlaybookTask, type RedZoneAlert, type RedZoneRule, type RedZoneResolutionCriteria, 
+  type RedZoneActivityLog, type CustomerMetric, 
   type MySQLConfig, type MySQLFieldMapping, type MySQLSavedQuery,
   type ChargebeeConfig, type ChargebeeFieldMapping, type Notification, type UserAchievement,
   type InsertUser, type InsertCustomer, type InsertTask, type InsertPlaybook,
-  type InsertRedZoneAlert, type InsertMySQLSavedQuery,
+  type InsertRedZoneAlert, type InsertRedZoneRule, type InsertRedZoneResolutionCriteria,
+  type InsertRedZoneActivityLog, type InsertMySQLSavedQuery,
   type InsertChargebeeConfig, type InsertChargebeeFieldMapping,
   type InsertNotification, type InsertUserAchievement
 } from "@shared/schema";
@@ -103,8 +106,27 @@ export interface IStorage {
   // Red Zone Alerts
   getRedZoneAlerts(): Promise<RedZoneAlert[]>;
   getRedZoneAlertsByCustomer(customerId: number): Promise<RedZoneAlert[]>;
+  getRedZoneAlert(id: number): Promise<RedZoneAlert | undefined>;
   createRedZoneAlert(alert: InsertRedZoneAlert): Promise<RedZoneAlert>;
+  updateRedZoneAlert(id: number, alert: Partial<RedZoneAlert>): Promise<RedZoneAlert | undefined>;
   resolveRedZoneAlert(id: number): Promise<RedZoneAlert | undefined>;
+  escalateRedZoneAlert(id: number, escalatedTo: number): Promise<RedZoneAlert | undefined>;
+  
+  // Red Zone Rules
+  getRedZoneRules(): Promise<RedZoneRule[]>;
+  getRedZoneRule(id: number): Promise<RedZoneRule | undefined>;
+  createRedZoneRule(rule: InsertRedZoneRule): Promise<RedZoneRule>;
+  updateRedZoneRule(id: number, rule: Partial<RedZoneRule>): Promise<RedZoneRule | undefined>;
+  deleteRedZoneRule(id: number): Promise<boolean>;
+  
+  // Red Zone Resolution Criteria
+  getRedZoneResolutionCriteria(ruleId: number): Promise<RedZoneResolutionCriteria[]>;
+  createRedZoneResolutionCriteria(criteria: InsertRedZoneResolutionCriteria): Promise<RedZoneResolutionCriteria>;
+  deleteRedZoneResolutionCriteria(id: number): Promise<boolean>;
+  
+  // Red Zone Activity Logs
+  getRedZoneActivityLogs(alertId: number): Promise<RedZoneActivityLog[]>;
+  createRedZoneActivityLog(log: InsertRedZoneActivityLog): Promise<RedZoneActivityLog>;
   
   // Customer Metrics
   getCustomerMetrics(customerId: number): Promise<CustomerMetric[]>;
@@ -177,6 +199,9 @@ export class MemStorage implements IStorage {
   private playbooks: Map<number, Playbook>;
   private playbookTasks: Map<number, PlaybookTask>;
   private redZoneAlerts: Map<number, RedZoneAlert>;
+  private redZoneRules: Map<number, RedZoneRule>;
+  private redZoneResolutionCriteria: Map<number, RedZoneResolutionCriteria>;
+  private redZoneActivityLogs: Map<number, RedZoneActivityLog>;
   private customerMetrics: Map<number, CustomerMetric>;
   private mysqlConfigs: Map<number, MySQLConfig>;
   private mysqlFieldMappings: Map<number, MySQLFieldMapping>;
