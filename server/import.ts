@@ -196,39 +196,78 @@ export const importCSV = async (req: Request, res: Response) => {
     const result = processCSV(csvContent, customersByRecurrerId);
     
     if (!result.success) {
-      return res.status(400).json({ success: false, error: result.error });
+      return res.status(400).json({ 
+        success: false, 
+        error: result.error || 'Failed to process CSV' 
+      });
     }
     
     // Only display the most important errors in the response
     const errors: string[] = [];
-    result.validationErrors.forEach(err => {
-      errors.push(`Row ${err.row}: ${err.message} (${err.field}: ${err.value})`);
-    });
+    if (result.validationErrors && result.validationErrors.length > 0) {
+      result.validationErrors.forEach(err => {
+        errors.push(`Row ${err.row}: ${err.message} (${err.field}: ${err.value})`);
+      });
+    }
     
     // Import records into database
-    const importedRecords = [];
-    const updatedRecords = [];
+    const importedRecords: any[] = [];
+    const updatedRecords: any[] = [];
     
     for (const record of result.records) {
       try {
         // Check if record has validation errors
-        const hasErrors = result.validationErrors.some(err => 
+        const hasErrors = result.validationErrors ? result.validationErrors.some(err => 
           err.row === record.row && err.field !== 'format'
-        );
+        ) : false;
         
         if (hasErrors) {
           continue; // Skip records with validation errors
         }
         
+        // Make sure the record has a required name field
+        if (!record.name || typeof record.name !== 'string') {
+          continue; // Skip records without name
+        }
+        
+        // Create a clean copy of the record without extra properties
+        const cleanRecord = {
+          name: record.name, // Ensure the required field is always present
+          recurrer_id: record.recurrer_id || null,
+          industry: record.industry || null,
+          logo_url: record.logo_url || null,
+          contact_name: record.contact_name || null,
+          contact_email: record.contact_email || null,
+          contact_phone: record.contact_phone || null,
+          assigned_csm: typeof record.assigned_csm === 'number' ? record.assigned_csm : null,
+          health_status: record.health_status || null,
+          mrr: typeof record.mrr === 'number' ? record.mrr : null,
+          arr: typeof record.arr === 'number' ? record.arr : null,
+          currency_code: record.currency_code || null,
+          renewal_date: record.renewal_date instanceof Date ? record.renewal_date : null,
+          onboarded_at: record.onboarded_at instanceof Date ? record.onboarded_at : null,
+          chargebee_customer_id: record.chargebee_customer_id || null,
+          chargebee_subscription_id: record.chargebee_subscription_id || null,
+          mysql_company_id: record.mysql_company_id || null,
+          active_stores: typeof record.active_stores === 'number' ? record.active_stores : null,
+          growth_subscription_count: typeof record.growth_subscription_count === 'number' ? record.growth_subscription_count : null,
+          loyalty_active_store_count: typeof record.loyalty_active_store_count === 'number' ? record.loyalty_active_store_count : null,
+          loyalty_inactive_store_count: typeof record.loyalty_inactive_store_count === 'number' ? record.loyalty_inactive_store_count : null,
+          loyalty_active_channels: record.loyalty_active_channels || null,
+          loyalty_channel_credits: typeof record.loyalty_channel_credits === 'number' ? record.loyalty_channel_credits : null,
+          loyalty_type: record.loyalty_type || null,
+          loyalty_reward: record.loyalty_reward || null
+        };
+        
         const existingCustomer = customersByRecurrerId[record.recurrer_id];
         
         if (existingCustomer) {
           // Update existing customer
-          await storage.updateCustomer(existingCustomer.id, record);
+          await storage.updateCustomer(existingCustomer.id, cleanRecord);
           updatedRecords.push(record);
         } else {
           // Create new customer
-          const newCustomer = await storage.createCustomer(record);
+          const newCustomer = await storage.createCustomer(cleanRecord);
           importedRecords.push(newCustomer);
         }
       } catch (error: any) {
@@ -370,7 +409,9 @@ export const processCSV = (csvContent: string, existingCustomers: Record<string,
       success: false,
       error: 'CSV file must contain at least a header row and one data row',
       records: [],
-      errors: []
+      validationErrors: [],
+      new: [],
+      updated: []
     };
   }
   
@@ -415,10 +456,10 @@ export const processCSV = (csvContent: string, existingCustomers: Record<string,
   };
   
   // Process each row
-  const records = [];
+  const records: Record<string, any>[] = [];
   const validationErrors: ValidationError[] = [];
-  const newRecords = [];
-  const updatedRecords = [];
+  const newRecords: Record<string, any>[] = [];
+  const updatedRecords: Record<string, any>[] = [];
   
   for (let i = 1; i < rows.length; i++) {
     if (!rows[i].trim()) continue; // Skip empty rows
@@ -426,7 +467,7 @@ export const processCSV = (csvContent: string, existingCustomers: Record<string,
     // Handle quoted values in CSV correctly
     let inQuote = false;
     let currentValue = '';
-    const values = [];
+    const values: string[] = [];
     const rowStr = rows[i] + ',';  // Add trailing comma to simplify parsing
     
     for (let j = 0; j < rowStr.length; j++) {
@@ -479,6 +520,9 @@ export const processCSV = (csvContent: string, existingCustomers: Record<string,
         convertedRecord.name = `Customer-${i}`;
       }
     }
+    
+    // Add row number for reference in validations
+    convertedRecord.row = i;
     
     // Run validation on the record
     const recordErrors = validateRecord(convertedRecord, i);

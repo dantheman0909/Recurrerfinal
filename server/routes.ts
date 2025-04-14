@@ -124,6 +124,12 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
   
+  // Customer CSV Import/Export
+  app.post('/api/customers/import/csv', upload.single('file'), importCSV);
+  app.post('/api/customers/import/preview', upload.single('file'), previewCSVImport);
+  app.get('/api/customers/export/csv', exportCustomersCSV);
+  app.get('/api/customers/sample/csv', downloadSampleCSV);
+  
   // Tasks
   app.get('/api/tasks', async (req, res) => {
     const customerId = req.query.customerId ? parseInt(req.query.customerId as string) : undefined;
