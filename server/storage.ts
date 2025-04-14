@@ -426,6 +426,11 @@ export class MemStorage implements IStorage {
     return updatedCustomer;
   }
   
+  async deleteCustomer(id: number): Promise<boolean> {
+    if (!this.customers.has(id)) return false;
+    return this.customers.delete(id);
+  }
+  
   async getCustomerTableFields(): Promise<string[]> {
     // Return field names from the customers schema
     // This implementation is just for memory storage
@@ -1105,6 +1110,14 @@ export class DatabaseStorage implements IStorage {
       .where(eq(customers.id, id))
       .returning();
     return updatedCustomer;
+  }
+  
+  async deleteCustomer(id: number): Promise<boolean> {
+    const result = await db
+      .delete(customers)
+      .where(eq(customers.id, id))
+      .returning({ id: customers.id });
+    return result.length > 0;
   }
   
   async getCustomerTableFields(): Promise<string[]> {

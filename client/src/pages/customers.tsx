@@ -10,7 +10,7 @@ import {
   Search,
   Filter,
   UserPlus,
-  ListFilter,
+  Users,
   LayoutGrid,
   LayoutList
 } from "lucide-react";
@@ -28,15 +28,36 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
 
 export default function Customers() {
   const [searchTerm, setSearchTerm] = useState("");
   const [healthFilter, setHealthFilter] = useState<string | null>(null);
+  const [csmFilter, setCsmFilter] = useState<number | null>(null);
+  const [tlFilter, setTlFilter] = useState<number | null>(null);
   const [viewMode, setViewMode] = useState<"card" | "table">("card");
   
-  const { data: customers, isLoading } = useQuery({
+  const { data: customers, isLoading: customersLoading } = useQuery({
     queryKey: ['/api/customers'],
   });
+  
+  const { data: users, isLoading: usersLoading } = useQuery({
+    queryKey: ['/api/users'],
+  });
+  
+  const isLoading = customersLoading || usersLoading;
+  
+  // Filter CSMs (role === 'csm')
+  const csms = users?.filter(user => user.role === 'csm') || [];
+  
+  // Filter Team Leads (role === 'team_lead')
+  const teamLeads = users?.filter(user => user.role === 'team_lead') || [];
   
   const filteredCustomers = customers?.filter((customer: Customer) => {
     const matchesSearch = customer.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
@@ -44,7 +65,15 @@ export default function Customers() {
     
     const matchesHealth = !healthFilter || customer.health_status === healthFilter;
     
-    return matchesSearch && matchesHealth;
+    const matchesCSM = !csmFilter || customer.assigned_csm === csmFilter;
+    
+    // For Team Lead filter, we need to check if the customer's assigned CSM 
+    // reports to the selected Team Lead
+    const matchesTL = !tlFilter || 
+                      (customer.assigned_csm && 
+                       csms.find(csm => csm.id === customer.assigned_csm)?.team_lead_id === tlFilter);
+    
+    return matchesSearch && matchesHealth && matchesCSM && matchesTL;
   });
   
   const getHealthBadgeStyles = (health: string) => {
