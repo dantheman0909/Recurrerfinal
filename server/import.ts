@@ -438,7 +438,8 @@ export const importCSV = async (req: Request, res: Response) => {
 // Generate and download sample CSV file with all customer fields
 export const downloadSampleCSV = async (req: Request, res: Response) => {
   try {
-    // Define the fields in the exact order we want them (must match export format)
+    // Define the fields in the exact order we want them - extended to include ALL MySQL and Chargebee fields
+    // The field list must match export format to ensure consistency between import and export
     const requiredFields = [
       'name',
       'recurrer_id',
@@ -478,7 +479,18 @@ export const downloadSampleCSV = async (req: Request, res: Response) => {
       'percentage_of_inactive_customers',
       'renewal_date',
       'revenue_1_year',
-      'unique_customers_captured'
+      'unique_customers_captured',
+      // Additional fields from MySQL service
+      'company_create_date',
+      'hubspot_id',
+      'wa_header_active',
+      'active_auto_campaigns_count',
+      'total_revenue_last_1_year_per_growth_subscription_per_month',
+      'aov',
+      'customers_profiled_with_birthday',
+      'customers_profiled_with_anniversary',
+      'next_month_birthdays',
+      'next_month_anniversaries'
     ];
     
     // Create CSV header row from fields
@@ -486,7 +498,7 @@ export const downloadSampleCSV = async (req: Request, res: Response) => {
     
     // Create a mapping object with field examples - including all required and optional fields
     const fieldExamples: Record<string, string[]> = {
-      // Required fields
+      // Required fields (starred in UI)
       name: ['Acme Industries', 'Beta Solutions', 'Gamma Foods'],
       recurrer_id: ['rec_123456', 'rec_234567', 'rec_345678'],  // Include sample IDs for clarity
       contact_email: ['john@acme.com', 'sarah@beta.com', 'raj@gammafoods.com'],
@@ -494,40 +506,58 @@ export const downloadSampleCSV = async (req: Request, res: Response) => {
       chargebee_customer_id: ['cb_cust_123', 'cb_cust_456', 'cb_cust_789'], 
       chargebee_subscription_id: ['cb_sub_123', 'cb_sub_456', 'cb_sub_789'],
       
-      // All other fields based on user requirements
+      // Contact & Profile fields
       reelo_id: ['618cece4633e300aa89bfba0', '626fc380ad1e9d301415d090', '62e23515db2250adbfa5a80b'],
-      active_stores: ['12', '5', '8'],
       contact_name: ['John Smith', 'Sarah Lee', 'Raj Kumar'],
+      industry: ['Manufacturing', 'Technology', 'Food & Beverage'],
+      logo_url: ['https://example.com/logo1.png', 'https://example.com/logo2.png', 'https://example.com/logo3.png'],
+      mysql_company_id: ['mysql_123', 'mysql_456', 'mysql_789'],
+      health_status: ['healthy', 'at_risk', 'healthy'],
+      hubspot_id: ['hspot_123', 'hspot_456', 'hspot_789'],
+      
+      // Financial fields
       arr: ['648000', '300000', '216000'],
       mrr: ['54000', '25000', '18000'],
-      assigned_csm: ['1', '2', '1'],
       currency_code: ['INR', 'USD', 'INR'],
+      renewal_date: ['2025-12-15', '2025-06-30', '2025-09-10'],
+      revenue_1_year: ['7500000', '3200000', '5100000'],
+      onboarded_at: ['2023-01-15', '2023-03-22', '2023-02-10'],
+      total_revenue_last_1_year_per_growth_subscription_per_month: ['625000', '266666', '425000'],
+      aov: ['1250', '980', '1450'],
+      
+      // Store metrics fields
+      active_stores: ['12', '5', '8'],
       growth_subscription_count: ['2', '1', '3'],
-      health_status: ['healthy', 'at_risk', 'healthy'],
-      industry: ['Manufacturing', 'Technology', 'Food & Beverage'],
+      assigned_csm: ['1', '2', '1'],
+      less_than_300_bills: ['0', '1', '0'],
+      wa_header_active: ['1', '0', '1'],
+      company_create_date: ['2022-06-15', '2022-08-22', '2022-05-10'],
+      
+      // Engagement fields
       bills_received_last_30_days: ['452', '215', '378'],
       campaigns_sent_last_90_days: ['12', '5', '8'],
       customers_acquired_last_30_days: ['45', '22', '37'],
       customers_with_min_one_visit: ['320', '180', '250'],
       customers_with_min_two_visit: ['210', '120', '175'],
       customers_without_min_visits: ['110', '60', '75'],
+      unique_customers_captured: ['4500', '2200', '3800'],
+      active_auto_campaigns_count: ['5', '2', '4'],
+      negative_feedbacks_count: ['2', '5', '1'],
+      negative_feedback_alert_inactive: ['0', '1', '0'],
       enableRLS: ['true', 'false', 'true'],
-      less_than_300_bills: ['0', '1', '0'],
-      logo_url: ['https://example.com/logo1.png', 'https://example.com/logo2.png', 'https://example.com/logo3.png'],
+      percentage_of_inactive_customers: ['25.5', '32.7', '18.2'],
+      customers_profiled_with_birthday: ['1250', '780', '950'],
+      customers_profiled_with_anniversary: ['850', '420', '630'],
+      next_month_birthdays: ['125', '78', '95'],
+      next_month_anniversaries: ['85', '42', '63'],
+      
+      // Loyalty fields
       loyalty_active_channels: ['sms,email,whatsapp', 'email', 'sms,email'],
       loyalty_active_store_count: ['10', '4', '7'],
       loyalty_channel_credits: ['5000', '2000', '3500'],
       loyalty_inactive_store_count: ['2', '1', '1'],
       loyalty_reward: ['tier1', 'tier2', 'tier1'],
-      loyalty_type: ['points', 'visits', 'points'],
-      mysql_company_id: ['mysql_123', 'mysql_456', 'mysql_789'],
-      negative_feedback_alert_inactive: ['0', '1', '0'],
-      negative_feedbacks_count: ['2', '5', '1'],
-      onboarded_at: ['2023-01-15', '2023-03-22', '2023-02-10'],
-      percentage_of_inactive_customers: ['25.5', '32.7', '18.2'],
-      renewal_date: ['2025-12-15', '2025-06-30', '2025-09-10'],
-      revenue_1_year: ['7500000', '3200000', '5100000'],
-      unique_customers_captured: ['4500', '2200', '3800']
+      loyalty_type: ['points', 'visits', 'points']
     };
     
     // Create sample data rows
