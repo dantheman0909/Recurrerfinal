@@ -1920,21 +1920,58 @@ function DataImportTab({ setActiveTab }: { setActiveTab: (tab: string) => void }
     const formData = new FormData();
     formData.append('file', selectedFile);
     
-    // Send file to server endpoint
-    fetch('/api/import/csv', {
+    // First get a preview of the data to validate it
+    fetch('/api/customers/import/preview', {
       method: 'POST',
       body: formData
     })
     .then(response => response.json())
-    .then(data => {
-      setIsUploading(false);
-      if (data.success) {
-        toast({
-          title: "Import Successful",
-          description: `Imported ${data.count || previewData.length} records from ${selectedFile.name}`,
+    .then(previewResult => {
+      if (previewResult.success) {
+        // If there are validation errors, show them
+        if (previewResult.preview.validation_errors && previewResult.preview.validation_errors.length > 0) {
+          const errorSummary = previewResult.preview.validation_errors
+            .slice(0, 5) // Show only first 5 errors
+            .map((err: any) => `Row ${err.row}: ${err.message} (${err.field})`)
+            .join('\n');
+            
+          const totalErrors = previewResult.preview.validation_errors.length;
+          const additionalErrors = totalErrors > 5 ? `\n...and ${totalErrors - 5} more errors` : '';
+          
+          toast({
+            title: "Validation Errors",
+            description: `Please fix the following issues:\n${errorSummary}${additionalErrors}`,
+            variant: "destructive",
+          });
+          setIsUploading(false);
+          return;
+        }
+        
+        // If validation passes, proceed with actual import
+        formData.append('confirmed', 'true');
+        
+        // Proceed with actual import
+        return fetch('/api/customers/import/csv', {
+          method: 'POST',
+          body: formData
+        })
+        .then(response => response.json())
+        .then(data => {
+          setIsUploading(false);
+          if (data.success) {
+            toast({
+              title: "Import Successful",
+              description: `Imported ${data.new} new and updated ${data.updated} existing records`,
+            });
+            
+            // Invalidate customers data to refresh views
+            queryClient.invalidateQueries({ queryKey: ['/api/customers'] });
+          } else {
+            throw new Error(data.error || "Import failed");
+          }
         });
       } else {
-        throw new Error(data.error || "Import failed");
+        throw new Error(previewResult.error || "Preview failed");
       }
     })
     .catch(error => {
@@ -2017,7 +2054,15 @@ function DataImportTab({ setActiveTab }: { setActiveTab: (tab: string) => void }
               </p>
             </div>
             
-            <div className="flex justify-end">
+            <div className="flex justify-between items-center">
+              <Button 
+                variant="outline"
+                onClick={() => window.location.href = '/api/customers/export/csv'}
+              >
+                <FileText className="h-4 w-4 mr-2" />
+                Export Current Customers
+              </Button>
+              
               <Button 
                 onClick={handleImport}
                 disabled={!selectedFile || isUploading}
