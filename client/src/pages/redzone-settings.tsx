@@ -225,7 +225,7 @@ const RedZoneSettingsPage = () => {
   };
   
   // Edit a rule
-  const editRule = (rule: any) => {
+  const editRule = (rule: RedZoneRule) => {
     setEditingRuleId(rule.id);
     
     // Prepare resolution conditions as expected by the form
@@ -234,18 +234,18 @@ const RedZoneSettingsPage = () => {
     form.reset({
       name: rule.name,
       description: rule.description || "",
-      severity: rule.severity,
-      conditions: rule.conditions,
-      auto_resolve: rule.auto_resolve,
-      resolution_conditions: resolutionConditions,
-      team_lead_approval_required: rule.team_lead_approval_required,
+      severity: rule.severity || "attention_needed",
+      conditions: rule.conditions as any,
+      auto_resolve: rule.auto_resolve || false,
+      resolution_conditions: resolutionConditions as any,
+      team_lead_approval_required: rule.team_lead_approval_required || false,
       notification_message: rule.notification_message || "",
-      enabled: rule.enabled,
+      enabled: rule.enabled || true,
     });
   };
 
   // Get severity badge color
-  const getSeverityColor = (severity: string) => {
+  const getSeverityColor = (severity: string | null) => {
     switch (severity) {
       case "critical":
         return "bg-red-500";
@@ -622,7 +622,7 @@ const RedZoneSettingsPage = () => {
                       </div>
                     ) : (
                       <div className="space-y-4">
-                        {rules.map((rule: any) => (
+                        {rules.map((rule: RedZoneRule) => (
                           <Card key={rule.id} className="overflow-hidden">
                             <div className={`h-1 ${getSeverityColor(rule.severity)}`} />
                             <CardHeader className="pb-2">
@@ -686,7 +686,7 @@ const RedZoneSettingsPage = () => {
                                 <div>
                                   <h4 className="text-sm font-medium mb-1">Alert Conditions</h4>
                                   <div className="space-y-1">
-                                    {rule.conditions.map((condition: any, i: number) => (
+                                    {rule.conditions.map((condition: {field: string, operator: string, value: string}, i: number) => (
                                       <p key={i} className="text-sm">
                                         <span className="font-medium">{condition.field}</span>
                                         {" "}
@@ -702,7 +702,7 @@ const RedZoneSettingsPage = () => {
                                   <div>
                                     <h4 className="text-sm font-medium mb-1">Auto-resolution Conditions</h4>
                                     <div className="space-y-1">
-                                      {rule.resolution_conditions.map((condition: any, i: number) => (
+                                      {rule.resolution_conditions?.map((condition: {field_path: string, operator: string, value: string}, i: number) => (
                                         <p key={i} className="text-sm">
                                           <span className="font-medium">{condition.field_path}</span>
                                           {" "}
