@@ -111,6 +111,15 @@ export const importCSV = async (req: Request, res: Response) => {
         }
       }
       
+      // Make sure the record has a name field (required by the schema)
+      if (!convertedRecord.name) {
+        if (record.company_name) {
+          convertedRecord.name = record.company_name;
+        } else {
+          convertedRecord.name = `Customer-${i}`;
+        }
+      }
+
       // Check if this is an update (by recurrer_id) or a new record
       try {
         const existingCustomer = await storage.getCustomerByRecurrerId(convertedRecord.recurrer_id);
@@ -124,7 +133,7 @@ export const importCSV = async (req: Request, res: Response) => {
           const newCustomer = await storage.createCustomer(convertedRecord);
           importedRecords.push(newCustomer);
         }
-      } catch (error) {
+      } catch (error: any) {
         errors.push(`Row ${i}: ${error.message}`);
       }
     }
@@ -138,7 +147,7 @@ export const importCSV = async (req: Request, res: Response) => {
       errors: errors.length > 0 ? errors : undefined
     });
     
-  } catch (error) {
+  } catch (error: any) {
     log(`CSV import error: ${error}`, 'error');
     res.status(500).json({ success: false, error: `Failed to import CSV: ${error.message}` });
   }
@@ -185,7 +194,7 @@ export const downloadSampleCSV = async (req: Request, res: Response) => {
     // Return success
     res.json({ success: true, message: 'Sample CSV created and updated' });
     
-  } catch (error) {
+  } catch (error: any) {
     log(`Error creating sample CSV: ${error}`, 'error');
     res.status(500).json({ success: false, error: `Failed to create sample CSV: ${error.message}` });
   }
@@ -234,7 +243,7 @@ export const exportCustomersCSV = async (req: Request, res: Response) => {
     // Send the CSV content
     res.send(csvContent);
     
-  } catch (error) {
+  } catch (error: any) {
     log(`Error exporting customers: ${error}`, 'error');
     res.status(500).json({ success: false, error: `Failed to export customers: ${error.message}` });
   }

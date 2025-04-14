@@ -14,6 +14,7 @@ import {
   getCustomerExternalData,
   importMySQLDataToCustomer
 } from "./external-data";
+import { upload, importCSV, downloadSampleCSV, exportCustomersCSV } from "./import";
 
 const app = express();
 app.use(express.json());
@@ -98,6 +99,11 @@ app.post('/api/admin/chargebee-sync', async (req, res) => {
 
 // Customer external data integration routes
 app.post('/api/customers/import-mysql-data', importMySQLDataToCustomer);
+
+// CSV Import/Export routes
+app.post('/api/import/csv', upload.single('file'), importCSV);
+app.get('/api/admin/csv/sample', downloadSampleCSV);
+app.get('/api/export/customers', exportCustomersCSV);
 app.get('/api/chargebee/customers/:id', getChargebeeCustomer);
 app.get('/api/chargebee/invoices', getChargebeeInvoices);
 app.get('/api/chargebee/invoices/:id', getChargebeeInvoice);
