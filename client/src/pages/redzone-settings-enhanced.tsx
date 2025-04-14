@@ -393,9 +393,9 @@ const RedZoneSettingsPage = () => {
             {editingRuleId ? "Edit Rule" : "Create Rule"}
           </TabsTrigger>
         </TabsList>
-          
-          <TabsContent value="rules" className="space-y-4">
-            <div className="flex justify-between items-center">
+        
+        <TabsContent value="rules" className="space-y-4">
+          <div className="flex justify-between items-center">
               <h2 className="text-xl font-semibold">RedZone Rules</h2>
               <Button onClick={() => {
                 resetForm();
@@ -447,7 +447,7 @@ const RedZoneSettingsPage = () => {
                             <Badge variant="destructive" className="ml-2">Critical</Badge>
                           )}
                           {rule.severity === "high_risk" && (
-                            <Badge variant="warning" className="ml-2 bg-orange-500">High Risk</Badge>
+                            <Badge variant="outline" className="ml-2 bg-orange-500 text-white">High Risk</Badge>
                           )}
                           {rule.severity === "attention_needed" && (
                             <Badge variant="secondary" className="ml-2">Attention Needed</Badge>
@@ -540,20 +540,20 @@ const RedZoneSettingsPage = () => {
                 ))}
               </div>
             )}
-          </TabsContent>
-          
-          <TabsContent value="create">
-            <Card>
-              <CardHeader>
-                <CardTitle>
-                  {editingRuleId ? "Edit RedZone Rule" : "Create RedZone Rule"}
-                </CardTitle>
-                <CardDescription>
-                  Configure conditions that trigger RedZone alerts
-                </CardDescription>
-              </CardHeader>
-              <CardContent>
-                <Form {...form}>
+        </TabsContent>
+        
+        <TabsContent value="create">
+          <Card>
+            <CardHeader>
+              <CardTitle>
+                {editingRuleId ? "Edit RedZone Rule" : "Create RedZone Rule"}
+              </CardTitle>
+              <CardDescription>
+                Configure conditions that trigger RedZone alerts
+              </CardDescription>
+            </CardHeader>
+            <CardContent>
+              <Form {...form}>
                   <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-6">
                     <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                       <FormField
