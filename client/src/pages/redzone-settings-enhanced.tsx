@@ -699,77 +699,34 @@ const RedZoneSettingsPage = () => {
                   <FormField
                     control={form.control}
                     name="notification_message"
-                      render={({ field }) => (
-                        <FormItem>
-                          <FormLabel>Notification Message</FormLabel>
-                          <FormControl>
-                            <Textarea
-                              placeholder="Enter a notification message"
-                              className="resize-none h-20"
-                              {...field}
-                            />
-                          </FormControl>
-                          <FormDescription>
-                            This message will be shown in the notification when the rule is triggered
-                          </FormDescription>
-                          <FormMessage />
-                        </FormItem>
-                      )}
-                    />
-                    
-                    <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                      <FormField
-                        control={form.control}
-                        name="auto_resolve"
-                        render={({ field }) => (
-                          <FormItem className="flex flex-row items-center justify-between rounded-lg border p-3 shadow-sm">
-                            <div className="space-y-0.5">
-                              <FormLabel>Auto-resolve</FormLabel>
-                              <FormDescription>
-                                Automatically resolve alerts when conditions are met
-                              </FormDescription>
-                            </div>
-                            <FormControl>
-                              <Switch
-                                checked={field.value}
-                                onCheckedChange={field.onChange}
-                              />
-                            </FormControl>
-                          </FormItem>
-                        )}
-                      />
-                      
-                      <FormField
-                        control={form.control}
-                        name="team_lead_approval_required"
-                        render={({ field }) => (
-                          <FormItem className="flex flex-row items-center justify-between rounded-lg border p-3 shadow-sm">
-                            <div className="space-y-0.5">
-                              <FormLabel>Team Lead Approval</FormLabel>
-                              <FormDescription>
-                                Require team lead approval for resolution
-                              </FormDescription>
-                            </div>
-                            <FormControl>
-                              <Switch
-                                checked={field.value}
-                                onCheckedChange={field.onChange}
-                              />
-                            </FormControl>
-                          </FormItem>
-                        )}
-                      />
-                    </div>
-                    
+                    render={({ field }) => (
+                      <FormItem>
+                        <FormLabel>Notification Message</FormLabel>
+                        <FormControl>
+                          <Textarea
+                            placeholder="Enter a notification message"
+                            className="resize-none h-20"
+                            {...field}
+                          />
+                        </FormControl>
+                        <FormDescription>
+                          This message will be shown in the notification when the rule is triggered
+                        </FormDescription>
+                        <FormMessage />
+                      </FormItem>
+                    )}
+                  />
+                  
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                     <FormField
                       control={form.control}
-                      name="enabled"
+                      name="auto_resolve"
                       render={({ field }) => (
                         <FormItem className="flex flex-row items-center justify-between rounded-lg border p-3 shadow-sm">
                           <div className="space-y-0.5">
-                            <FormLabel>Enable Rule</FormLabel>
+                            <FormLabel>Auto-resolve</FormLabel>
                             <FormDescription>
-                              When enabled, this rule will actively monitor customers
+                              Automatically resolve alerts when conditions are met
                             </FormDescription>
                           </div>
                           <FormControl>
@@ -782,32 +739,75 @@ const RedZoneSettingsPage = () => {
                       )}
                     />
                     
-                    <div className="flex justify-end space-x-2">
-                      <Button
-                        type="button"
-                        variant="outline"
-                        onClick={() => {
-                          resetForm();
-                          setActiveTab("rules");
-                        }}
-                      >
-                        Cancel
-                      </Button>
-                      <Button
-                        type="submit"
-                        disabled={createRuleMutation.isPending}
-                      >
-                        {createRuleMutation.isPending ? (
-                          "Saving..."
-                        ) : editingRuleId ? (
-                          "Update Rule"
-                        ) : (
-                          "Create Rule"
-                        )}
-                      </Button>
-                    </div>
-                  </form>
-                </Form>
+                    <FormField
+                      control={form.control}
+                      name="team_lead_approval_required"
+                      render={({ field }) => (
+                        <FormItem className="flex flex-row items-center justify-between rounded-lg border p-3 shadow-sm">
+                          <div className="space-y-0.5">
+                            <FormLabel>Team Lead Approval</FormLabel>
+                            <FormDescription>
+                              Require team lead approval for resolution
+                            </FormDescription>
+                          </div>
+                          <FormControl>
+                            <Switch
+                              checked={field.value}
+                              onCheckedChange={field.onChange}
+                            />
+                          </FormControl>
+                        </FormItem>
+                      )}
+                    />
+                  </div>
+                  
+                  <FormField
+                    control={form.control}
+                    name="enabled"
+                    render={({ field }) => (
+                      <FormItem className="flex flex-row items-center justify-between rounded-lg border p-3 shadow-sm">
+                        <div className="space-y-0.5">
+                          <FormLabel>Enable Rule</FormLabel>
+                          <FormDescription>
+                            When enabled, this rule will actively monitor customers
+                          </FormDescription>
+                        </div>
+                        <FormControl>
+                          <Switch
+                            checked={field.value}
+                            onCheckedChange={field.onChange}
+                          />
+                        </FormControl>
+                      </FormItem>
+                    )}
+                  />
+                  
+                  <div className="flex justify-end space-x-2">
+                    <Button
+                      type="button"
+                      variant="outline"
+                      onClick={() => {
+                        resetForm();
+                        setActiveTab("rules");
+                      }}
+                    >
+                      Cancel
+                    </Button>
+                    <Button
+                      type="submit"
+                      disabled={createRuleMutation.isPending}
+                    >
+                      {createRuleMutation.isPending ? (
+                        "Saving..."
+                      ) : editingRuleId ? (
+                        "Update Rule"
+                      ) : (
+                        "Create Rule"
+                      )}
+                    </Button>
+                  </div>
+                </form>
+              </Form>
               </CardContent>
             </Card>
           </TabsContent>
