@@ -20,19 +20,29 @@ async function migrateChargebeeTables() {
     
     if (!checkConfigTable[0]?.exists) {
       console.log('Creating chargebee_config table...');
-      await db.execute(sql.raw(`
-        CREATE TABLE chargebee_config (
-          id SERIAL PRIMARY KEY,
-          created_at TIMESTAMP DEFAULT NOW(),
-          created_by INTEGER,
-          site TEXT NOT NULL,
-          apiKey TEXT NOT NULL,
-          status TEXT DEFAULT 'active',
-          sync_frequency INTEGER DEFAULT 24,
-          last_synced_at TIMESTAMP
-        )
-      `));
-      console.log('chargebee_config table created successfully');
+      try {
+        await db.execute(sql.raw(`
+          CREATE TABLE IF NOT EXISTS chargebee_config (
+            id SERIAL PRIMARY KEY,
+            created_at TIMESTAMP DEFAULT NOW(),
+            created_by INTEGER,
+            site TEXT NOT NULL,
+            apiKey TEXT NOT NULL,
+            status TEXT DEFAULT 'active',
+            sync_frequency INTEGER DEFAULT 24,
+            last_synced_at TIMESTAMP
+          )
+        `));
+        console.log('chargebee_config table created successfully');
+      } catch (tableError) {
+        // Check if it's the "relation already exists" error (42P07)
+        if (tableError instanceof Error && tableError.message.includes('42P07')) {
+          console.log('Chargebee tables update warning: relation "chargebee_config" already exists');
+        } else {
+          // Re-throw other errors
+          throw tableError;
+        }
+      }
     } else {
       // Check if status column exists
       const checkStatusColumn = await db.execute(sql.raw(`
