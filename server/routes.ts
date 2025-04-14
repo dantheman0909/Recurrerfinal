@@ -560,6 +560,21 @@ export async function registerRoutes(app: Express): Promise<Server> {
     res.status(204).end();
   });
   
+  // Get available fields for RedZone rules
+  app.get('/api/red-zone/available-fields', async (req, res) => {
+    try {
+      const { getAvailableFields } = await import('./get-available-fields');
+      const fields = await getAvailableFields();
+      res.json(fields);
+    } catch (error) {
+      console.error('Error getting available fields:', error);
+      res.status(500).json({ 
+        message: 'Failed to get available fields', 
+        error: error instanceof Error ? error.message : String(error) 
+      });
+    }
+  });
+  
   app.post('/api/red-zone/:id/resolve', async (req, res) => {
     const id = parseInt(req.params.id);
     const alert = await storage.resolveRedZoneAlert(id);
