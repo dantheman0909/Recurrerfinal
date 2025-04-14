@@ -156,7 +156,7 @@ const validateRecord = (record: Record<string, any>, rowIndex: number): Validati
   // Required fields validation - based on user requirements
   const requiredFields = [
     { field: 'name', label: 'Name' },
-    { field: 'recurrer_id', label: 'Recurrer ID' },
+    // recurrer_id is auto-generated if missing, so don't validate it as required
     { field: 'contact_email', label: 'Contact Email' },
     { field: 'contact_phone', label: 'Contact Phone' },
     { field: 'chargebee_customer_id', label: 'Chargebee Customer ID' },
@@ -349,8 +349,8 @@ export const importCSV = async (req: Request, res: Response) => {
           continue; // Skip records with validation errors
         }
         
-        // Check all required fields are present
-        const requiredFields = ['name', 'recurrer_id', 'contact_email', 'contact_phone', 'chargebee_customer_id', 'chargebee_subscription_id'];
+        // Check all required fields are present (except recurrer_id which is auto-generated if missing)
+        const requiredFields = ['name', 'contact_email', 'contact_phone', 'chargebee_customer_id', 'chargebee_subscription_id'];
         const missingFields = requiredFields.filter(field => !record[field]);
         
         if (missingFields.length > 0) {
@@ -806,13 +806,9 @@ export const processCSV = (csvContent: string, existingCustomers: Record<string,
     // Ensure recurrer_id exists - either use the provided one or generate a new one
     if (!record.recurrer_id) {
       record.recurrer_id = `rec_${randomUUID().replace(/-/g, '')}`;
-      // Add a note that this ID was auto-generated
-      validationErrors.push({
-        row: i,
-        field: 'recurrer_id',
-        value: record.recurrer_id,
-        message: 'Recurrer ID was auto-generated for this record'
-      });
+      // This is an informational message, not an error
+      // Don't add this to validationErrors as it's not a real error
+      console.log(`Row ${i}: Recurrer ID was auto-generated: ${record.recurrer_id}`);
     }
     
     // Convert values to appropriate types
@@ -872,11 +868,13 @@ const getFieldRequirements = () => {
   return {
     required_fields: [
       { field: 'name', description: 'Company or customer name' },
-      { field: 'recurrer_id', description: 'Unique identifier for the customer in Recurrer (will be auto-generated if missing)' },
       { field: 'contact_email', description: 'Primary contact email address' },
       { field: 'contact_phone', description: 'Primary contact phone number' },
       { field: 'chargebee_customer_id', description: 'Chargebee customer identifier' },
       { field: 'chargebee_subscription_id', description: 'Chargebee subscription identifier' }
+    ],
+    auto_generated_fields: [
+      { field: 'recurrer_id', description: 'Unique identifier for the customer in Recurrer (automatically generated if missing)' }
     ],
     optional_fields: [
       // Core customer info

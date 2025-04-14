@@ -1935,21 +1935,39 @@ function DataImportTab({ setActiveTab }: { setActiveTab: (tab: string) => void }
       if (previewResult.success) {
         // If there are validation errors, show them
         if (previewResult.preview.validation_errors && previewResult.preview.validation_errors.length > 0) {
-          const errorSummary = previewResult.preview.validation_errors
-            .slice(0, 5) // Show only first 5 errors
-            .map((err: any) => `Row ${err.row}: ${err.message} (${err.field})`)
-            .join('\n');
-            
-          const totalErrors = previewResult.preview.validation_errors.length;
-          const additionalErrors = totalErrors > 5 ? `\n...and ${totalErrors - 5} more errors` : '';
+          // Filter out non-blocking warnings like auto-generated IDs
+          const actualErrors = previewResult.preview.validation_errors.filter(
+            (err: any) => !err.message.includes('auto-generated')
+          );
           
-          toast({
-            title: "Validation Errors",
-            description: `Please fix the following issues:\n${errorSummary}${additionalErrors}`,
-            variant: "destructive",
-          });
-          setIsUploading(false);
-          return;
+          // If there are actual errors (not just auto-generated fields)
+          if (actualErrors.length > 0) {
+            const errorSummary = actualErrors
+              .slice(0, 5) // Show only first 5 errors
+              .map((err: any) => `Row ${err.row}: ${err.message} (${err.field})`)
+              .join('\n');
+              
+            const totalErrors = actualErrors.length;
+            const additionalErrors = totalErrors > 5 ? `\n...and ${totalErrors - 5} more errors` : '';
+            
+            toast({
+              title: "Validation Errors",
+              description: `Please fix the following issues:\n${errorSummary}${additionalErrors}`,
+              variant: "destructive",
+            });
+            setIsUploading(false);
+            return;
+          }
+          
+          // If we only had auto-generated ID notices but no actual errors, show an informational toast
+          if (previewResult.preview.validation_errors.length > actualErrors.length) {
+            const autoGenCount = previewResult.preview.validation_errors.length - actualErrors.length;
+            toast({
+              title: "Import Ready",
+              description: `${autoGenCount} rows will have auto-generated Recurrer IDs. Click Import again to proceed.`,
+            });
+            // Don't stop the import process, the user can continue
+          }
         }
         
         // If validation passes, proceed with actual import
@@ -2485,6 +2503,7 @@ function DataImportTab({ setActiveTab }: { setActiveTab: (tab: string) => void }
                     <AlertDescription className="text-blue-700 text-xs">
                       <ul className="list-disc pl-5 mt-1">
                         <li>Fields marked with <span className="text-red-500">*</span> are required</li>
+                        <li><span className="font-medium">recurrer_id</span> will be automatically generated if not provided</li>
                         <li>All CSV imports must include a header row with exact field names</li>
                         <li>You can download a sample file with the exact format using the button above</li>
                         <li>The system will validate all fields and report any errors before importing</li>
