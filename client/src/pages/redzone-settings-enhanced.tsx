@@ -185,6 +185,12 @@ const RedZoneSettingsPage = () => {
     };
     
     form.setValue("conditions.groups", updatedGroups);
+    
+    // Force rerender to update the UI
+    const formData = form.getValues();
+    form.reset(formData);
+    
+    console.log("Added condition to group", groupIndex, form.getValues("conditions.groups"));
   };
   
   // Remove condition from a specific group
@@ -210,6 +216,12 @@ const RedZoneSettingsPage = () => {
     };
     
     form.setValue("conditions.groups", updatedGroups);
+    
+    // Force rerender to update the UI
+    const formData = form.getValues();
+    form.reset(formData);
+    
+    console.log("Removed condition from group", groupIndex, form.getValues("conditions.groups"));
   };
   
   // Add a new condition group
@@ -223,6 +235,12 @@ const RedZoneSettingsPage = () => {
         conditions: [{ field: "", operator: "equals", value: "" }]
       }
     ]);
+    
+    // Force rerender to update the UI
+    const formData = form.getValues();
+    form.reset(formData);
+    
+    console.log("Added condition group", form.getValues("conditions.groups"));
   };
   
   // Remove a condition group
@@ -241,6 +259,12 @@ const RedZoneSettingsPage = () => {
       "conditions.groups",
       currentGroups.filter((_, i) => i !== groupIndex)
     );
+    
+    // Force rerender to update the UI
+    const formData = form.getValues();
+    form.reset(formData);
+    
+    console.log("Removed condition group", form.getValues("conditions.groups"));
   };
   
   // Handle changes to group logic operator
@@ -371,7 +395,52 @@ const RedZoneSettingsPage = () => {
   
   // Submit handler
   const onSubmit = (data: RedZoneRuleForm) => {
-    createRuleMutation.mutate(data);
+    // Make sure all conditions have valid field and value
+    try {
+      // Validate that all conditions have field values selected
+      const groups = data.conditions.groups;
+      let isValid = true;
+      
+      for (let i = 0; i < groups.length; i++) {
+        const conditions = groups[i].conditions;
+        for (let j = 0; j < conditions.length; j++) {
+          const condition = conditions[j];
+          if (!condition.field || condition.field === "") {
+            isValid = false;
+            toast({
+              title: "Validation Error",
+              description: `Please select a field for condition ${j + 1} in group ${i + 1}`,
+              variant: "destructive",
+            });
+            return;
+          }
+          // Only validate value if operator is not is_empty or is_not_empty
+          if (condition.operator !== "is_empty" && condition.operator !== "is_not_empty") {
+            if (!condition.value && condition.value !== "0") {
+              isValid = false;
+              toast({
+                title: "Validation Error",
+                description: `Please provide a value for condition ${j + 1} in group ${i + 1}`,
+                variant: "destructive",
+              });
+              return;
+            }
+          }
+        }
+      }
+      
+      if (isValid) {
+        console.log("Submitting rule data:", data);
+        createRuleMutation.mutate(data);
+      }
+    } catch (error) {
+      console.error("Error validating rule data:", error);
+      toast({
+        title: "Error",
+        description: "There was a problem validating your rule data",
+        variant: "destructive",
+      });
+    }
   };
   
   return (
