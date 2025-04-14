@@ -27,18 +27,39 @@ const sanitizeValue = (value: string | null | undefined): string | null => {
 
 // More robust type conversion and validation
 const convertValueType = (field: string, value: string | null): any => {
-  if (value === null) return null;
+  if (value === null || value === '') return null;
   
-  // Integer fields
-  if (['id', 'mrr', 'arr', 'assigned_csm', 'active_stores', 'growth_subscription_count', 
-       'loyalty_active_store_count', 'loyalty_inactive_store_count', 'loyalty_channel_credits',
-       'negative_feedback_alert_inactive', 'less_than_300_bills', 'wa_header_active', 
-       'active_auto_campaigns_count', 'unique_customers_captured', 'total_revenue_last_1_year_per_growth_subscription_per_month',
-       'revenue_1_year', 'customers_with_min_one_visit', 'customers_with_min_two_visit', 'aov',
-       'customers_profiled_with_birthday', 'customers_profiled_with_anniversary', 'next_month_birthdays',
-       'next_month_anniversaries', 'customers_without_min_visits', 'percentage_of_inactive_customers',
-       'negative_feedbacks_count', 'campaigns_sent_last_90_days', 'bills_received_last_30_days',
-       'customers_acquired_last_30_days'].includes(field)) {
+  // Integer fields - all fields that should be stored as whole numbers
+  if ([
+    'id', 
+    'mrr', 
+    'arr', 
+    'assigned_csm', 
+    'active_stores', 
+    'growth_subscription_count', 
+    'loyalty_active_store_count', 
+    'loyalty_inactive_store_count', 
+    'loyalty_channel_credits',
+    'negative_feedback_alert_inactive', 
+    'less_than_300_bills', 
+    'wa_header_active', 
+    'active_auto_campaigns_count', 
+    'unique_customers_captured', 
+    'total_revenue_last_1_year_per_growth_subscription_per_month',
+    'revenue_1_year', 
+    'customers_with_min_one_visit', 
+    'customers_with_min_two_visit', 
+    'aov',
+    'customers_profiled_with_birthday', 
+    'customers_profiled_with_anniversary', 
+    'next_month_birthdays',
+    'next_month_anniversaries', 
+    'customers_without_min_visits',
+    'negative_feedbacks_count', 
+    'campaigns_sent_last_90_days', 
+    'bills_received_last_30_days',
+    'customers_acquired_last_30_days'
+  ].includes(field)) {
     // Make sure we have a valid number format
     const parsed = parseInt(value, 10);
     if (isNaN(parsed)) {
@@ -47,8 +68,10 @@ const convertValueType = (field: string, value: string | null): any => {
     return parsed;
   }
   
-  // Decimal/float fields
-  if (['percentage_of_inactive_customers'].includes(field)) {
+  // Decimal/float fields - fields that should allow decimal points
+  if ([
+    'percentage_of_inactive_customers'
+  ].includes(field)) {
     const parsed = parseFloat(value);
     if (isNaN(parsed)) {
       return null;
@@ -56,9 +79,36 @@ const convertValueType = (field: string, value: string | null): any => {
     return parsed;
   }
   
-  // Date fields
-  if (['onboarded_at', 'renewal_date', 'updated_from_mysql_at'].includes(field)) {
+  // Boolean fields - convert string representations to boolean
+  if ([
+    'enableRLS'
+  ].includes(field)) {
+    if (typeof value === 'string') {
+      // Handle various string representations
+      return ['true', 'yes', '1', 'on'].includes(value.toLowerCase());
+    }
+    return !!value; // Convert to boolean
+  }
+  
+  // Date fields - parse and validate dates
+  if ([
+    'onboarded_at', 
+    'renewal_date', 
+    'updated_from_mysql_at',
+    'company_create_date'
+  ].includes(field)) {
     try {
+      // Standardize date format
+      // Check if it's in YYYY-MM-DD format
+      const dateRegex = /^\d{4}-\d{2}-\d{2}$/;
+      if (dateRegex.test(value)) {
+        const date = new Date(value);
+        if (!isNaN(date.getTime())) {
+          return date;
+        }
+      }
+      
+      // Try general date parsing
       const date = new Date(value);
       // Validate that it's a proper date
       if (isNaN(date.getTime())) {
@@ -70,12 +120,20 @@ const convertValueType = (field: string, value: string | null): any => {
     }
   }
   
-  // Enum fields
+  // Enum fields - validate against allowed values
   if (field === 'health_status' && value) {
     if (['healthy', 'at_risk', 'red_zone'].includes(value.toLowerCase())) {
       return value.toLowerCase();
     }
     return 'healthy'; // Default to healthy if invalid
+  }
+  
+  // Loyalty type enum
+  if (field === 'loyalty_type' && value) {
+    if (['points', 'visits', 'purchases'].includes(value.toLowerCase())) {
+      return value.toLowerCase();
+    }
+    return null;
   }
   
   // Email validation for contact_email
@@ -117,14 +175,34 @@ const validateRecord = (record: Record<string, any>, rowIndex: number): Validati
   });
   
   // Numeric fields validation
-  ['mrr', 'arr'].forEach(field => {
+  [
+    'mrr', 
+    'arr', 
+    'active_stores', 
+    'growth_subscription_count',
+    'bills_received_last_30_days', 
+    'campaigns_sent_last_90_days', 
+    'customers_acquired_last_30_days', 
+    'customers_with_min_one_visit', 
+    'customers_with_min_two_visit', 
+    'customers_without_min_visits',
+    'less_than_300_bills', 
+    'loyalty_active_store_count', 
+    'loyalty_channel_credits', 
+    'loyalty_inactive_store_count',
+    'negative_feedback_alert_inactive', 
+    'negative_feedbacks_count',
+    'percentage_of_inactive_customers',
+    'revenue_1_year', 
+    'unique_customers_captured'
+  ].forEach(field => {
     const value = record[field];
-    if (value !== null && value !== undefined && isNaN(Number(value))) {
+    if (value !== null && value !== undefined && value !== '' && isNaN(Number(value))) {
       errors.push({
         row: rowIndex,
         field,
         value: String(value),
-        message: `${field.toUpperCase()} must be a number`
+        message: `${field} must be a number`
       });
     }
   });
@@ -159,8 +237,8 @@ const validateRecord = (record: Record<string, any>, rowIndex: number): Validati
     });
   }
   
-  // Date validation for renewal_date and onboarded_at
-  ['renewal_date', 'onboarded_at'].forEach(field => {
+  // Date validation for all date fields
+  ['renewal_date', 'onboarded_at', 'company_create_date'].forEach(field => {
     if (record[field]) {
       try {
         const date = new Date(record[field]);
@@ -169,7 +247,7 @@ const validateRecord = (record: Record<string, any>, rowIndex: number): Validati
             row: rowIndex,
             field,
             value: String(record[field]),
-            message: `Invalid date format for ${field}`
+            message: `Invalid date format for ${field}. Please use YYYY-MM-DD format.`
           });
         }
       } catch (e) {
@@ -177,11 +255,36 @@ const validateRecord = (record: Record<string, any>, rowIndex: number): Validati
           row: rowIndex,
           field,
           value: String(record[field]),
-          message: `Invalid date format for ${field}`
+          message: `Invalid date format for ${field}. Please use YYYY-MM-DD format.`
         });
       }
     }
   });
+  
+  // Validation for boolean fields
+  ['enableRLS'].forEach(field => {
+    if (record[field] !== undefined && record[field] !== null && record[field] !== '') {
+      const value = String(record[field]).toLowerCase();
+      if (!['true', 'false', '1', '0', 'yes', 'no'].includes(value)) {
+        errors.push({
+          row: rowIndex,
+          field,
+          value: String(record[field]),
+          message: `${field} must be a boolean value (true/false, yes/no, or 1/0)`
+        });
+      }
+    }
+  });
+  
+  // Validation for loyalty type
+  if (record.loyalty_type && !['points', 'visits', 'purchases'].includes(String(record.loyalty_type).toLowerCase())) {
+    errors.push({
+      row: rowIndex,
+      field: 'loyalty_type',
+      value: String(record.loyalty_type),
+      message: 'Loyalty type must be one of: points, visits, purchases'
+    });
+  }
   
   return errors;
 };
@@ -489,51 +592,139 @@ export const processCSV = (csvContent: string, existingCustomers: Record<string,
   
   // Field mappings for case-insensitive matching and aliases - must match export fields
   const fieldMappings: Record<string, string> = {
-    // Standard fields
+    // Standard fields - with variations for each field name
     'name': 'name',
     'company name': 'name',
+    'company_name': 'name',
     'recurrer_id': 'recurrer_id',
+    'recurrerid': 'recurrer_id',
     
-    // All fields from the customer data model (based on user's request)
-    'reelo_id': 'reelo_id',
-    'active_stores': 'active_stores',
+    // Contact information - handle common field name variations
     'contact_name': 'contact_name',
+    'contactname': 'contact_name',
+    'contact name': 'contact_name',
     'contact_phone': 'contact_phone',
+    'contactphone': 'contact_phone',
+    'contact phone': 'contact_phone',
+    'phone': 'contact_phone',
+    'phone_number': 'contact_phone',
     'contact_email': 'contact_email',
+    'contactemail': 'contact_email',
+    'contact email': 'contact_email',
+    'email': 'contact_email',
+    'email_address': 'contact_email',
+    
+    // External IDs with variations
+    'reelo_id': 'reelo_id',
+    'reeloid': 'reelo_id',
+    'reelo id': 'reelo_id',
     'chargebee_customer_id': 'chargebee_customer_id',
+    'chargebeecustomerid': 'chargebee_customer_id',
+    'chargebee customer id': 'chargebee_customer_id',
     'chargebee_subscription_id': 'chargebee_subscription_id',
+    'chargebeesubscriptionid': 'chargebee_subscription_id',
+    'chargebee subscription id': 'chargebee_subscription_id',
+    'mysql_company_id': 'mysql_company_id',
+    'mysqlcompanyid': 'mysql_company_id',
+    'mysql company id': 'mysql_company_id',
+    
+    // Financial metrics
     'arr': 'arr',
+    'annual recurring revenue': 'arr',
+    'annual_recurring_revenue': 'arr',
     'mrr': 'mrr',
+    'monthly recurring revenue': 'mrr',
+    'monthly_recurring_revenue': 'mrr',
+    'currency_code': 'currency_code',
+    'currencycode': 'currency_code',
+    'currency code': 'currency_code',
+    'revenue_1_year': 'revenue_1_year',
+    'revenue1year': 'revenue_1_year',
+    'revenue 1 year': 'revenue_1_year',
+    
+    // Customer support fields
     'assigned_csm': 'assigned_csm',
+    'assignedcsm': 'assigned_csm',
+    'assigned csm': 'assigned_csm',
     'csm_id': 'assigned_csm',  // Map to internal field
-    'currency_code': 'currency_code', 
-    'growth_subscription_count': 'growth_subscription_count',
+    'csmid': 'assigned_csm',
+    'csm id': 'assigned_csm',
+    
+    // Customer profile
     'health_status': 'health_status',
+    'healthstatus': 'health_status',
     'health status': 'health_status',
     'industry': 'industry',
+    'sector': 'industry',
+    'business_type': 'industry',
+    
+    // Store metrics
+    'active_stores': 'active_stores',
+    'activestores': 'active_stores',
+    'active stores': 'active_stores',
+    'growth_subscription_count': 'growth_subscription_count',
+    'growthsubscriptioncount': 'growth_subscription_count',
+    'growth subscription count': 'growth_subscription_count',
+    
+    // Customer engagement metrics
     'bills_received_last_30_days': 'bills_received_last_30_days',
+    'bills received last 30 days': 'bills_received_last_30_days',
     'campaigns_sent_last_90_days': 'campaigns_sent_last_90_days',
+    'campaigns sent last 90 days': 'campaigns_sent_last_90_days',
     'customers_acquired_last_30_days': 'customers_acquired_last_30_days',
+    'customers acquired last 30 days': 'customers_acquired_last_30_days',
     'customers_with_min_one_visit': 'customers_with_min_one_visit',
+    'customers with min one visit': 'customers_with_min_one_visit',
     'customers_with_min_two_visit': 'customers_with_min_two_visit',
+    'customers with min two visit': 'customers_with_min_two_visit',
     'customers_without_min_visits': 'customers_without_min_visits',
+    'customers without min visits': 'customers_without_min_visits',
+    'unique_customers_captured': 'unique_customers_captured',
+    'unique customers captured': 'unique_customers_captured',
+    
+    // System settings
     'enableRLS': 'enableRLS',
+    'enable_rls': 'enableRLS',
+    'enable rls': 'enableRLS',
     'less_than_300_bills': 'less_than_300_bills',
+    'less than 300 bills': 'less_than_300_bills',
     'logo_url': 'logo_url',
+    'logourl': 'logo_url',
+    'logo url': 'logo_url',
+    
+    // Loyalty program details
     'loyalty_active_channels': 'loyalty_active_channels',
+    'loyalty active channels': 'loyalty_active_channels',
     'loyalty_active_store_count': 'loyalty_active_store_count',
+    'loyalty active store count': 'loyalty_active_store_count',
     'loyalty_channel_credits': 'loyalty_channel_credits',
+    'loyalty channel credits': 'loyalty_channel_credits',
     'loyalty_inactive_store_count': 'loyalty_inactive_store_count',
+    'loyalty inactive store count': 'loyalty_inactive_store_count',
     'loyalty_reward': 'loyalty_reward',
+    'loyaltyreward': 'loyalty_reward',
+    'loyalty reward': 'loyalty_reward',
     'loyalty_type': 'loyalty_type',
-    'mysql_company_id': 'mysql_company_id',
+    'loyaltytype': 'loyalty_type',
+    'loyalty type': 'loyalty_type',
+    
+    // Feedback and health metrics
     'negative_feedback_alert_inactive': 'negative_feedback_alert_inactive',
+    'negative feedback alert inactive': 'negative_feedback_alert_inactive',
     'negative_feedbacks_count': 'negative_feedbacks_count',
-    'onboarded_at': 'onboarded_at',
+    'negative feedbacks count': 'negative_feedbacks_count',
     'percentage_of_inactive_customers': 'percentage_of_inactive_customers',
+    'percentage of inactive customers': 'percentage_of_inactive_customers',
+    
+    // Dates
+    'onboarded_at': 'onboarded_at',
+    'onboardedat': 'onboarded_at',
+    'onboarded at': 'onboarded_at',
+    'onboarding_date': 'onboarded_at',
     'renewal_date': 'renewal_date',
-    'revenue_1_year': 'revenue_1_year',
-    'unique_customers_captured': 'unique_customers_captured'
+    'renewaldate': 'renewal_date',
+    'renewal date': 'renewal_date',
+    'next_renewal': 'renewal_date'
   };
   
   // Process each row
