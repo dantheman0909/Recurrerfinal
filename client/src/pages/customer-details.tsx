@@ -35,6 +35,7 @@ import { Label } from "@/components/ui/label";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { AnnotationList } from "@/components/annotations/annotation-list";
 
 export default function CustomerDetails() {
   const { id } = useParams();
@@ -500,15 +501,24 @@ export default function CustomerDetails() {
               </TabsContent>
               
               <TabsContent value="communication" className="mt-4">
-                <Card>
-                  <CardHeader>
-                    <CardTitle>Communication History</CardTitle>
-                    <CardDescription>Recent emails and meetings</CardDescription>
-                  </CardHeader>
-                  <CardContent>
-                    <p className="text-gray-500 text-center">Communication history will be displayed here</p>
-                  </CardContent>
-                </Card>
+                <div className="grid gap-6">
+                  <Card>
+                    <CardHeader>
+                      <CardTitle>Communication History</CardTitle>
+                      <CardDescription>Recent emails and meetings</CardDescription>
+                    </CardHeader>
+                    <CardContent>
+                      <p className="text-gray-500 text-center">Communication history will be displayed here</p>
+                    </CardContent>
+                  </Card>
+                  
+                  {/* Annotations Component */}
+                  <AnnotationList 
+                    entityType="customer" 
+                    entityId={parseInt(id || "0")} 
+                    currentUserId={1} // Hardcoded for demo, should come from auth context
+                  />
+                </div>
               </TabsContent>
             </Tabs>
           </div>
