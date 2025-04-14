@@ -62,15 +62,53 @@ export const importCSV = async (req: Request, res: Response) => {
       return res.status(400).json({ success: false, error: 'No file uploaded' });
     }
     
-    const csvData = req.file.buffer.toString('utf8');
-    const rows = csvData.split('\n');
+    // Read and parse CSV file
+    const csvContent = req.file.buffer.toString('utf8');
+    const rows = csvContent.split('\n');
     
     if (rows.length < 2) {
-      return res.status(400).json({ success: false, error: 'CSV file is empty or invalid' });
+      return res.status(400).json({ success: false, error: 'CSV file must contain at least a header row and one data row' });
     }
     
     // Get headers from first row
     const headers = rows[0].split(',').map(h => h.trim());
+    
+    // Field mappings for case-insensitive matching and aliases
+    const fieldMappings: Record<string, string> = {
+      // Standard fields
+      'name': 'name',
+      'company name': 'name',
+      'recurrer_id': 'recurrer_id',
+      'industry': 'industry',
+      'logo_url': 'logo_url',
+      'contact_name': 'contact_name',
+      'contact_email': 'contact_email',
+      'contact_phone': 'contact_phone',
+      'assigned_csm': 'assigned_csm',
+      'csm_id': 'assigned_csm',
+      'health_status': 'health_status',
+      'health status': 'health_status',
+      'mrr': 'mrr',
+      'arr': 'arr',
+      'currency_code': 'currency_code',
+      'renewal_date': 'renewal_date',
+      'onboarded_at': 'onboarded_at',
+      
+      // External IDs
+      'chargebee_customer_id': 'chargebee_customer_id',
+      'chargebee_subscription_id': 'chargebee_subscription_id',
+      'mysql_company_id': 'mysql_company_id',
+      
+      // MySQL company fields
+      'active_stores': 'active_stores',
+      'growth_subscription_count': 'growth_subscription_count',
+      'loyalty_active_store_count': 'loyalty_active_store_count',
+      'loyalty_inactive_store_count': 'loyalty_inactive_store_count',
+      'loyalty_active_channels': 'loyalty_active_channels',
+      'loyalty_channel_credits': 'loyalty_channel_credits',
+      'loyalty_type': 'loyalty_type', 
+      'loyalty_reward': 'loyalty_reward',
+    };
     
     // Process each row
     const importedRecords = [];
@@ -86,10 +124,12 @@ export const importCSV = async (req: Request, res: Response) => {
         continue;
       }
       
-      // Create record object
+      // Create record object with normalized field names
       const record: Record<string, any> = {};
       headers.forEach((header, index) => {
-        record[header] = sanitizeValue(values[index]);
+        const normalizedHeader = header.toLowerCase().trim();
+        const mappedField = fieldMappings[normalizedHeader] || normalizedHeader;
+        record[mappedField] = sanitizeValue(values[index]);
       });
       
       // Generate recurrer_id if not present
@@ -159,22 +199,82 @@ export const downloadSampleCSV = async (req: Request, res: Response) => {
     // Get all customer fields from storage
     const customerFields = await storage.getCustomerTableFields();
     
+    // Filter out specific fields we don't want in the CSV
+    const fieldsToExclude = ['id', 'created_at', 'updated_from_mysql_at'];
+    const filteredFields = customerFields
+      .filter(field => !fieldsToExclude.includes(field))
+      .sort(); // Sort fields alphabetically for better organization
+    
+    // Add 'name' field at the beginning as it's required
+    if (!filteredFields.includes('name')) {
+      filteredFields.unshift('name');
+    } else {
+      // Remove and reinsert name at the beginning
+      filteredFields.splice(filteredFields.indexOf('name'), 1);
+      filteredFields.unshift('name');
+    }
+    
+    // Add recurrer_id as the second field for clarity
+    if (filteredFields.includes('recurrer_id')) {
+      filteredFields.splice(filteredFields.indexOf('recurrer_id'), 1);
+      filteredFields.splice(1, 0, 'recurrer_id');
+    }
+    
     // Create CSV header row from fields
-    const headerRow = customerFields
-      .filter(field => field !== 'id' && field !== 'created_at') // Remove auto-generated fields
-      .join(',');
-      
-    // Create sample data rows (2-3 examples)
-    const sampleRows = [
-      // Row 1 - Tech company
-      'Acme Tech Solutions,,Technology,John Smith,john@acmetech.com,+91 9876543210,1,healthy,54000,648000,2025-12-15,Asia/Kolkata,,20,5,3,1,WhatsApp|SMS,200,0,0,12,20000,120000,5000,1200,800,3.2,400,150,15,20,35,0,moderate,standard,150,120,premium,tier2',
-      
-      // Row 2 - Retail company with less data
-      'Gamma Retail,,Retail,Sarah Lee,sarah@gammaretail.com,+91 8765432109,2,at_risk,25000,300000,2025-06-30,Asia/Kolkata,CB_CUST_123,15,3,2,0,SMS,100,1,2,6,15000,90000,3000,900,500,2.8,300,100,10,15,25,10,basic,entry,100,80,basic,tier1',
-      
-      // Row 3 - Manufacturing company with minimal data
-      'Beta Manufacturing,,Manufacturing,Raj Kumar,raj@betamfg.com,+91 7654321098,3,red_zone,18000,216000,2024-09-10,Asia/Kolkata,,10,2,1,0,,50,2,5,3,8000,60000,2000,500,300,2.5,200,50,8,10,20,25,none,none,50,40,standard,none'
-    ];
+    const headerRow = filteredFields.join(',');
+    
+    // Create a mapping object with field examples
+    const fieldExamples: Record<string, string[]> = {
+      name: ['Acme Tech Solutions', 'Gamma Retail', 'Beta Manufacturing'],
+      recurrer_id: ['', '', ''],  // Empty to demonstrate auto-generation
+      industry: ['Technology', 'Retail', 'Manufacturing'],
+      contact_name: ['John Smith', 'Sarah Lee', 'Raj Kumar'],
+      contact_email: ['john@acmetech.com', 'sarah@gammaretail.com', 'raj@betamfg.com'],
+      contact_phone: ['+91 9876543210', '+91 8765432109', '+91 7654321098'],
+      assigned_csm: ['1', '2', '3'],
+      health_status: ['healthy', 'at_risk', 'red_zone'],
+      mrr: ['54000', '25000', '18000'],
+      arr: ['648000', '300000', '216000'],
+      renewal_date: ['2025-12-15', '2025-06-30', '2024-09-10'],
+      currency_code: ['INR', 'INR', 'INR'],
+      chargebee_customer_id: ['', 'cb_cust_123', ''],
+      chargebee_subscription_id: ['', 'cb_sub_456', ''],
+      mysql_company_id: ['sql_123', 'sql_456', 'sql_789'],
+      active_stores: ['20', '15', '10'],
+      growth_subscription_count: ['5', '3', '2'],
+      loyalty_active_store_count: ['3', '2', '1'],
+      loyalty_inactive_store_count: ['1', '0', '0'],
+      loyalty_active_channels: ['WhatsApp|SMS', 'SMS', ''],
+      loyalty_channel_credits: ['200', '100', '50'],
+      negative_feedback_alert_inactive: ['0', '1', '2'],
+      less_than_300_bills: ['0', '2', '5'],
+      active_auto_campaigns_count: ['12', '6', '3'],
+      unique_customers_captured: ['20000', '15000', '8000'],
+      revenue_1_year: ['120000', '90000', '60000'],
+      customers_with_min_one_visit: ['5000', '3000', '2000'],
+      customers_with_min_two_visit: ['1200', '900', '500'],
+      customers_without_min_visits: ['800', '500', '300'],
+      percentage_of_inactive_customers: ['3.2', '2.8', '2.5'],
+      negative_feedbacks_count: ['400', '300', '200'],
+      campaigns_sent_last_90_days: ['150', '100', '50'],
+      bills_received_last_30_days: ['15', '10', '8'],
+      customers_acquired_last_30_days: ['20', '15', '10'],
+      loyalty_type: ['premium', 'basic', 'standard'],
+      loyalty_reward: ['tier2', 'tier1', 'none'],
+      onboarded_at: ['2023-01-15', '2023-02-28', '2023-03-10'],
+      logo_url: ['https://example.com/logo1.png', 'https://example.com/logo2.png', '']
+    };
+    
+    // Create sample data rows
+    const sampleRows = Array(3).fill(null).map((_, i) => {
+      return filteredFields.map(field => {
+        if (fieldExamples[field] && fieldExamples[field][i]) {
+          return fieldExamples[field][i];
+        }
+        // Default empty for fields not in the example mapping
+        return '';
+      }).join(',');
+    });
     
     // Combine header and sample rows
     const csvContent = [headerRow, ...sampleRows].join('\n');
@@ -191,8 +291,10 @@ export const downloadSampleCSV = async (req: Request, res: Response) => {
     const filePath = path.join(publicDir, 'customer-import-sample.csv');
     fs.writeFileSync(filePath, csvContent);
     
-    // Return success
-    res.json({ success: true, message: 'Sample CSV created and updated' });
+    // Set headers for file download
+    res.setHeader('Content-Type', 'text/csv');
+    res.setHeader('Content-Disposition', 'attachment; filename=customer-import-sample.csv');
+    res.send(csvContent);
     
   } catch (error: any) {
     log(`Error creating sample CSV: ${error}`, 'error');
@@ -209,28 +311,49 @@ export const exportCustomersCSV = async (req: Request, res: Response) => {
     // Get all customer fields
     const customerFields = await storage.getCustomerTableFields();
     
+    // Filter out specific fields we don't want in the CSV
+    const fieldsToExclude = ['id', 'created_at', 'updated_from_mysql_at'];
+    const filteredFields = customerFields
+      .filter(field => !fieldsToExclude.includes(field))
+      .sort(); // Sort fields alphabetically for better organization
+    
+    // Reorganize fields for better readability
+    // Add 'name' field at the beginning as it's required
+    if (filteredFields.includes('name')) {
+      filteredFields.splice(filteredFields.indexOf('name'), 1);
+      filteredFields.unshift('name');
+    }
+    
+    // Add recurrer_id as the second field for clarity
+    if (filteredFields.includes('recurrer_id')) {
+      filteredFields.splice(filteredFields.indexOf('recurrer_id'), 1);
+      filteredFields.splice(1, 0, 'recurrer_id');
+    }
+    
     // Create CSV header row
-    const headerRow = customerFields
-      .filter(field => field !== 'id' && field !== 'created_at') // Remove internal fields
-      .join(',');
+    const headerRow = filteredFields.join(',');
     
     // Create a row for each customer
     const customerRows = allCustomers.map(customer => {
-      return customerFields
-        .filter(field => field !== 'id' && field !== 'created_at')
-        .map(field => {
-          const value = customer[field];
-          
-          // Handle different value types
-          if (value === null || value === undefined) {
-            return '';
-          } else if (typeof value === 'object' && value instanceof Date) {
-            return value.toISOString().split('T')[0]; // YYYY-MM-DD format
-          } else {
-            return String(value).replace(/,/g, ''); // Remove commas to prevent CSV parsing issues
+      return filteredFields.map(field => {
+        const value = customer[field as keyof typeof customer]; // Type assertion for TypeScript
+        
+        // Handle different value types
+        if (value === null || value === undefined) {
+          return '';
+        } else if (typeof value === 'object' && value instanceof Date) {
+          return value.toISOString().split('T')[0]; // YYYY-MM-DD format
+        } else if (Array.isArray(value)) {
+          return `"${value.join('|')}"`;  // Convert arrays to pipe-delimited strings and quote them
+        } else {
+          // Clean strings and surround with quotes if they contain commas
+          const strValue = String(value);
+          if (strValue.includes(',')) {
+            return `"${strValue}"`;
           }
-        })
-        .join(',');
+          return strValue.replace(/,/g, ''); // Remove commas to prevent CSV parsing issues
+        }
+      }).join(',');
     });
     
     // Combine header and customer rows
