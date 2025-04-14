@@ -16,6 +16,7 @@ import {
 import { Badge } from "@/components/ui/badge";
 import { GradientCard } from "../ui/gradient-card";
 import { Button } from "../ui/button";
+import { useQuery } from "@tanstack/react-query";
 
 interface SubItem {
   name: string;
@@ -44,6 +45,16 @@ export default function Sidebar({ open, setOpen }: SidebarProps) {
     role: "Team Lead",
     avatar: ""
   };
+  
+  // Fetch active RedZone alerts
+  const { data: redZoneAlerts = [] } = useQuery({
+    queryKey: ['/api/red-zone'],
+  });
+  
+  // Count only active (non-resolved) alerts
+  const activeRedZoneCount = Array.isArray(redZoneAlerts) 
+    ? redZoneAlerts.filter((alert: any) => alert.status === 'open').length
+    : 0;
 
   const navigationItems: NavigationItem[] = [
     { name: "Dashboard", href: "/", icon: Home },
@@ -55,7 +66,7 @@ export default function Sidebar({ open, setOpen }: SidebarProps) {
       name: "Red Zone", 
       href: "/red-zone", 
       icon: AlertTriangle, 
-      badgeCount: 12,
+      badgeCount: activeRedZoneCount > 0 ? activeRedZoneCount : undefined,
       subItems: [
         { name: "Settings", href: "/red-zone/settings", icon: Settings }
       ]

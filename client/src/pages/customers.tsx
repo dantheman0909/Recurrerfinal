@@ -9,7 +9,10 @@ import {
   ArrowUpRight, 
   Search,
   Filter,
-  UserPlus
+  UserPlus,
+  ListFilter,
+  LayoutGrid,
+  LayoutList
 } from "lucide-react";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
@@ -17,10 +20,19 @@ import { Badge } from "@/components/ui/badge";
 import { cn, formatINR } from "@/lib/utils";
 import { Customer } from "@shared/schema";
 import { Link } from "wouter";
+import {
+  Table,
+  TableBody,
+  TableCell,
+  TableHead,
+  TableHeader,
+  TableRow,
+} from "@/components/ui/table";
 
 export default function Customers() {
   const [searchTerm, setSearchTerm] = useState("");
   const [healthFilter, setHealthFilter] = useState<string | null>(null);
+  const [viewMode, setViewMode] = useState<"card" | "table">("card");
   
   const { data: customers, isLoading } = useQuery({
     queryKey: ['/api/customers'],
@@ -100,46 +112,75 @@ export default function Customers() {
             />
           </div>
           
-          <div className="flex flex-wrap gap-2">
-            <Button 
-              variant="outline" 
-              size="sm"
-              className={cn(getHealthFilterStyles(null))}
-              onClick={() => setHealthFilter(null)}
-            >
-              <Filter className="h-4 w-4 mr-1" />
-              All
-            </Button>
-            <Button 
-              variant="outline" 
-              size="sm" 
-              className={cn(getHealthFilterStyles('healthy'))}
-              onClick={() => setHealthFilter(healthFilter === 'healthy' ? null : 'healthy')}
-            >
-              Healthy
-            </Button>
-            <Button 
-              variant="outline" 
-              size="sm" 
-              className={cn(getHealthFilterStyles('at_risk'))}
-              onClick={() => setHealthFilter(healthFilter === 'at_risk' ? null : 'at_risk')}
-            >
-              At Risk
-            </Button>
-            <Button 
-              variant="outline" 
-              size="sm"
-              className={cn(getHealthFilterStyles('red_zone'))}
-              onClick={() => setHealthFilter(healthFilter === 'red_zone' ? null : 'red_zone')}
-            >
-              Red Zone
-            </Button>
+          <div className="flex items-center gap-4">
+            <div className="flex border rounded-md overflow-hidden">
+              <Button 
+                variant="ghost" 
+                size="sm" 
+                className={cn(
+                  "rounded-none border-0",
+                  viewMode === "card" ? "bg-gray-100" : ""
+                )}
+                onClick={() => setViewMode("card")}
+              >
+                <LayoutGrid className="h-4 w-4 mr-1" />
+                Card
+              </Button>
+              <Button 
+                variant="ghost" 
+                size="sm" 
+                className={cn(
+                  "rounded-none border-0",
+                  viewMode === "table" ? "bg-gray-100" : ""
+                )}
+                onClick={() => setViewMode("table")}
+              >
+                <LayoutList className="h-4 w-4 mr-1" />
+                Table
+              </Button>
+            </div>
+            
+            <div className="flex flex-wrap gap-2">
+              <Button 
+                variant="outline" 
+                size="sm"
+                className={cn(getHealthFilterStyles(null))}
+                onClick={() => setHealthFilter(null)}
+              >
+                <Filter className="h-4 w-4 mr-1" />
+                All
+              </Button>
+              <Button 
+                variant="outline" 
+                size="sm" 
+                className={cn(getHealthFilterStyles('healthy'))}
+                onClick={() => setHealthFilter(healthFilter === 'healthy' ? null : 'healthy')}
+              >
+                Healthy
+              </Button>
+              <Button 
+                variant="outline" 
+                size="sm" 
+                className={cn(getHealthFilterStyles('at_risk'))}
+                onClick={() => setHealthFilter(healthFilter === 'at_risk' ? null : 'at_risk')}
+              >
+                At Risk
+              </Button>
+              <Button 
+                variant="outline" 
+                size="sm"
+                className={cn(getHealthFilterStyles('red_zone'))}
+                onClick={() => setHealthFilter(healthFilter === 'red_zone' ? null : 'red_zone')}
+              >
+                Red Zone
+              </Button>
+            </div>
           </div>
         </div>
         
         {isLoading ? (
           <div className="text-center py-10">Loading customers...</div>
-        ) : (
+        ) : viewMode === "card" ? (
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
             {filteredCustomers?.map((customer: Customer) => (
               <Link key={customer.id} href={`/customers/${customer.id}`}>
@@ -164,8 +205,8 @@ export default function Customers() {
                             <p className="text-sm text-gray-500">{customer.industry || 'No industry'}</p>
                           </div>
                         </div>
-                        <Badge className={cn(getHealthBadgeStyles(customer.health_status))}>
-                          {customer.health_status.replace('_', ' ')}
+                        <Badge className={cn(getHealthBadgeStyles(customer.health_status || ""))}>
+                          {(customer.health_status || "unknown").replace('_', ' ')}
                         </Badge>
                       </div>
                       
@@ -198,6 +239,71 @@ export default function Customers() {
                 </a>
               </Link>
             ))}
+          </div>
+        ) : (
+          <div className="border rounded-md">
+            <Table>
+              <TableHeader>
+                <TableRow>
+                  <TableHead>Company</TableHead>
+                  <TableHead>Health</TableHead>
+                  <TableHead>Industry</TableHead>
+                  <TableHead>Contact</TableHead>
+                  <TableHead>MRR</TableHead>
+                  <TableHead>ARR</TableHead>
+                  <TableHead>Renewal Date</TableHead>
+                  <TableHead className="text-right">Actions</TableHead>
+                </TableRow>
+              </TableHeader>
+              <TableBody>
+                {filteredCustomers?.map((customer: Customer) => (
+                  <TableRow key={customer.id}>
+                    <TableCell className="font-medium">
+                      <div className="flex items-center">
+                        <div className="bg-gray-100 rounded-md p-2 mr-2 flex items-center justify-center">
+                          {customer.logo_url ? (
+                            <img 
+                              src={customer.logo_url} 
+                              alt={customer.name} 
+                              className="h-6 w-6 object-contain" 
+                            />
+                          ) : (
+                            <Building className="h-6 w-6 text-gray-600" />
+                          )}
+                        </div>
+                        {customer.name}
+                      </div>
+                    </TableCell>
+                    <TableCell>
+                      <Badge className={cn(getHealthBadgeStyles(customer.health_status || ""))}>
+                        {(customer.health_status || "unknown").replace('_', ' ')}
+                      </Badge>
+                    </TableCell>
+                    <TableCell>{customer.industry || "—"}</TableCell>
+                    <TableCell>
+                      <div>
+                        <div>{customer.contact_name || "—"}</div>
+                        <div className="text-xs text-gray-500">{customer.contact_email || "—"}</div>
+                      </div>
+                    </TableCell>
+                    <TableCell>{formatINR(customer.mrr || 0)}</TableCell>
+                    <TableCell>{formatINR(customer.arr || 0)}</TableCell>
+                    <TableCell>
+                      {customer.renewal_date 
+                        ? new Date(customer.renewal_date).toLocaleDateString() 
+                        : '—'}
+                    </TableCell>
+                    <TableCell className="text-right">
+                      <Link href={`/customers/${customer.id}`}>
+                        <Button variant="ghost" size="sm">
+                          View <ArrowUpRight className="ml-1 h-4 w-4" />
+                        </Button>
+                      </Link>
+                    </TableCell>
+                  </TableRow>
+                ))}
+              </TableBody>
+            </Table>
           </div>
         )}
         
