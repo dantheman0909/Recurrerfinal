@@ -598,107 +598,107 @@ const RedZoneSettingsPage = () => {
                       )}
                     />
                     </div>
-                    
-                    <FormField
-                      control={form.control}
-                      name="description"
-                      render={({ field }) => (
-                        <FormItem>
-                          <FormLabel>Description</FormLabel>
-                          <FormControl>
-                            <Textarea
-                              placeholder="Enter a description for this rule"
-                              className="resize-none h-20"
-                              {...field}
-                            />
-                          </FormControl>
-                          <FormDescription>
-                            Describe when this rule should trigger and why
-                          </FormDescription>
-                          <FormMessage />
-                        </FormItem>
-                      )}
-                    />
-                    
-                    <Separator />
-                    
-                    <div className="space-y-4">
-                      <div>
-                        <h3 className="font-medium mb-2">Rule Conditions</h3>
-                        <p className="text-sm text-muted-foreground mb-4">
-                          Specify the conditions that will trigger this RedZone rule
-                        </p>
-                        
-                        <div className="mb-4">
-                          <div className="flex items-center mb-2">
-                            <FormField
-                              control={form.control}
-                              name="conditions.logicOperator"
-                              render={({ field }) => (
-                                <FormItem className="w-24">
-                                  <Select 
-                                    value={field.value} 
-                                    onValueChange={(value) => {
-                                      field.onChange(value);
-                                      handleTopLevelLogicOperatorChange(value as LogicOperator);
-                                    }}
-                                  >
-                                    <FormControl>
-                                      <SelectTrigger>
-                                        <SelectValue />
-                                      </SelectTrigger>
-                                    </FormControl>
-                                    <SelectContent>
-                                      <SelectItem value="AND">AND</SelectItem>
-                                      <SelectItem value="OR">OR</SelectItem>
-                                    </SelectContent>
-                                  </Select>
-                                </FormItem>
-                              )}
-                            />
-                            <span className="mx-2 text-sm font-medium">between condition groups</span>
+                  
+                  <FormField
+                    control={form.control}
+                    name="description"
+                    render={({ field }) => (
+                      <FormItem>
+                        <FormLabel>Description</FormLabel>
+                        <FormControl>
+                          <Textarea
+                            placeholder="Enter a description for this rule"
+                            className="resize-none h-20"
+                            {...field}
+                          />
+                        </FormControl>
+                        <FormDescription>
+                          Describe when this rule should trigger and why
+                        </FormDescription>
+                        <FormMessage />
+                      </FormItem>
+                    )}
+                  />
+                  
+                  <Separator />
+                  
+                  <div className="space-y-4">
+                    <div>
+                      <h3 className="font-medium mb-2">Rule Conditions</h3>
+                      <p className="text-sm text-muted-foreground mb-4">
+                        Specify the conditions that will trigger this RedZone rule
+                      </p>
+                      
+                      <div className="mb-4">
+                        <div className="flex items-center mb-2">
+                          <FormField
+                            control={form.control}
+                            name="conditions.logicOperator"
+                            render={({ field }) => (
+                              <FormItem className="w-24">
+                                <Select 
+                                  value={field.value} 
+                                  onValueChange={(value) => {
+                                    field.onChange(value);
+                                    handleTopLevelLogicOperatorChange(value as LogicOperator);
+                                  }}
+                                >
+                                  <FormControl>
+                                    <SelectTrigger>
+                                      <SelectValue />
+                                    </SelectTrigger>
+                                  </FormControl>
+                                  <SelectContent>
+                                    <SelectItem value="AND">AND</SelectItem>
+                                    <SelectItem value="OR">OR</SelectItem>
+                                  </SelectContent>
+                                </Select>
+                              </FormItem>
+                            )}
+                          />
+                          <span className="mx-2 text-sm font-medium">between condition groups</span>
                           </div>
                         </div>
-                        
-                        {fieldsLoading ? (
-                          <div className="space-y-4">
-                            <Skeleton className="h-40 w-full" />
-                            <Skeleton className="h-40 w-full" />
-                          </div>
-                        ) : (
-                          <>
-                            {form.getValues("conditions.groups")?.map((group, groupIndex) => (
-                              <ConditionGroupComponent 
-                                key={groupIndex}
-                                form={form}
-                                groupIndex={groupIndex}
-                                availableFields={availableFields}
-                                onAddCondition={addCondition}
-                                onRemoveCondition={removeCondition}
-                                onLogicOperatorChange={handleLogicOperatorChange}
-                                onRemoveGroup={removeConditionGroup}
-                              />
-                            ))}
-                            
-                            <Button
-                              type="button"
-                              variant="outline"
-                              onClick={addConditionGroup}
-                              className="mt-2"
-                            >
-                              <PlusCircleIcon className="h-4 w-4 mr-2" />
-                              Add Condition Group
-                            </Button>
-                          </>
-                        )}
+                      
+                      {fieldsLoading ? (
+                        <div className="space-y-4">
+                          <Skeleton className="h-40 w-full" />
+                          <Skeleton className="h-40 w-full" />
+                        </div>
+                      ) : (
+                        <>
+                          {form.getValues("conditions.groups")?.map((group, groupIndex) => (
+                            <ConditionGroupComponent 
+                              key={groupIndex}
+                              form={form}
+                              groupIndex={groupIndex}
+                              availableFields={availableFields}
+                              onAddCondition={addCondition}
+                              onRemoveCondition={removeCondition}
+                              onLogicOperatorChange={handleLogicOperatorChange}
+                              onRemoveGroup={removeConditionGroup}
+                            />
+                          ))}
+                          
+                          <Button
+                            type="button"
+                            variant="outline"
+                            onClick={addConditionGroup}
+                            className="mt-2"
+                          >
+                            <PlusCircleIcon className="h-4 w-4 mr-2" />
+                            Add Condition Group
+                          </Button>
+                        </>
+                      )}
                       </div>
                     </div>
-                    
-                    <Separator />
-                    
-                    <FormField
-                      control={form.control}
-                      name="notification_message"
+                  
+                  <Separator />
+                  
+                  <FormField
+                    control={form.control}
+                    name="notification_message"
                       render={({ field }) => (
                         <FormItem>
                           <FormLabel>Notification Message</FormLabel>
