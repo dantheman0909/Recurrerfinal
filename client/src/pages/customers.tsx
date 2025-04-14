@@ -13,6 +13,7 @@ import {
   Users,
   LayoutGrid,
   LayoutList,
+  Loader2,
   Trash2,
   AlertTriangle
 } from "lucide-react";
@@ -75,7 +76,7 @@ export default function Customers() {
   // Mutation for deleting a customer
   const deleteCustomerMutation = useMutation({
     mutationFn: (customerId: number) => {
-      return apiRequest(`/api/customers/${customerId}`, { method: 'DELETE' });
+      return apiRequest(`/api/customers/${customerId}`, { method: 'DELETE' } as RequestInit);
     },
     onSuccess: () => {
       toast({
@@ -268,8 +269,8 @@ export default function Customers() {
           <div className="flex flex-col md:flex-row gap-2">
             <div className="w-full md:w-1/2">
               <Select 
-                value={csmFilter?.toString() || ""} 
-                onValueChange={(value) => setCsmFilter(value ? parseInt(value) : null)}
+                value={csmFilter?.toString() || "all"} 
+                onValueChange={(value) => setCsmFilter(value !== "all" ? parseInt(value) : null)}
               >
                 <SelectTrigger className="w-full">
                   <SelectValue placeholder="Filter by CSM" />
@@ -287,8 +288,8 @@ export default function Customers() {
             
             <div className="w-full md:w-1/2">
               <Select 
-                value={tlFilter?.toString() || ""} 
-                onValueChange={(value) => setTlFilter(value ? parseInt(value) : null)}
+                value={tlFilter?.toString() || "all"} 
+                onValueChange={(value) => setTlFilter(value !== "all" ? parseInt(value) : null)}
               >
                 <SelectTrigger className="w-full">
                   <SelectValue placeholder="Filter by Team Lead" />
@@ -358,9 +359,19 @@ export default function Customers() {
                               : 'No date set'}
                           </p>
                         </div>
-                        <Button variant="ghost" size="sm" className="text-teal-600">
-                          Details <ArrowUpRight className="ml-1 h-4 w-4" />
-                        </Button>
+                        <div className="flex items-center gap-2">
+                          <Button variant="ghost" size="sm" className="text-teal-600">
+                            Details <ArrowUpRight className="ml-1 h-4 w-4" />
+                          </Button>
+                          <Button 
+                            variant="ghost" 
+                            size="sm" 
+                            className="text-red-600 hover:text-red-700 hover:bg-red-50 p-2"
+                            onClick={(e) => openDeleteDialog(customer, e)}
+                          >
+                            <Trash2 className="h-4 w-4" />
+                          </Button>
+                        </div>
                       </div>
                     </CardContent>
                   </Card>
@@ -422,11 +433,21 @@ export default function Customers() {
                         : '—'}
                     </TableCell>
                     <TableCell className="text-right">
-                      <Link href={`/customers/${customer.id}`}>
-                        <Button variant="ghost" size="sm">
-                          View <ArrowUpRight className="ml-1 h-4 w-4" />
+                      <div className="flex justify-end gap-2">
+                        <Link href={`/customers/${customer.id}`}>
+                          <Button variant="ghost" size="sm">
+                            View <ArrowUpRight className="ml-1 h-4 w-4" />
+                          </Button>
+                        </Link>
+                        <Button 
+                          variant="ghost" 
+                          size="sm" 
+                          className="text-red-600 hover:text-red-700 hover:bg-red-50"
+                          onClick={(e) => openDeleteDialog(customer, e)}
+                        >
+                          <Trash2 className="h-4 w-4" />
                         </Button>
-                      </Link>
+                      </div>
                     </TableCell>
                   </TableRow>
                 ))}
@@ -441,6 +462,35 @@ export default function Customers() {
           </div>
         )}
       </div>
+
+      {/* Delete Confirmation Dialog */}
+      <AlertDialog open={showDeleteDialog} onOpenChange={setShowDeleteDialog}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Confirm Deletion</AlertDialogTitle>
+            <AlertDialogDescription>
+              Are you sure you want to delete {customerToDelete?.name}? This action cannot be undone.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel disabled={deleteCustomerMutation.isPending}>Cancel</AlertDialogCancel>
+            <AlertDialogAction 
+              onClick={handleDeleteConfirm}
+              className="bg-red-600 hover:bg-red-700 text-white"
+              disabled={deleteCustomerMutation.isPending}
+            >
+              {deleteCustomerMutation.isPending ? (
+                <span className="flex items-center">
+                  <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                  Deleting...
+                </span>
+              ) : (
+                "Delete Customer"
+              )}
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </>
   );
 }
