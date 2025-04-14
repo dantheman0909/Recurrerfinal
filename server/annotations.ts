@@ -153,7 +153,7 @@ export const updateAnnotation = async (req: Request, res: Response) => {
       });
     }
     
-    const updateData = {
+    const updateData: Record<string, any> = {
       ...validationResult.data,
       updated_at: new Date()
     };

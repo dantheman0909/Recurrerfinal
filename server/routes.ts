@@ -1,5 +1,6 @@
 import type { Express } from "express";
 import { createServer, type Server } from "http";
+import { WebSocketServer } from "ws";
 import { storage } from "./storage";
 import { z } from "zod";
 import { MetricTimeframe } from "@shared/types";
@@ -30,6 +31,14 @@ import {
   importMySQLDataToCustomer,
   getCustomerExternalData
 } from "./external-data";
+
+import {
+  getAnnotations,
+  createAnnotation,
+  updateAnnotation,
+  deleteAnnotation,
+  createAnnotationReply
+} from "./annotations";
 
 export async function registerRoutes(app: Express): Promise<Server> {
   // API Routes - All prefixed with /api
@@ -1687,6 +1696,66 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
   // Note: External data routes are now registered directly in server/index.ts
 
+  // Annotation routes
+  app.get('/api/annotations/:entity_type/:entity_id', getAnnotations);
+  app.post('/api/annotations/:entity_type/:entity_id', createAnnotation);
+  app.put('/api/annotations/:id', updateAnnotation);
+  app.delete('/api/annotations/:id', deleteAnnotation);
+  app.post('/api/annotations/:id/replies', createAnnotationReply);
+
   const httpServer = createServer(app);
+  
+  // Set up WebSocket server for real-time annotations
+  const wss = new WebSocketServer({ server: httpServer, path: '/ws' });
+  
+  // Store connected clients
+  const clients = new Map();
+  
+  wss.on('connection', (ws) => {
+    const clientId = Date.now();
+    clients.set(clientId, ws);
+    
+    // Log connection
+    console.log(`WebSocket client connected: ${clientId}`);
+    
+    // Send initial connection success message
+    ws.send(JSON.stringify({
+      type: 'connection',
+      status: 'connected',
+      clientId
+    }));
+    
+    // Handle messages from clients
+    ws.on('message', (messageData) => {
+      try {
+        const message = JSON.parse(messageData.toString());
+        
+        // Add sender info to message
+        message.sender = clientId;
+        message.timestamp = new Date().toISOString();
+        
+        // Broadcast to all other connected clients based on entity
+        if (message.entity_type && message.entity_id) {
+          const channel = `${message.entity_type}_${message.entity_id}`;
+          
+          clients.forEach((client, id) => {
+            // Only send to clients that are ready and not the sender
+            if (id !== clientId && client.readyState === WebSocket.OPEN) {
+              client.send(JSON.stringify(message));
+            }
+          });
+        }
+      } catch (error) {
+        console.error('Error handling WebSocket message:', error);
+      }
+    });
+    
+    // Handle disconnection
+    ws.on('close', () => {
+      clients.delete(clientId);
+      console.log(`WebSocket client disconnected: ${clientId}`);
+    });
+  });
+
   return httpServer;
 }
