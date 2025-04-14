@@ -376,7 +376,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
   });
   
   // Red Zone Alerts
-  app.get('/api/red-zone', async (req, res) => {
+  // RedZone Alerts Endpoints
+  app.get('/api/red-zone/alerts', async (req, res) => {
     const customerId = req.query.customerId ? parseInt(req.query.customerId as string) : undefined;
     
     let alerts;
@@ -389,7 +390,18 @@ export async function registerRoutes(app: Express): Promise<Server> {
     res.json(alerts);
   });
   
-  app.post('/api/red-zone', async (req, res) => {
+  app.get('/api/red-zone/alerts/:id', async (req, res) => {
+    const alertId = parseInt(req.params.id);
+    const alert = await storage.getRedZoneAlert(alertId);
+    
+    if (!alert) {
+      return res.status(404).json({ message: 'RedZone alert not found' });
+    }
+    
+    res.json(alert);
+  });
+  
+  app.post('/api/red-zone/alerts', async (req, res) => {
     try {
       const alertData = insertRedZoneAlertSchema.parse(req.body);
       const alert = await storage.createRedZoneAlert(alertData);
@@ -397,6 +409,155 @@ export async function registerRoutes(app: Express): Promise<Server> {
     } catch (error) {
       res.status(400).json({ message: 'Invalid alert data', error });
     }
+  });
+  
+  app.put('/api/red-zone/alerts/:id', async (req, res) => {
+    try {
+      const alertId = parseInt(req.params.id);
+      const alertData = req.body;
+      const updatedAlert = await storage.updateRedZoneAlert(alertId, alertData);
+      
+      if (!updatedAlert) {
+        return res.status(404).json({ message: 'RedZone alert not found' });
+      }
+      
+      res.json(updatedAlert);
+    } catch (error) {
+      res.status(400).json({ message: 'Invalid alert data', error });
+    }
+  });
+  
+  app.post('/api/red-zone/alerts/:id/resolve', async (req, res) => {
+    const alertId = parseInt(req.params.id);
+    const { userId, resolutionSummary } = req.body;
+    
+    const resolvedAlert = await storage.resolveRedZoneAlert(
+      alertId, 
+      userId ? parseInt(userId) : undefined,
+      resolutionSummary
+    );
+    
+    if (!resolvedAlert) {
+      return res.status(404).json({ message: 'RedZone alert not found' });
+    }
+    
+    res.json(resolvedAlert);
+  });
+  
+  app.post('/api/red-zone/alerts/:id/escalate', async (req, res) => {
+    const alertId = parseInt(req.params.id);
+    const { teamLeadId } = req.body;
+    
+    if (!teamLeadId) {
+      return res.status(400).json({ message: 'Team lead ID is required' });
+    }
+    
+    const escalatedAlert = await storage.escalateRedZoneAlert(alertId, parseInt(teamLeadId));
+    
+    if (!escalatedAlert) {
+      return res.status(404).json({ message: 'RedZone alert not found' });
+    }
+    
+    res.json(escalatedAlert);
+  });
+  
+  // RedZone Activity Logs
+  app.get('/api/red-zone/activity-logs/:alertId', async (req, res) => {
+    const alertId = parseInt(req.params.alertId);
+    const logs = await storage.getRedZoneActivityLogs(alertId);
+    res.json(logs);
+  });
+  
+  app.post('/api/red-zone/activity-logs', async (req, res) => {
+    try {
+      const logData = insertRedZoneActivityLogSchema.parse(req.body);
+      const log = await storage.createRedZoneActivityLog(logData);
+      res.status(201).json(log);
+    } catch (error) {
+      res.status(400).json({ message: 'Invalid activity log data', error });
+    }
+  });
+  
+  // RedZone Rules
+  app.get('/api/red-zone/rules', async (req, res) => {
+    const rules = await storage.getRedZoneRules();
+    res.json(rules);
+  });
+  
+  app.get('/api/red-zone/rules/:id', async (req, res) => {
+    const ruleId = parseInt(req.params.id);
+    const rule = await storage.getRedZoneRule(ruleId);
+    
+    if (!rule) {
+      return res.status(404).json({ message: 'RedZone rule not found' });
+    }
+    
+    res.json(rule);
+  });
+  
+  app.post('/api/red-zone/rules', async (req, res) => {
+    try {
+      const ruleData = insertRedZoneRuleSchema.parse(req.body);
+      const rule = await storage.createRedZoneRule(ruleData);
+      res.status(201).json(rule);
+    } catch (error) {
+      res.status(400).json({ message: 'Invalid rule data', error });
+    }
+  });
+  
+  app.put('/api/red-zone/rules/:id', async (req, res) => {
+    try {
+      const ruleId = parseInt(req.params.id);
+      const ruleData = req.body;
+      const updatedRule = await storage.updateRedZoneRule(ruleId, ruleData);
+      
+      if (!updatedRule) {
+        return res.status(404).json({ message: 'RedZone rule not found' });
+      }
+      
+      res.json(updatedRule);
+    } catch (error) {
+      res.status(400).json({ message: 'Invalid rule data', error });
+    }
+  });
+  
+  app.delete('/api/red-zone/rules/:id', async (req, res) => {
+    const ruleId = parseInt(req.params.id);
+    const success = await storage.deleteRedZoneRule(ruleId);
+    
+    if (!success) {
+      return res.status(404).json({ message: 'RedZone rule not found or could not be deleted' });
+    }
+    
+    res.status(204).end();
+  });
+  
+  // RedZone Resolution Criteria
+  app.get('/api/red-zone/resolution-criteria/:ruleId', async (req, res) => {
+    const ruleId = parseInt(req.params.ruleId);
+    const criteria = await storage.getRedZoneResolutionCriteria(ruleId);
+    res.json(criteria);
+  });
+  
+  app.post('/api/red-zone/resolution-criteria', async (req, res) => {
+    try {
+      const criteriaData = insertRedZoneResolutionCriteriaSchema.parse(req.body);
+      const criteria = await storage.createRedZoneResolutionCriteria(criteriaData);
+      res.status(201).json(criteria);
+    } catch (error) {
+      res.status(400).json({ message: 'Invalid resolution criteria data', error });
+    }
+  });
+  
+  app.delete('/api/red-zone/resolution-criteria/:id', async (req, res) => {
+    const criteriaId = parseInt(req.params.id);
+    const success = await storage.deleteRedZoneResolutionCriteria(criteriaId);
+    
+    if (!success) {
+      return res.status(404).json({ message: 'Resolution criteria not found or could not be deleted' });
+    }
+    
+    res.status(204).end();
   });
   
   app.post('/api/red-zone/:id/resolve', async (req, res) => {

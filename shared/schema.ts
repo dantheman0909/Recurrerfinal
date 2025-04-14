@@ -141,14 +141,60 @@ export const playbookRuns = pgTable("playbook_runs", {
   completed_at: timestamp("completed_at"),
 });
 
-// Red Zone Alerts
+// Red Zone Rules
+export const redZoneRules = pgTable("red_zone_rules", {
+  id: serial("id").primaryKey(),
+  name: text("name").notNull(),
+  description: text("description"),
+  conditions: jsonb("conditions").notNull(), // JSON structure for conditions with AND/OR logic
+  severity: alertSeverityEnum("severity").default('attention_needed'),
+  auto_resolve: boolean("auto_resolve").default(false),
+  resolution_conditions: jsonb("resolution_conditions"), // Optional conditions for auto-resolution
+  enabled: boolean("enabled").default(true),
+  created_by: integer("created_by").references(() => users.id),
+  created_at: timestamp("created_at").defaultNow(),
+  updated_at: timestamp("updated_at"),
+  team_lead_approval_required: boolean("team_lead_approval_required").default(false),
+  notification_message: text("notification_message"), // Custom message for notifications
+});
+
+// Red Zone Resolution Conditions
+export const redZoneResolutionCriteria = pgTable("red_zone_resolution_criteria", {
+  id: serial("id").primaryKey(),
+  rule_id: integer("rule_id").notNull().references(() => redZoneRules.id),
+  field_path: text("field_path").notNull(), // Path to the field to check
+  operator: text("operator").notNull(), // equals, not_equals, greater_than, etc.
+  value: text("value").notNull(), // Value to compare against
+  created_at: timestamp("created_at").defaultNow(),
+});
+
+// Red Zone Activity Logs
+export const redZoneActivityLogs = pgTable("red_zone_activity_logs", {
+  id: serial("id").primaryKey(),
+  alert_id: integer("alert_id").notNull().references(() => redZoneAlerts.id),
+  action: text("action").notNull(), // created, updated, escalated, resolved, etc.
+  performed_by: integer("performed_by").references(() => users.id),
+  details: jsonb("details"), // Additional details about the action
+  created_at: timestamp("created_at").defaultNow(),
+});
+
+// Red Zone Alerts (Enhanced)
 export const redZoneAlerts = pgTable("red_zone_alerts", {
   id: serial("id").primaryKey(),
   customer_id: integer("customer_id").notNull().references(() => customers.id),
+  rule_id: integer("rule_id").references(() => redZoneRules.id), // Optional reference to the rule that triggered this alert
   reason: text("reason").notNull(),
   severity: alertSeverityEnum("severity").default('attention_needed'),
+  status: text("status").default('open').notNull(), // open, pending_approval, resolved
+  details: jsonb("details"), // Additional details about what triggered the alert
+  notes: text("notes"), // CSM notes about the alert
+  assigned_to: integer("assigned_to").references(() => users.id),
+  escalated_to: integer("escalated_to").references(() => users.id),
+  escalated_at: timestamp("escalated_at"),
+  resolution_summary: text("resolution_summary"),
   created_at: timestamp("created_at").defaultNow(),
   resolved_at: timestamp("resolved_at"),
+  resolved_by: integer("resolved_by").references(() => users.id),
 });
 
 // Customer Metrics
@@ -297,8 +343,28 @@ export const playbookRunsRelations = relations(playbookRuns, ({ one }) => ({
   triggeredBy: one(users, { fields: [playbookRuns.triggered_by], references: [users.id] }),
 }));
 
-export const redZoneAlertsRelations = relations(redZoneAlerts, ({ one }) => ({
+export const redZoneRulesRelations = relations(redZoneRules, ({ one, many }) => ({
+  createdBy: one(users, { fields: [redZoneRules.created_by], references: [users.id] }),
+  resolutionCriteria: many(redZoneResolutionCriteria),
+  alerts: many(redZoneAlerts),
+}));
+
+export const redZoneResolutionCriteriaRelations = relations(redZoneResolutionCriteria, ({ one }) => ({
+  rule: one(redZoneRules, { fields: [redZoneResolutionCriteria.rule_id], references: [redZoneRules.id] }),
+}));
+
+export const redZoneAlertsRelations = relations(redZoneAlerts, ({ one, many }) => ({
   customer: one(customers, { fields: [redZoneAlerts.customer_id], references: [customers.id] }),
+  rule: one(redZoneRules, { fields: [redZoneAlerts.rule_id], references: [redZoneRules.id] }),
+  assignedTo: one(users, { fields: [redZoneAlerts.assigned_to], references: [users.id] }),
+  escalatedTo: one(users, { fields: [redZoneAlerts.escalated_to], references: [users.id] }),
+  resolvedBy: one(users, { fields: [redZoneAlerts.resolved_by], references: [users.id] }),
+  activityLogs: many(redZoneActivityLogs),
+}));
+
+export const redZoneActivityLogsRelations = relations(redZoneActivityLogs, ({ one }) => ({
+  alert: one(redZoneAlerts, { fields: [redZoneActivityLogs.alert_id], references: [redZoneAlerts.id] }),
+  performedBy: one(users, { fields: [redZoneActivityLogs.performed_by], references: [users.id] }),
 }));
 
 export const customerMetricsRelations = relations(customerMetrics, ({ one }) => ({
@@ -320,7 +386,10 @@ export const insertTaskSchema = createInsertSchema(tasks).omit({ id: true, creat
 export const insertPlaybookSchema = createInsertSchema(playbooks).omit({ id: true, created_at: true });
 export const insertPlaybookTaskSchema = createInsertSchema(playbookTasks).omit({ id: true, created_at: true });
 export const insertPlaybookRunSchema = createInsertSchema(playbookRuns).omit({ id: true, started_at: true, completed_at: true });
-export const insertRedZoneAlertSchema = createInsertSchema(redZoneAlerts).omit({ id: true, created_at: true, resolved_at: true });
+export const insertRedZoneRuleSchema = createInsertSchema(redZoneRules).omit({ id: true, created_at: true, updated_at: true });
+export const insertRedZoneResolutionCriteriaSchema = createInsertSchema(redZoneResolutionCriteria).omit({ id: true, created_at: true });
+export const insertRedZoneActivityLogSchema = createInsertSchema(redZoneActivityLogs).omit({ id: true, created_at: true });
+export const insertRedZoneAlertSchema = createInsertSchema(redZoneAlerts).omit({ id: true, created_at: true, resolved_at: true, escalated_at: true });
 export const insertMySQLConfigSchema = createInsertSchema(mysqlConfig).omit({ id: true, created_at: true });
 export const insertMySQLFieldMappingSchema = createInsertSchema(mysqlFieldMappings).omit({ id: true, created_at: true });
 export const insertMySQLSavedQuerySchema = createInsertSchema(mysqlSavedQueries).omit({ id: true, created_at: true, last_run_at: true });
@@ -349,6 +418,15 @@ export type InsertPlaybookTask = z.infer<typeof insertPlaybookTaskSchema>;
 
 export type PlaybookRun = typeof playbookRuns.$inferSelect;
 export type InsertPlaybookRun = z.infer<typeof insertPlaybookRunSchema>;
+
+export type RedZoneRule = typeof redZoneRules.$inferSelect;
+export type InsertRedZoneRule = z.infer<typeof insertRedZoneRuleSchema>;
+
+export type RedZoneResolutionCriteria = typeof redZoneResolutionCriteria.$inferSelect;
+export type InsertRedZoneResolutionCriteria = z.infer<typeof insertRedZoneResolutionCriteriaSchema>;
+
+export type RedZoneActivityLog = typeof redZoneActivityLogs.$inferSelect;
+export type InsertRedZoneActivityLog = z.infer<typeof insertRedZoneActivityLogSchema>;
 
 export type RedZoneAlert = typeof redZoneAlerts.$inferSelect;
 export type InsertRedZoneAlert = z.infer<typeof insertRedZoneAlertSchema>;

@@ -1120,12 +1120,89 @@ export class DatabaseStorage implements IStorage {
     return updatedTask;
   }
 
+  // RedZone Rules Methods
+  async getRedZoneRules(): Promise<RedZoneRule[]> {
+    return await db
+      .select()
+      .from(redZoneRules)
+      .orderBy(desc(redZoneRules.created_at));
+  }
+
+  async getRedZoneRule(id: number): Promise<RedZoneRule | undefined> {
+    const [rule] = await db
+      .select()
+      .from(redZoneRules)
+      .where(eq(redZoneRules.id, id))
+      .limit(1);
+
+    return rule;
+  }
+
+  async createRedZoneRule(rule: InsertRedZoneRule): Promise<RedZoneRule> {
+    const [newRule] = await db
+      .insert(redZoneRules)
+      .values({
+        ...rule,
+        updated_at: new Date()
+      })
+      .returning();
+
+    return newRule;
+  }
+
+  async updateRedZoneRule(id: number, data: Partial<InsertRedZoneRule>): Promise<RedZoneRule | undefined> {
+    const [updatedRule] = await db
+      .update(redZoneRules)
+      .set({
+        ...data,
+        updated_at: new Date()
+      })
+      .where(eq(redZoneRules.id, id))
+      .returning();
+
+    return updatedRule;
+  }
+
+  async deleteRedZoneRule(id: number): Promise<boolean> {
+    const result = await db
+      .delete(redZoneRules)
+      .where(eq(redZoneRules.id, id));
+
+    return !!result;
+  }
+
+  // RedZone Resolution Criteria Methods
+  async getRedZoneResolutionCriteria(ruleId: number): Promise<RedZoneResolutionCriteria[]> {
+    return await db
+      .select()
+      .from(redZoneResolutionCriteria)
+      .where(eq(redZoneResolutionCriteria.rule_id, ruleId))
+      .orderBy(asc(redZoneResolutionCriteria.id));
+  }
+
+  async createRedZoneResolutionCriteria(criteria: InsertRedZoneResolutionCriteria): Promise<RedZoneResolutionCriteria> {
+    const [newCriteria] = await db
+      .insert(redZoneResolutionCriteria)
+      .values(criteria)
+      .returning();
+
+    return newCriteria;
+  }
+
+  async deleteRedZoneResolutionCriteria(id: number): Promise<boolean> {
+    const result = await db
+      .delete(redZoneResolutionCriteria)
+      .where(eq(redZoneResolutionCriteria.id, id));
+
+    return !!result;
+  }
+
   // Red Zone Alert Methods
   async getRedZoneAlerts(): Promise<RedZoneAlert[]> {
     return await db
       .select()
       .from(redZoneAlerts)
-      .where(isNull(redZoneAlerts.resolved_at))
+      .where(eq(redZoneAlerts.status, 'open'))
       .orderBy(desc(redZoneAlerts.created_at));
   }
 
@@ -1136,25 +1213,99 @@ export class DatabaseStorage implements IStorage {
       .where(
         and(
           eq(redZoneAlerts.customer_id, customerId),
-          isNull(redZoneAlerts.resolved_at)
+          eq(redZoneAlerts.status, 'open')
         )
       )
       .orderBy(desc(redZoneAlerts.created_at));
   }
+  
+  async getRedZoneAlert(id: number): Promise<RedZoneAlert | undefined> {
+    const [alert] = await db
+      .select()
+      .from(redZoneAlerts)
+      .where(eq(redZoneAlerts.id, id))
+      .limit(1);
+
+    return alert;
+  }
 
   async createRedZoneAlert(alert: InsertRedZoneAlert): Promise<RedZoneAlert> {
-    const [newAlert] = await db.insert(redZoneAlerts).values(alert).returning();
+    const [newAlert] = await db
+      .insert(redZoneAlerts)
+      .values({
+        ...alert,
+        status: alert.status || 'open',
+      })
+      .returning();
+
     return newAlert;
   }
 
-  async resolveRedZoneAlert(id: number): Promise<RedZoneAlert | undefined> {
-    const now = new Date();
-    const [resolvedAlert] = await db
+  async updateRedZoneAlert(id: number, data: Partial<InsertRedZoneAlert>): Promise<RedZoneAlert | undefined> {
+    const [updatedAlert] = await db
       .update(redZoneAlerts)
-      .set({ resolved_at: now })
+      .set(data)
       .where(eq(redZoneAlerts.id, id))
       .returning();
+
+    return updatedAlert;
+  }
+
+  async resolveRedZoneAlert(id: number, userId?: number, resolutionSummary?: string): Promise<RedZoneAlert | undefined> {
+    const now = new Date();
+    const updateData: any = { 
+      resolved_at: now, 
+      status: 'resolved' 
+    };
+    
+    if (userId) {
+      updateData.resolved_by = userId;
+    }
+    
+    if (resolutionSummary) {
+      updateData.resolution_summary = resolutionSummary;
+    }
+    
+    const [resolvedAlert] = await db
+      .update(redZoneAlerts)
+      .set(updateData)
+      .where(eq(redZoneAlerts.id, id))
+      .returning();
+
     return resolvedAlert;
+  }
+  
+  async escalateRedZoneAlert(id: number, teamLeadId: number): Promise<RedZoneAlert | undefined> {
+    const now = new Date();
+    const [escalatedAlert] = await db
+      .update(redZoneAlerts)
+      .set({ 
+        escalated_to: teamLeadId, 
+        escalated_at: now,
+        status: 'pending_approval'
+      })
+      .where(eq(redZoneAlerts.id, id))
+      .returning();
+
+    return escalatedAlert;
+  }
+
+  // RedZone Activity Log Methods
+  async getRedZoneActivityLogs(alertId: number): Promise<RedZoneActivityLog[]> {
+    return await db
+      .select()
+      .from(redZoneActivityLogs)
+      .where(eq(redZoneActivityLogs.alert_id, alertId))
+      .orderBy(desc(redZoneActivityLogs.created_at));
+  }
+
+  async createRedZoneActivityLog(log: InsertRedZoneActivityLog): Promise<RedZoneActivityLog> {
+    const [newLog] = await db
+      .insert(redZoneActivityLogs)
+      .values(log)
+      .returning();
+
+    return newLog;
   }
 
   // Customer Metric Methods
