@@ -250,10 +250,18 @@ export const createAnnotationReply = async (req: Request, res: Response) => {
       return res.status(404).json({ error: 'Parent annotation not found' });
     }
     
+    // Extract only the valid fields from validation result
+    const { content, type, position_data, mentioned_user_ids, parent_id, user_id } = validationResult.data;
+    
     // Insert reply annotation
     const [newReply] = await db.insert(annotations)
       .values({
-        ...validationResult.data,
+        content,
+        type,
+        position_data,
+        mentioned_user_ids,
+        parent_id,
+        user_id,
         entity_type: parentAnnotation.entity_type as any, // Cast to ensure type compatibility
         entity_id: parentAnnotation.entity_id,
       })
