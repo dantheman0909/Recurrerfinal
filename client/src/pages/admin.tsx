@@ -754,7 +754,7 @@ function DatabaseConfigTab() {
                         } else if (value) {
                           setSelectedSavedQuery(value);
                           // Find and set the query from the saved queries
-                          const selectedQuery = existingSavedQueries.find((q: any) => q.id.toString() === value);
+                          const selectedQuery = existingSavedQueries?.find((q: any) => q.id.toString() === value);
                           if (selectedQuery) {
                             setSqlQuery(selectedQuery.query);
                           }
@@ -766,11 +766,15 @@ function DatabaseConfigTab() {
                       </SelectTrigger>
                       <SelectContent>
                         <SelectItem value="create_new">-- Create new query --</SelectItem>
-                        {existingSavedQueries.map((query: any) => (
-                          <SelectItem key={query.id} value={query.id.toString()}>
-                            {query.name} {query.is_active && "(Active)"}
-                          </SelectItem>
-                        ))}
+                        {existingSavedQueries && Array.isArray(existingSavedQueries) ? (
+                          existingSavedQueries.map((query: any) => (
+                            <SelectItem key={query.id} value={query.id.toString()}>
+                              {query.name} {query.is_active && "(Active)"}
+                            </SelectItem>
+                          ))
+                        ) : (
+                          <SelectItem value="no_queries" disabled>No saved queries found</SelectItem>
+                        )}
                       </SelectContent>
                     </Select>
                     <p className="text-xs text-gray-500">
