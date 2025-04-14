@@ -452,7 +452,15 @@ export const importCSV = async (req: Request, res: Response) => {
           importedRecords.push(newCustomer);
         }
       } catch (error: any) {
-        errors.push(`Row error: ${error.message}`);
+        // Create a validation error object for the caught error
+        const processingError: ValidationError = {
+          row: record.row || 0,
+          field: 'processing',
+          value: '',
+          message: `Processing error: ${error.message}`
+        };
+        errorsList.push(processingError);
+        errorStrings.push(`Row error: ${error.message}`);
       }
     }
     
@@ -462,8 +470,8 @@ export const importCSV = async (req: Request, res: Response) => {
       totalProcessed: importedRecords.length + updatedRecords.length,
       newRecords: importedRecords.length,
       updatedRecords: updatedRecords.length,
-      errorCount: errors.length,
-      errors: errors
+      errorCount: errorsList.length,
+      errors: errorsList
     };
 
     // Return response with import results
@@ -472,7 +480,7 @@ export const importCSV = async (req: Request, res: Response) => {
       count: importedRecords.length + updatedRecords.length,
       new: importedRecords.length,
       updated: updatedRecords.length,
-      errors: errors.length > 0 ? errors : undefined
+      errors: errorStrings.length > 0 ? errorStrings : undefined
     });
     
   } catch (error: any) {
