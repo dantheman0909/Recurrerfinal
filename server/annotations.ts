@@ -97,9 +97,18 @@ export const createAnnotation = async (req: Request, res: Response) => {
       });
     }
     
+    // Ensure entity_type is a valid enum value
+    const entityType = entity_type.toLowerCase();
+    if (!['customer', 'task', 'playbook', 'report', 'metric'].includes(entityType)) {
+      return res.status(400).json({ 
+        error: 'Invalid entity type', 
+        message: 'Entity type must be one of: customer, task, playbook, report, metric'
+      });
+    }
+    
     const annotationData = {
       ...validationResult.data,
-      entity_type: entity_type as any,
+      entity_type: entityType as any, // Cast to any to ensure compatibility with enum
       entity_id: parseInt(entity_id),
     };
     
@@ -245,7 +254,7 @@ export const createAnnotationReply = async (req: Request, res: Response) => {
     const [newReply] = await db.insert(annotations)
       .values({
         ...validationResult.data,
-        entity_type: parentAnnotation.entity_type,
+        entity_type: parentAnnotation.entity_type as any, // Cast to ensure type compatibility
         entity_id: parentAnnotation.entity_id,
       })
       .returning();
