@@ -20,24 +20,32 @@ async function migrateMySQLTables() {
     `));
     
     if (!checkConfigTable[0]?.exists) {
-      console.log('Creating mysql_config table...');
-      await db.execute(sql.raw(`
-        CREATE TABLE mysql_config (
-          id SERIAL PRIMARY KEY,
-          created_at TIMESTAMP DEFAULT NOW(),
-          created_by INTEGER,
-          host TEXT NOT NULL,
-          port INTEGER NOT NULL,
-          username TEXT NOT NULL,
-          password TEXT NOT NULL,
-          database TEXT NOT NULL,
-          status TEXT DEFAULT 'active',
-          sync_frequency INTEGER DEFAULT 24,
-          last_synced_at TIMESTAMP
-        )
-      `));
-      console.log('mysql_config table created successfully');
-    } else {
+      try {
+        console.log('Creating mysql_config table...');
+        await db.execute(sql.raw(`
+          CREATE TABLE mysql_config (
+            id SERIAL PRIMARY KEY,
+            created_at TIMESTAMP DEFAULT NOW(),
+            created_by INTEGER,
+            host TEXT NOT NULL,
+            port INTEGER NOT NULL,
+            username TEXT NOT NULL,
+            password TEXT NOT NULL,
+            database TEXT NOT NULL,
+            status TEXT DEFAULT 'active',
+            sync_frequency INTEGER DEFAULT 24,
+            last_synced_at TIMESTAMP
+          )
+        `));
+        console.log('mysql_config table created successfully');
+      } catch (error) {
+        // If table creation fails, it might be because the table was created in a parallel process
+        console.log('Table mysql_config might already exist, proceeding with column checks');
+      }
+    }
+    
+    // Whether table was created or already existed, check for columns
+    {
       // Check if status column exists
       const checkStatusColumn = await db.execute(sql.raw(`
         SELECT EXISTS (
@@ -96,22 +104,30 @@ async function migrateMySQLTables() {
     `));
     
     if (!checkMappingsTable[0]?.exists) {
-      console.log('Creating mysql_field_mappings table...');
-      await db.execute(sql.raw(`
-        CREATE TABLE mysql_field_mappings (
-          id SERIAL PRIMARY KEY,
-          created_at TIMESTAMP DEFAULT NOW(),
-          created_by INTEGER,
-          mysql_table TEXT NOT NULL,
-          mysql_field TEXT NOT NULL,
-          local_table TEXT NOT NULL,
-          local_field TEXT NOT NULL,
-          field_type TEXT DEFAULT 'text',
-          is_key_field BOOLEAN DEFAULT false
-        )
-      `));
-      console.log('mysql_field_mappings table created successfully');
-    } else {
+      try {
+        console.log('Creating mysql_field_mappings table...');
+        await db.execute(sql.raw(`
+          CREATE TABLE mysql_field_mappings (
+            id SERIAL PRIMARY KEY,
+            created_at TIMESTAMP DEFAULT NOW(),
+            created_by INTEGER,
+            mysql_table TEXT NOT NULL,
+            mysql_field TEXT NOT NULL,
+            local_table TEXT NOT NULL,
+            local_field TEXT NOT NULL,
+            field_type TEXT DEFAULT 'text',
+            is_key_field BOOLEAN DEFAULT false
+          )
+        `));
+        console.log('mysql_field_mappings table created successfully');
+      } catch (error) {
+        // If table creation fails, it might be because the table was created in a parallel process
+        console.log('Table mysql_field_mappings might already exist, proceeding with column checks');
+      }
+    }
+    
+    // Whether table was created or already existed, check for columns
+    {
       // Check if field_type column exists
       const checkFieldTypeColumn = await db.execute(sql.raw(`
         SELECT EXISTS (
