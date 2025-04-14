@@ -216,6 +216,9 @@ export class MemStorage implements IStorage {
   private playbookId: number = 1;
   private playbookTaskId: number = 1;
   private alertId: number = 1;
+  private ruleId: number = 1;
+  private resolutionCriteriaId: number = 1;
+  private activityLogId: number = 1;
   private metricId: number = 1;
   private configId: number = 1;
   private mappingId: number = 1;
@@ -231,6 +234,9 @@ export class MemStorage implements IStorage {
     this.playbooks = new Map();
     this.playbookTasks = new Map();
     this.redZoneAlerts = new Map();
+    this.redZoneRules = new Map();
+    this.redZoneResolutionCriteria = new Map();
+    this.redZoneActivityLogs = new Map();
     this.customerMetrics = new Map();
     this.mysqlConfigs = new Map();
     this.mysqlFieldMappings = new Map();
@@ -560,22 +566,146 @@ export class MemStorage implements IStorage {
   async getRedZoneAlertsByCustomer(customerId: number): Promise<RedZoneAlert[]> {
     return Array.from(this.redZoneAlerts.values()).filter(alert => alert.customer_id === customerId && !alert.resolved_at);
   }
+  
+  async getRedZoneAlert(id: number): Promise<RedZoneAlert | undefined> {
+    return this.redZoneAlerts.get(id);
+  }
 
   async createRedZoneAlert(alert: InsertRedZoneAlert): Promise<RedZoneAlert> {
     const id = this.alertId++;
     const timestamp = new Date();
-    const newAlert = { ...alert, id, created_at: timestamp, resolved_at: null };
+    const newAlert = { 
+      ...alert, 
+      id, 
+      created_at: timestamp, 
+      resolved_at: null,
+      escalated_at: null,
+      escalated_to: null,
+      status: alert.status || 'open',
+      resolved_by: null
+    };
     this.redZoneAlerts.set(id, newAlert);
     return newAlert;
+  }
+  
+  async updateRedZoneAlert(id: number, alert: Partial<RedZoneAlert>): Promise<RedZoneAlert | undefined> {
+    const existingAlert = this.redZoneAlerts.get(id);
+    if (!existingAlert) return undefined;
+    
+    const updatedAlert = { ...existingAlert, ...alert };
+    this.redZoneAlerts.set(id, updatedAlert);
+    return updatedAlert;
   }
 
   async resolveRedZoneAlert(id: number): Promise<RedZoneAlert | undefined> {
     const existingAlert = this.redZoneAlerts.get(id);
     if (!existingAlert) return undefined;
     
-    const resolvedAlert = { ...existingAlert, resolved_at: new Date() };
+    const resolvedAlert = { ...existingAlert, resolved_at: new Date(), status: 'resolved' };
     this.redZoneAlerts.set(id, resolvedAlert);
     return resolvedAlert;
+  }
+  
+  async escalateRedZoneAlert(id: number, escalatedTo: number): Promise<RedZoneAlert | undefined> {
+    const existingAlert = this.redZoneAlerts.get(id);
+    if (!existingAlert) return undefined;
+    
+    const escalatedAlert = { 
+      ...existingAlert, 
+      escalated_at: new Date(), 
+      escalated_to: escalatedTo,
+      status: 'escalated'
+    };
+    this.redZoneAlerts.set(id, escalatedAlert);
+    return escalatedAlert;
+  }
+  
+  // Red Zone Rule Methods
+  async getRedZoneRules(): Promise<RedZoneRule[]> {
+    return Array.from(this.redZoneRules.values());
+  }
+  
+  async getRedZoneRule(id: number): Promise<RedZoneRule | undefined> {
+    return this.redZoneRules.get(id);
+  }
+  
+  async createRedZoneRule(rule: InsertRedZoneRule): Promise<RedZoneRule> {
+    const id = this.ruleId++;
+    const timestamp = new Date();
+    const newRule = { 
+      ...rule, 
+      id, 
+      created_at: timestamp, 
+      updated_at: timestamp
+    };
+    this.redZoneRules.set(id, newRule);
+    return newRule;
+  }
+  
+  async updateRedZoneRule(id: number, rule: Partial<RedZoneRule>): Promise<RedZoneRule | undefined> {
+    const existingRule = this.redZoneRules.get(id);
+    if (!existingRule) return undefined;
+    
+    const updatedRule = { 
+      ...existingRule, 
+      ...rule, 
+      updated_at: new Date() 
+    };
+    this.redZoneRules.set(id, updatedRule);
+    return updatedRule;
+  }
+  
+  async deleteRedZoneRule(id: number): Promise<boolean> {
+    const exists = this.redZoneRules.has(id);
+    if (exists) {
+      this.redZoneRules.delete(id);
+    }
+    return exists;
+  }
+  
+  // Red Zone Resolution Criteria Methods
+  async getRedZoneResolutionCriteria(ruleId: number): Promise<RedZoneResolutionCriteria[]> {
+    return Array.from(this.redZoneResolutionCriteria.values())
+      .filter(criteria => criteria.rule_id === ruleId);
+  }
+  
+  async createRedZoneResolutionCriteria(criteria: InsertRedZoneResolutionCriteria): Promise<RedZoneResolutionCriteria> {
+    const id = this.resolutionCriteriaId++;
+    const timestamp = new Date();
+    const newCriteria = { 
+      ...criteria, 
+      id, 
+      created_at: timestamp 
+    };
+    this.redZoneResolutionCriteria.set(id, newCriteria);
+    return newCriteria;
+  }
+  
+  async deleteRedZoneResolutionCriteria(id: number): Promise<boolean> {
+    const exists = this.redZoneResolutionCriteria.has(id);
+    if (exists) {
+      this.redZoneResolutionCriteria.delete(id);
+    }
+    return exists;
+  }
+  
+  // Red Zone Activity Log Methods
+  async getRedZoneActivityLogs(alertId: number): Promise<RedZoneActivityLog[]> {
+    return Array.from(this.redZoneActivityLogs.values())
+      .filter(log => log.alert_id === alertId)
+      .sort((a, b) => new Date(b.created_at || 0).getTime() - new Date(a.created_at || 0).getTime());
+  }
+  
+  async createRedZoneActivityLog(log: InsertRedZoneActivityLog): Promise<RedZoneActivityLog> {
+    const id = this.activityLogId++;
+    const timestamp = new Date();
+    const newLog = { 
+      ...log, 
+      id, 
+      created_at: timestamp 
+    };
+    this.redZoneActivityLogs.set(id, newLog);
+    return newLog;
   }
 
   // Customer Metric Methods

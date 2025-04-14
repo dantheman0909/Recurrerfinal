@@ -14,6 +14,7 @@ import {
   FormLabel,
   FormMessage,
 } from "@/components/ui/form";
+import { RedZoneRule } from "@shared/schema";
 import {
   AlertDialog,
   AlertDialogAction,
@@ -75,7 +76,7 @@ const RedZoneSettingsPage = () => {
   const [editingRuleId, setEditingRuleId] = useState<number | null>(null);
   
   // Fetch RedZone rules
-  const { data: rules = [], isLoading: rulesLoading } = useQuery({
+  const { data: rules = [], isLoading: rulesLoading } = useQuery<RedZoneRule[]>({
     queryKey: ["/api/red-zone/rules"],
   });
   
