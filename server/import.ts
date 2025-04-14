@@ -981,7 +981,8 @@ export const exportCustomersCSV = async (req: Request, res: Response) => {
     // Get all customers
     const allCustomers = await storage.getCustomers();
     
-    // Define fields in the exact order we want them (must match sample file and user requirements)
+    // Define fields in the exact order we want them - aligned exactly with downloadSampleCSV
+    // Must include ALL MySQL and Chargebee fields for consistency between import and export
     const requiredFields = [
       'name',
       'recurrer_id',
@@ -1021,7 +1022,18 @@ export const exportCustomersCSV = async (req: Request, res: Response) => {
       'percentage_of_inactive_customers',
       'renewal_date',
       'revenue_1_year',
-      'unique_customers_captured'
+      'unique_customers_captured',
+      // Additional fields from MySQL service - added for completeness
+      'company_create_date',
+      'hubspot_id',
+      'wa_header_active',
+      'active_auto_campaigns_count',
+      'total_revenue_last_1_year_per_growth_subscription_per_month',
+      'aov',
+      'customers_profiled_with_birthday',
+      'customers_profiled_with_anniversary',
+      'next_month_birthdays',
+      'next_month_anniversaries'
     ];
     
     // Create a mapping for field names from database to export (handle field name differences)
