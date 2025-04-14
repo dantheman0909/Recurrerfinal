@@ -2023,35 +2023,155 @@ function DataImportTab({ setActiveTab }: { setActiveTab: (tab: string) => void }
       
       <Card>
         <CardHeader>
-          <CardTitle>CSV Data Import</CardTitle>
-          <CardDescription>
-            Upload customer data from a CSV file
-          </CardDescription>
+          <div className="flex items-start">
+            <div className="mr-2">
+              <Upload className="h-6 w-6 text-green-600" />
+            </div>
+            <div>
+              <CardTitle>CSV Import</CardTitle>
+              <CardDescription>
+                Import customer data from a CSV file
+              </CardDescription>
+            </div>
+          </div>
         </CardHeader>
         <CardContent>
-          <div className="space-y-4">
-            <div className="grid gap-4">
-              <div className="flex justify-between items-center">
-                <Label htmlFor="csv-file">Select CSV File</Label>
-                <a 
-                  href="/sample/customer-import-sample.csv"
-                  download
-                  className="inline-flex items-center text-xs text-blue-600 hover:text-blue-800"
-                >
-                  <FileText className="h-3 w-3 mr-1" />
-                  Download Sample CSV
+          <div className="space-y-6">
+            <div className="flex mb-4">
+              <Button 
+                variant="outline"
+                className="flex items-center"
+                asChild
+              >
+                <a href="/sample/customer-import-sample.csv" download>
+                  <FileText className="h-4 w-4 mr-2" />
+                  Download Template
                 </a>
+              </Button>
+              <p className="ml-4 text-sm text-gray-500 flex items-center">
+                Download a CSV template with the required format
+              </p>
+            </div>
+            
+            <div className="border rounded-md p-5">
+              <h3 className="text-md font-medium mb-4">Required Fields</h3>
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-x-8 gap-y-4">
+                <div>
+                  <div className="flex items-start">
+                    <span className="text-red-500 mr-1">*</span>
+                    <div>
+                      <p className="font-medium text-sm">name</p>
+                      <p className="text-xs text-gray-500">Customer company name (mandatory)</p>
+                    </div>
+                  </div>
+                </div>
+                
+                <div>
+                  <div className="flex items-start">
+                    <span className="text-red-500 mr-1 opacity-0">*</span>
+                    <div>
+                      <p className="font-medium text-sm">recurrer_id</p>
+                      <p className="text-xs text-gray-500">Auto-assigned by Recurrer (leave blank for new customers)</p>
+                    </div>
+                  </div>
+                </div>
+                
+                <div>
+                  <div className="flex items-start">
+                    <span className="text-red-500 mr-1 opacity-0">*</span>
+                    <div>
+                      <p className="font-medium text-sm">industry</p>
+                      <p className="text-xs text-gray-500">Customer's business industry</p>
+                    </div>
+                  </div>
+                </div>
+                
+                <div>
+                  <div className="flex items-start">
+                    <span className="text-red-500 mr-1 opacity-0">*</span>
+                    <div>
+                      <p className="font-medium text-sm">contact_email</p>
+                      <p className="text-xs text-gray-500">Primary contact email address</p>
+                    </div>
+                  </div>
+                </div>
+                
+                <div>
+                  <div className="flex items-start">
+                    <span className="text-red-500 mr-1 opacity-0">*</span>
+                    <div>
+                      <p className="font-medium text-sm">contact_name</p>
+                      <p className="text-xs text-gray-500">Primary contact person's name</p>
+                    </div>
+                  </div>
+                </div>
+                
+                <div>
+                  <div className="flex items-start">
+                    <span className="text-red-500 mr-1 opacity-0">*</span>
+                    <div>
+                      <p className="font-medium text-sm">renewal_date</p>
+                      <p className="text-xs text-gray-500">Contract renewal date (YYYY-MM-DD)</p>
+                    </div>
+                  </div>
+                </div>
+                
+                <div>
+                  <div className="flex items-start">
+                    <span className="text-red-500 mr-1 opacity-0">*</span>
+                    <div>
+                      <p className="font-medium text-sm">mrr</p>
+                      <p className="text-xs text-gray-500">Monthly Recurring Revenue</p>
+                    </div>
+                  </div>
+                </div>
+                
+                <div>
+                  <div className="flex items-start">
+                    <span className="text-red-500 mr-1 opacity-0">*</span>
+                    <div>
+                      <p className="font-medium text-sm">arr</p>
+                      <p className="text-xs text-gray-500">Annual Recurring Revenue</p>
+                    </div>
+                  </div>
+                </div>
+                
+                <div>
+                  <div className="flex items-start">
+                    <span className="text-red-500 mr-1 opacity-0">*</span>
+                    <div>
+                      <p className="font-medium text-sm">health_status</p>
+                      <p className="text-xs text-gray-500">Customer health (healthy, at_risk, red_zone)</p>
+                    </div>
+                  </div>
+                </div>
+                
+                <div>
+                  <div className="flex items-start">
+                    <span className="text-red-500 mr-1 opacity-0">*</span>
+                    <div>
+                      <p className="font-medium text-sm">mysql_company_id</p>
+                      <p className="text-xs text-gray-500">MySQL database unique ID (for integration)</p>
+                    </div>
+                  </div>
+                </div>
               </div>
+            </div>
+            
+            <div className="border border-dashed rounded-md p-6 flex flex-col items-center justify-center text-center">
+              <div className="mb-4">
+                <Upload className="h-12 w-12 text-gray-400" />
+              </div>
+              <h3 className="text-md font-medium mb-1">Drag and drop your CSV file here or click to browse</h3>
+              <p className="text-sm text-gray-500 mb-4">CSV files only, up to 10MB</p>
               
               <Input 
                 id="csv-file" 
                 type="file" 
                 accept=".csv" 
                 onChange={handleFileChange}
+                className="max-w-xs"
               />
-              <p className="text-xs text-gray-500">
-                File should include customer data with headers for company_id, company_name, etc.
-              </p>
             </div>
             
             <div className="flex justify-between items-center">
