@@ -95,15 +95,26 @@ const convertValueType = (field: string, value: string | null): any => {
 const validateRecord = (record: Record<string, any>, rowIndex: number): ValidationError[] => {
   const errors: ValidationError[] = [];
   
-  // Required field validation
-  if (!record.name) {
-    errors.push({
-      row: rowIndex,
-      field: 'name',
-      value: String(record.name || ''),
-      message: 'Name is required'
-    });
-  }
+  // Required fields validation - based on user requirements
+  const requiredFields = [
+    { field: 'name', label: 'Name' },
+    { field: 'recurrer_id', label: 'Recurrer ID' },
+    { field: 'contact_email', label: 'Contact Email' },
+    { field: 'contact_phone', label: 'Contact Phone' },
+    { field: 'chargebee_customer_id', label: 'Chargebee Customer ID' },
+    { field: 'chargebee_subscription_id', label: 'Chargebee Subscription ID' }
+  ];
+  
+  requiredFields.forEach(({ field, label }) => {
+    if (!record[field]) {
+      errors.push({
+        row: rowIndex,
+        field,
+        value: String(record[field] || ''),
+        message: `${label} is required`
+      });
+    }
+  });
   
   // Numeric fields validation
   ['mrr', 'arr'].forEach(field => {
@@ -125,6 +136,16 @@ const validateRecord = (record: Record<string, any>, rowIndex: number): Validati
       field: 'contact_email',
       value: String(record.contact_email),
       message: 'Invalid email format'
+    });
+  }
+  
+  // Phone validation - basic check for non-empty value
+  if (record.contact_phone && record.contact_phone.trim() === '') {
+    errors.push({
+      row: rowIndex,
+      field: 'contact_phone',
+      value: String(record.contact_phone),
+      message: 'Invalid phone number format'
     });
   }
   
@@ -225,20 +246,24 @@ export const importCSV = async (req: Request, res: Response) => {
           continue; // Skip records with validation errors
         }
         
-        // Make sure the record has a required name field
-        if (!record.name || typeof record.name !== 'string') {
-          continue; // Skip records without name
+        // Check all required fields are present
+        const requiredFields = ['name', 'recurrer_id', 'contact_email', 'contact_phone', 'chargebee_customer_id', 'chargebee_subscription_id'];
+        const missingFields = requiredFields.filter(field => !record[field]);
+        
+        if (missingFields.length > 0) {
+          errors.push(`Row ${record.row}: Missing required fields: ${missingFields.join(', ')}`);
+          continue; // Skip records missing required fields
         }
         
         // Create a clean copy of the record without extra properties
         const cleanRecord = {
-          name: record.name, // Ensure the required field is always present
-          recurrer_id: record.recurrer_id || null,
+          name: record.name, // Required field
+          recurrer_id: record.recurrer_id, // Required field
           industry: record.industry || null,
           logo_url: record.logo_url || null,
           contact_name: record.contact_name || null,
-          contact_email: record.contact_email || null,
-          contact_phone: record.contact_phone || null,
+          contact_email: record.contact_email, // Required field
+          contact_phone: record.contact_phone, // Required field
           assigned_csm: typeof record.assigned_csm === 'number' ? record.assigned_csm : null,
           health_status: record.health_status || null,
           mrr: typeof record.mrr === 'number' ? record.mrr : null,
@@ -246,8 +271,8 @@ export const importCSV = async (req: Request, res: Response) => {
           currency_code: record.currency_code || null,
           renewal_date: record.renewal_date instanceof Date ? record.renewal_date : null,
           onboarded_at: record.onboarded_at instanceof Date ? record.onboarded_at : null,
-          chargebee_customer_id: record.chargebee_customer_id || null,
-          chargebee_subscription_id: record.chargebee_subscription_id || null,
+          chargebee_customer_id: record.chargebee_customer_id, // Required field
+          chargebee_subscription_id: record.chargebee_subscription_id, // Required field
           mysql_company_id: record.mysql_company_id || null,
           active_stores: typeof record.active_stores === 'number' ? record.active_stores : null,
           growth_subscription_count: typeof record.growth_subscription_count === 'number' ? record.growth_subscription_count : null,
@@ -481,9 +506,16 @@ export const processCSV = (csvContent: string, existingCustomers: Record<string,
       record[mappedField] = sanitizeValue(values[index]);
     });
     
-    // Generate recurrer_id if not present
+    // Ensure recurrer_id exists - either use the provided one or generate a new one
     if (!record.recurrer_id) {
       record.recurrer_id = `rec_${randomUUID().replace(/-/g, '')}`;
+      // Add a note that this ID was auto-generated
+      validationErrors.push({
+        row: i,
+        field: 'recurrer_id',
+        value: record.recurrer_id,
+        message: 'Recurrer ID was auto-generated for this record'
+      });
     }
     
     // Convert values to appropriate types
