@@ -17,6 +17,19 @@ type ValidationError = {
   message: string;
 };
 
+// Define import session tracking
+type ImportSession = {
+  timestamp: Date;
+  totalProcessed: number;
+  newRecords: number;
+  updatedRecords: number;
+  errorCount: number;
+  errors: string[];
+};
+
+// Store the last import session for reporting
+let lastImportSession: ImportSession | null = null;
+
 // Helper function to sanitize input values
 const sanitizeValue = (value: string | null | undefined): string | null => {
   if (value === null || value === undefined || value === '' || value.toLowerCase() === 'null') {
@@ -420,6 +433,16 @@ export const importCSV = async (req: Request, res: Response) => {
       }
     }
     
+    // Store import session for reporting
+    lastImportSession = {
+      timestamp: new Date(),
+      totalProcessed: importedRecords.length + updatedRecords.length,
+      newRecords: importedRecords.length,
+      updatedRecords: updatedRecords.length,
+      errorCount: errors.length,
+      errors: errors
+    };
+
     // Return response with import results
     res.json({
       success: true,
@@ -603,6 +626,27 @@ export const downloadSampleCSV = async (req: Request, res: Response) => {
 
 // Download current customer data as CSV for updates
 // Helper function to process CSV content and return records and errors
+// Get the last import session
+export const getLastImportSession = (req: Request, res: Response) => {
+  if (!lastImportSession) {
+    return res.status(404).json({ success: false, error: 'No import sessions found' });
+  }
+  
+  // Limit the number of errors returned to prevent huge payloads
+  const limitedErrors = lastImportSession.errors.slice(0, 100);
+  const hasMoreErrors = lastImportSession.errors.length > limitedErrors.length;
+  
+  return res.json({
+    success: true,
+    importSession: {
+      ...lastImportSession,
+      errors: limitedErrors,
+      errorCount: lastImportSession.errors.length,
+      hasMoreErrors
+    }
+  });
+};
+
 export const processCSV = (csvContent: string, existingCustomers: Record<string, any> = {}) => {
   const rows = csvContent.split('\n');
   
