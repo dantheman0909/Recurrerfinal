@@ -265,8 +265,6 @@ export const usersRelations = relations(users, ({ one, many }) => ({
   assignedCustomers: many(customers, { relationName: "assigned_customers" }),
   notifications: many(notifications),
   achievements: many(userAchievements),
-  createdAnnotations: many(annotations, { relationName: "created_annotations" }),
-  resolvedAnnotations: many(annotations, { relationName: "resolved_annotations" }),
 }));
 
 export const customersRelations = relations(customers, ({ one, many }) => ({
@@ -311,99 +309,8 @@ export const notificationsRelations = relations(notifications, ({ one }) => ({
   user: one(users, { fields: [notifications.user_id], references: [users.id] }),
 }));
 
-// Custom Reports
-export const customReports = pgTable("custom_reports", {
-  id: serial("id").primaryKey(),
-  name: text("name").notNull(),
-  description: text("description"),
-  chart_type: text("chart_type").notNull().default('line'), // line, bar, area, pie, etc.
-  is_public: boolean("is_public").default(true),
-  filters: jsonb("filters"), // JSON filters for the report
-  created_by: integer("created_by").references(() => users.id),
-  created_at: timestamp("created_at").defaultNow(),
-  updated_at: timestamp("updated_at"),
-  last_run_at: timestamp("last_run_at"),
-});
-
-// Custom Metrics Definitions
-export const customMetrics = pgTable("custom_metrics", {
-  id: serial("id").primaryKey(),
-  report_id: integer("report_id").references(() => customReports.id),
-  name: text("name").notNull(),
-  description: text("description"),
-  data_source: text("data_source").notNull(), // 'customers', 'mysql', 'chargebee'
-  metric_type: text("metric_type").notNull(), // 'count', 'sum', 'average', 'percent'
-  sql_query: text("sql_query"), // SQL query used for the metric
-  field_mapping: jsonb("field_mapping"), // JSON mapping of fields from data source
-  display_format: text("display_format").default('number'), // number, currency, percent
-  display_color: text("display_color"),
-  target_value: integer("target_value"),
-  is_active: boolean("is_active").default(true),
-  created_by: integer("created_by").references(() => users.id),
-  created_at: timestamp("created_at").defaultNow(),
-});
-
-// Custom Report Schedules
-export const reportSchedules = pgTable("report_schedules", {
-  id: serial("id").primaryKey(),
-  report_id: integer("report_id").references(() => customReports.id),
-  frequency: text("frequency").notNull(), // daily, weekly, monthly
-  recipients: text("recipients").array(), // Array of email addresses
-  last_sent_at: timestamp("last_sent_at"),
-  next_scheduled_at: timestamp("next_scheduled_at"),
-  is_active: boolean("is_active").default(true),
-  created_by: integer("created_by").references(() => users.id),
-  created_at: timestamp("created_at").defaultNow(),
-});
-
-// Annotations for real-time collaboration
-export const annotationTypeEnum = pgEnum('annotation_type', ['comment', 'highlight', 'suggestion', 'action_item']);
-export const entityTypeEnum = pgEnum('entity_type', ['customer', 'task', 'playbook', 'report', 'metric']);
-
-export const annotations = pgTable("annotations", {
-  id: serial("id").primaryKey(),
-  entity_type: entityTypeEnum("entity_type").notNull(), // What type of object is being annotated
-  entity_id: integer("entity_id").notNull(), // ID of the entity being annotated
-  user_id: integer("user_id").notNull().references(() => users.id), // Who created the annotation
-  type: annotationTypeEnum("type").notNull().default('comment'),
-  content: text("content").notNull(), // The annotation text
-  position_data: jsonb("position_data"), // JSON for UI positioning, highlighting
-  is_resolved: boolean("is_resolved").default(false),
-  parent_id: integer("parent_id"), // For threaded replies to annotations
-  mentioned_user_ids: integer("mentioned_user_ids").array(), // Array of user IDs mentioned
-  created_at: timestamp("created_at").defaultNow(),
-  updated_at: timestamp("updated_at"),
-  resolved_at: timestamp("resolved_at"),
-  resolved_by: integer("resolved_by").references(() => users.id),
-});
-
-// Relations for Custom Reports
-export const customReportsRelations = relations(customReports, ({ one, many }) => ({
-  createdBy: one(users, { fields: [customReports.created_by], references: [users.id] }),
-  metrics: many(customMetrics),
-  schedules: many(reportSchedules),
-}));
-
-// Relations for Custom Metrics
-export const customMetricsRelations = relations(customMetrics, ({ one }) => ({
-  report: one(customReports, { fields: [customMetrics.report_id], references: [customReports.id] }),
-  createdBy: one(users, { fields: [customMetrics.created_by], references: [users.id] }),
-}));
-
-// Relations for Report Schedules
-export const reportSchedulesRelations = relations(reportSchedules, ({ one }) => ({
-  report: one(customReports, { fields: [reportSchedules.report_id], references: [customReports.id] }),
-  createdBy: one(users, { fields: [reportSchedules.created_by], references: [users.id] }),
-}));
-
 export const userAchievementsRelations = relations(userAchievements, ({ one }) => ({
   user: one(users, { fields: [userAchievements.user_id], references: [users.id] }),
-}));
-
-// Relations for Annotations
-export const annotationsRelations = relations(annotations, ({ one }) => ({
-  user: one(users, { fields: [annotations.user_id], references: [users.id], relationName: "created_annotations" }),
-  resolvedBy: one(users, { fields: [annotations.resolved_by], references: [users.id], relationName: "resolved_annotations" }),
 }));
 
 // Schemas
@@ -421,10 +328,6 @@ export const insertChargebeeConfigSchema = createInsertSchema(chargebeeConfig).o
 export const insertChargebeeFieldMappingSchema = createInsertSchema(chargebeeFieldMappings).omit({ id: true, created_at: true });
 export const insertNotificationSchema = createInsertSchema(notifications).omit({ id: true, created_at: true });
 export const insertUserAchievementSchema = createInsertSchema(userAchievements).omit({ id: true, earned_at: true });
-export const insertCustomReportSchema = createInsertSchema(customReports).omit({ id: true, created_at: true, updated_at: true, last_run_at: true });
-export const insertCustomMetricSchema = createInsertSchema(customMetrics).omit({ id: true, created_at: true });
-export const insertReportScheduleSchema = createInsertSchema(reportSchedules).omit({ id: true, created_at: true, last_sent_at: true, next_scheduled_at: true });
-export const insertAnnotationSchema = createInsertSchema(annotations).omit({ id: true, created_at: true, updated_at: true, resolved_at: true });
 
 // Types
 export type User = typeof users.$inferSelect;
@@ -466,15 +369,3 @@ export type InsertNotification = z.infer<typeof insertNotificationSchema>;
 
 export type UserAchievement = typeof userAchievements.$inferSelect;
 export type InsertUserAchievement = z.infer<typeof insertUserAchievementSchema>;
-
-export type CustomReport = typeof customReports.$inferSelect;
-export type InsertCustomReport = z.infer<typeof insertCustomReportSchema>;
-
-export type CustomMetric = typeof customMetrics.$inferSelect;
-export type InsertCustomMetric = z.infer<typeof insertCustomMetricSchema>;
-
-export type ReportSchedule = typeof reportSchedules.$inferSelect;
-export type InsertReportSchedule = z.infer<typeof insertReportScheduleSchema>;
-
-export type Annotation = typeof annotations.$inferSelect;
-export type InsertAnnotation = z.infer<typeof insertAnnotationSchema>;

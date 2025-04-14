@@ -258,9 +258,9 @@ function DatabaseConfigTab() {
   
   // Auto-select the active saved query when saved queries are loaded
   React.useEffect(() => {
-    if (existingSavedQueries && Array.isArray(existingSavedQueries) && existingSavedQueries.length > 0) {
+    if (existingSavedQueries && existingSavedQueries.length > 0) {
       // Find the active query or the most recently used one
-      const activeQuery = existingSavedQueries.find((q: any) => q && q.is_active === true);
+      const activeQuery = existingSavedQueries.find((q: any) => q.is_active === true);
       if (activeQuery) {
         setSelectedSavedQuery(activeQuery.id.toString());
         setSqlQuery(activeQuery.query);
@@ -754,7 +754,7 @@ function DatabaseConfigTab() {
                         } else if (value) {
                           setSelectedSavedQuery(value);
                           // Find and set the query from the saved queries
-                          const selectedQuery = existingSavedQueries?.find((q: any) => q.id.toString() === value);
+                          const selectedQuery = existingSavedQueries.find((q: any) => q.id.toString() === value);
                           if (selectedQuery) {
                             setSqlQuery(selectedQuery.query);
                           }
@@ -766,15 +766,11 @@ function DatabaseConfigTab() {
                       </SelectTrigger>
                       <SelectContent>
                         <SelectItem value="create_new">-- Create new query --</SelectItem>
-                        {existingSavedQueries && Array.isArray(existingSavedQueries) ? (
-                          existingSavedQueries.map((query: any) => (
-                            <SelectItem key={query.id} value={query.id.toString()}>
-                              {query.name} {query.is_active && "(Active)"}
-                            </SelectItem>
-                          ))
-                        ) : (
-                          <SelectItem value="no_queries" disabled>No saved queries found</SelectItem>
-                        )}
+                        {existingSavedQueries.map((query: any) => (
+                          <SelectItem key={query.id} value={query.id.toString()}>
+                            {query.name} {query.is_active && "(Active)"}
+                          </SelectItem>
+                        ))}
                       </SelectContent>
                     </Select>
                     <p className="text-xs text-gray-500">

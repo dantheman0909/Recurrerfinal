@@ -77,26 +77,11 @@ export class ChargebeeService {
       });
 
       if (!response.ok) {
-        const errorData = await response.json().catch(() => null);
-        const errorMessage = errorData?.message || response.statusText;
-        
-        // Handle authentication errors specifically
-        if (response.status === 401) {
-          throw new Error(`Chargebee API authentication failed: Invalid API key or site name`);
-        } else if (response.status === 403) {
-          throw new Error(`Chargebee API authorization failed: Insufficient permissions`);
-        } else {
-          throw new Error(`Chargebee API error (${response.status}): ${errorMessage}`);
-        }
+        throw new Error(`Chargebee API error: ${response.status} ${response.statusText}`);
       }
 
       return await response.json();
-    } catch (error: any) {
-      // Handle network errors
-      if (error.name === 'TypeError' && error.message.includes('Failed to fetch')) {
-        throw new Error(`Cannot connect to Chargebee: Please check your network connection and site name`);
-      }
-      
+    } catch (error) {
       console.error('Error calling Chargebee API:', error);
       throw error;
     }
@@ -223,15 +208,10 @@ export class ChargebeeService {
 // Initialize chargebee service
 export const initChargebeeService = (): ChargebeeService | null => {
   const apiKey = process.env.CHARGEBEE_API_KEY;
-  const site = process.env.CHARGEBEE_SITE;
+  const site = process.env.CHARGEBEE_SITE || 'getreelo';
 
   if (!apiKey) {
-    console.warn('Chargebee API key not found. Set CHARGEBEE_API_KEY environment variable.');
-    return null;
-  }
-
-  if (!site) {
-    console.warn('Chargebee site not found. Set CHARGEBEE_SITE environment variable.');
+    console.error('Chargebee API key not found. Set CHARGEBEE_API_KEY environment variable.');
     return null;
   }
 

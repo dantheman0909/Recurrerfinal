@@ -1,6 +1,5 @@
 import type { Express } from "express";
 import { createServer, type Server } from "http";
-import { WebSocketServer, WebSocket } from "ws";
 import { storage } from "./storage";
 import { z } from "zod";
 import { MetricTimeframe } from "@shared/types";
@@ -13,10 +12,7 @@ import {
   insertRedZoneAlertSchema,
   insertMySQLSavedQuerySchema,
   insertNotificationSchema,
-  insertUserAchievementSchema,
-  insertCustomReportSchema,
-  insertCustomMetricSchema,
-  insertReportScheduleSchema
+  insertUserAchievementSchema
 } from "@shared/schema";
 import {
   getChargebeeSubscriptions,
@@ -32,20 +28,7 @@ import {
   getCustomerExternalData
 } from "./external-data";
 
-import {
-  getAnnotations,
-  createAnnotation,
-  updateAnnotation,
-  deleteAnnotation,
-  createAnnotationReply
-} from "./annotations";
-
 export async function registerRoutes(app: Express): Promise<Server> {
-  // Health check endpoint
-  app.get('/api/health', (req, res) => {
-    res.status(200).json({ status: 'ok', message: 'Recurrer API is running' });
-  });
-
   // API Routes - All prefixed with /api
   
   // Dashboard
@@ -1209,49 +1192,24 @@ export async function registerRoutes(app: Express): Promise<Server> {
       // Import the MySQL service to execute the query
       const { mysqlService } = await import('./mysql-service');
       
-      if (!mysqlService) {
-        return res.status(500).json({ 
-          success: false,
-          message: 'MySQL service is not configured. Please set up the MySQL connection first.'
-        });
-      }
+      // Execute the saved query
+      const result = await mysqlService.executeQuery(savedQuery.query);
       
-      try {
-        // Execute the saved query - ensure we have a query string
-        const query = typeof savedQuery.query === 'string' ? savedQuery.query : '';
-        
-        if (!query) {
-          return res.status(400).json({
-            success: false,
-            message: 'Query string is empty or invalid'
-          });
-        }
-        
-        const result = await mysqlService.executeQuery(query);
-        
-        // Update the last run timestamp
-        await storage.updateMySQLSavedQueryLastRun(id);
-        
-        // Return the query results
-        res.json({
-          success: true,
-          query: savedQuery,
-          results: result.rows,
-          fields: result.fields
-        });
-      } catch (dbError: any) {
-        console.error('Database error running MySQL saved query:', dbError);
-        res.status(400).json({ 
-          success: false,
-          message: 'Database error while executing saved query', 
-          error: dbError.message || 'Unknown database error'
-        });
-      }
-    } catch (error: any) {
+      // Update the last run timestamp
+      await storage.updateMySQLSavedQueryLastRun(id);
+      
+      // Return the query results
+      res.json({
+        success: true,
+        query: savedQuery,
+        results: result.rows,
+        fields: result.fields
+      });
+    } catch (error) {
       console.error('Error executing saved query:', error);
       res.status(500).json({ 
         success: false, 
-        message: `Error executing saved query: ${error.message || String(error)}` 
+        message: `Error executing saved query: ${error instanceof Error ? error.message : String(error)}` 
       });
     }
   });
@@ -1303,21 +1261,22 @@ export async function registerRoutes(app: Express): Promise<Server> {
       
       const configData = configSchema.parse(req.body);
       
-      // Import ChargebeeService class
-      const { ChargebeeService } = await import('./chargebee');
+      // Set temporary environment variables for testing
+      process.env.CHARGEBEE_SITE = configData.site;
+      process.env.CHARGEBEE_API_KEY = configData.apiKey;
       
-      // Create a new instance directly with the provided credentials
-      const testService = new ChargebeeService({
-        site: configData.site,
-        apiKey: configData.apiKey
-      });
+      // Try to initialize the service with the new credentials
+      const { chargebeeService } = await import('./chargebee');
+      
+      if (!chargebeeService) {
+        return res.status(500).json({ success: false, message: 'Failed to initialize Chargebee service' });
+      }
       
       // Try a test API call to validate credentials
-      await testService.getSubscriptions(1);
+      await chargebeeService.getSubscriptions(1);
       
       res.json({ success: true, message: 'Connection successful' });
     } catch (error: any) {
-      console.error('Chargebee test connection error:', error);
       res.status(400).json({ 
         success: false, 
         message: 'Chargebee connection failed', 
@@ -1445,346 +1404,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  // Custom Reports
-  app.get('/api/custom-reports', async (req, res) => {
-    try {
-      const reports = await storage.getCustomReports();
-      res.json(reports);
-    } catch (error) {
-      console.error('Error getting custom reports:', error);
-      res.status(500).json({ message: 'Failed to fetch custom reports', error: (error as Error).message });
-    }
-  });
-
-  app.get('/api/custom-reports/:id', async (req, res) => {
-    try {
-      const id = parseInt(req.params.id);
-      const report = await storage.getCustomReport(id);
-      
-      if (!report) {
-        return res.status(404).json({ message: 'Custom report not found' });
-      }
-      
-      res.json(report);
-    } catch (error) {
-      res.status(500).json({ message: 'Failed to fetch custom report', error: (error as Error).message });
-    }
-  });
-
-  app.post('/api/custom-reports', async (req, res) => {
-    try {
-      const reportData = insertCustomReportSchema.parse(req.body);
-      const report = await storage.createCustomReport(reportData);
-      res.status(201).json(report);
-    } catch (error) {
-      res.status(400).json({ 
-        message: 'Invalid custom report data', 
-        error: error instanceof Error ? error.message : String(error) 
-      });
-    }
-  });
-
-  app.patch('/api/custom-reports/:id', async (req, res) => {
-    try {
-      const id = parseInt(req.params.id);
-      const reportData = insertCustomReportSchema.partial().parse(req.body);
-      const report = await storage.updateCustomReport(id, reportData);
-      
-      if (!report) {
-        return res.status(404).json({ message: 'Custom report not found' });
-      }
-      
-      res.json(report);
-    } catch (error) {
-      res.status(400).json({ 
-        message: 'Invalid custom report data', 
-        error: error instanceof Error ? error.message : String(error) 
-      });
-    }
-  });
-
-  app.delete('/api/custom-reports/:id', async (req, res) => {
-    try {
-      const id = parseInt(req.params.id);
-      const success = await storage.deleteCustomReport(id);
-      
-      if (!success) {
-        return res.status(404).json({ message: 'Custom report not found' });
-      }
-      
-      res.status(204).end();
-    } catch (error) {
-      res.status(500).json({ 
-        message: 'Failed to delete custom report', 
-        error: error instanceof Error ? error.message : String(error) 
-      });
-    }
-  });
-
-  app.post('/api/custom-reports/:id/run', async (req, res) => {
-    try {
-      const id = parseInt(req.params.id);
-      const report = await storage.updateCustomReportLastRun(id);
-      
-      if (!report) {
-        return res.status(404).json({ message: 'Custom report not found' });
-      }
-      
-      res.json(report);
-    } catch (error) {
-      res.status(500).json({ 
-        message: 'Failed to run custom report', 
-        error: error instanceof Error ? error.message : String(error) 
-      });
-    }
-  });
-
-  // Custom Metrics
-  app.get('/api/custom-reports/:reportId/metrics', async (req, res) => {
-    try {
-      const reportId = parseInt(req.params.reportId);
-      const metrics = await storage.getCustomMetrics(reportId);
-      res.json(metrics);
-    } catch (error) {
-      console.error('Error getting custom metrics:', error);
-      res.status(500).json({ message: 'Failed to fetch custom metrics', error: (error as Error).message });
-    }
-  });
-
-  app.get('/api/custom-metrics/:id', async (req, res) => {
-    try {
-      const id = parseInt(req.params.id);
-      const metric = await storage.getCustomMetric(id);
-      
-      if (!metric) {
-        return res.status(404).json({ message: 'Custom metric not found' });
-      }
-      
-      res.json(metric);
-    } catch (error) {
-      res.status(500).json({ message: 'Failed to fetch custom metric', error: (error as Error).message });
-    }
-  });
-
-  app.post('/api/custom-reports/:reportId/metrics', async (req, res) => {
-    try {
-      const reportId = parseInt(req.params.reportId);
-      // Ensure the report ID in the URL matches the one in the body
-      const metricData = insertCustomMetricSchema.parse({
-        ...req.body,
-        report_id: reportId
-      });
-      
-      const metric = await storage.createCustomMetric(metricData);
-      res.status(201).json(metric);
-    } catch (error) {
-      res.status(400).json({ 
-        message: 'Invalid custom metric data', 
-        error: error instanceof Error ? error.message : String(error) 
-      });
-    }
-  });
-
-  app.patch('/api/custom-metrics/:id', async (req, res) => {
-    try {
-      const id = parseInt(req.params.id);
-      const metricData = insertCustomMetricSchema.partial().parse(req.body);
-      const metric = await storage.updateCustomMetric(id, metricData);
-      
-      if (!metric) {
-        return res.status(404).json({ message: 'Custom metric not found' });
-      }
-      
-      res.json(metric);
-    } catch (error) {
-      res.status(400).json({ 
-        message: 'Invalid custom metric data', 
-        error: error instanceof Error ? error.message : String(error) 
-      });
-    }
-  });
-
-  app.delete('/api/custom-metrics/:id', async (req, res) => {
-    try {
-      const id = parseInt(req.params.id);
-      const success = await storage.deleteCustomMetric(id);
-      
-      if (!success) {
-        return res.status(404).json({ message: 'Custom metric not found' });
-      }
-      
-      res.status(204).end();
-    } catch (error) {
-      res.status(500).json({ 
-        message: 'Failed to delete custom metric', 
-        error: error instanceof Error ? error.message : String(error) 
-      });
-    }
-  });
-
-  // Report Schedules
-  app.get('/api/custom-reports/:reportId/schedules', async (req, res) => {
-    try {
-      const reportId = parseInt(req.params.reportId);
-      const schedules = await storage.getReportSchedules(reportId);
-      res.json(schedules);
-    } catch (error) {
-      console.error('Error getting report schedules:', error);
-      res.status(500).json({ message: 'Failed to fetch report schedules', error: (error as Error).message });
-    }
-  });
-
-  app.get('/api/report-schedules/:id', async (req, res) => {
-    try {
-      const id = parseInt(req.params.id);
-      const schedule = await storage.getReportSchedule(id);
-      
-      if (!schedule) {
-        return res.status(404).json({ message: 'Report schedule not found' });
-      }
-      
-      res.json(schedule);
-    } catch (error) {
-      res.status(500).json({ message: 'Failed to fetch report schedule', error: (error as Error).message });
-    }
-  });
-
-  app.post('/api/custom-reports/:reportId/schedules', async (req, res) => {
-    try {
-      const reportId = parseInt(req.params.reportId);
-      // Ensure the report ID in the URL matches the one in the body
-      const scheduleData = insertReportScheduleSchema.parse({
-        ...req.body,
-        report_id: reportId
-      });
-      
-      const schedule = await storage.createReportSchedule(scheduleData);
-      res.status(201).json(schedule);
-    } catch (error) {
-      res.status(400).json({ 
-        message: 'Invalid report schedule data', 
-        error: error instanceof Error ? error.message : String(error) 
-      });
-    }
-  });
-
-  app.patch('/api/report-schedules/:id', async (req, res) => {
-    try {
-      const id = parseInt(req.params.id);
-      const scheduleData = insertReportScheduleSchema.partial().parse(req.body);
-      const schedule = await storage.updateReportSchedule(id, scheduleData);
-      
-      if (!schedule) {
-        return res.status(404).json({ message: 'Report schedule not found' });
-      }
-      
-      res.json(schedule);
-    } catch (error) {
-      res.status(400).json({ 
-        message: 'Invalid report schedule data', 
-        error: error instanceof Error ? error.message : String(error) 
-      });
-    }
-  });
-
-  app.delete('/api/report-schedules/:id', async (req, res) => {
-    try {
-      const id = parseInt(req.params.id);
-      const success = await storage.deleteReportSchedule(id);
-      
-      if (!success) {
-        return res.status(404).json({ message: 'Report schedule not found' });
-      }
-      
-      res.status(204).end();
-    } catch (error) {
-      res.status(500).json({ 
-        message: 'Failed to delete report schedule', 
-        error: error instanceof Error ? error.message : String(error) 
-      });
-    }
-  });
-
-  app.post('/api/report-schedules/:id/send', async (req, res) => {
-    try {
-      const id = parseInt(req.params.id);
-      const schedule = await storage.updateReportScheduleLastSent(id);
-      
-      if (!schedule) {
-        return res.status(404).json({ message: 'Report schedule not found' });
-      }
-      
-      res.json(schedule);
-    } catch (error) {
-      res.status(500).json({ 
-        message: 'Failed to send report', 
-        error: error instanceof Error ? error.message : String(error) 
-      });
-    }
-  });
-
   // Note: External data routes are now registered directly in server/index.ts
 
-  // Annotation routes
-  app.get('/api/annotations/:entity_type/:entity_id', getAnnotations);
-  app.post('/api/annotations/:entity_type/:entity_id', createAnnotation);
-  app.put('/api/annotations/:id', updateAnnotation);
-  app.delete('/api/annotations/:id', deleteAnnotation);
-  app.post('/api/annotations/:id/replies', createAnnotationReply);
-
   const httpServer = createServer(app);
-  
-  // Set up WebSocket server for real-time annotations
-  const wss = new WebSocketServer({ server: httpServer, path: '/ws' });
-  
-  // Store connected clients
-  const clients = new Map();
-  
-  wss.on('connection', (ws) => {
-    const clientId = Date.now();
-    clients.set(clientId, ws);
-    
-    // Log connection
-    console.log(`WebSocket client connected: ${clientId}`);
-    
-    // Send initial connection success message
-    ws.send(JSON.stringify({
-      type: 'connection',
-      status: 'connected',
-      clientId
-    }));
-    
-    // Handle messages from clients
-    ws.on('message', (messageData) => {
-      try {
-        const message = JSON.parse(messageData.toString());
-        
-        // Add sender info to message
-        message.sender = clientId;
-        message.timestamp = new Date().toISOString();
-        
-        // Broadcast to all other connected clients based on entity
-        if (message.entity_type && message.entity_id) {
-          const channel = `${message.entity_type}_${message.entity_id}`;
-          
-          clients.forEach((client, id) => {
-            // Only send to clients that are ready and not the sender
-            if (id !== clientId && client.readyState === WebSocket.OPEN) {
-              client.send(JSON.stringify(message));
-            }
-          });
-        }
-      } catch (error) {
-        console.error('Error handling WebSocket message:', error);
-      }
-    });
-    
-    // Handle disconnection
-    ws.on('close', () => {
-      clients.delete(clientId);
-      console.log(`WebSocket client disconnected: ${clientId}`);
-    });
-  });
-
   return httpServer;
 }
