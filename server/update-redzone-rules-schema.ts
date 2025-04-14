@@ -76,8 +76,9 @@ async function updateRedZoneRulesSchema() {
   }
 }
 
-// Execute the function if this file is run directly
-if (require.main === module) {
+// This is an ES module, so we can't use require.main === module
+// Instead, we'll just check if this is being run directly
+if (import.meta.url.endsWith(process.argv[1])) {
   updateRedZoneRulesSchema()
     .then(result => {
       console.log('RedZone rules schema update result:', result);

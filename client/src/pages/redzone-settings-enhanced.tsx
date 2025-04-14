@@ -15,15 +15,16 @@ import {
   FormMessage,
 } from "@/components/ui/form";
 import { RedZoneRule } from "@shared/schema";
-import {
+// Because we created these types in a separate file, use interface imports to prevent naming conflicts
+import type {
   AvailableFields,
   RedZoneRuleForm,
-  redZoneRuleFormSchema,
   Condition,
-  ConditionGroup,
   Conditions,
   LogicOperator
 } from "@shared/redzone-types";
+// Import the schema for form validation
+import { redZoneRuleFormSchema } from "@shared/redzone-types";
 import {
   AlertDialog,
   AlertDialogAction,
@@ -47,7 +48,7 @@ import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
 import AppLayout from "@/components/layouts/app-layout";
 import { Skeleton } from "@/components/ui/skeleton";
-import ConditionGroup from "@/components/red-zone/condition-group";
+import { default as ConditionGroupComponent } from "@/components/red-zone/condition-group";
 
 const severityOptions = [
   { value: "critical", label: "Critical" },
@@ -669,7 +670,7 @@ const RedZoneSettingsPage = () => {
                         ) : (
                           <>
                             {form.getValues("conditions.groups")?.map((group, groupIndex) => (
-                              <ConditionGroup 
+                              <ConditionGroupComponent 
                                 key={groupIndex}
                                 form={form}
                                 groupIndex={groupIndex}
