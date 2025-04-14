@@ -2511,13 +2511,23 @@ function DataImportTab({ setActiveTab }: { setActiveTab: (tab: string) => void }
             </div>
             
             <div className="flex justify-between items-center">
-              <Button 
-                variant="outline"
-                onClick={() => window.location.href = '/api/customers/export/csv'}
-              >
-                <FileText className="h-4 w-4 mr-2" />
-                Export Current Customers
-              </Button>
+              <div className="space-x-2">
+                <Button 
+                  variant="outline"
+                  onClick={() => window.location.href = '/api/customers/export/csv'}
+                >
+                  <FileText className="h-4 w-4 mr-2" />
+                  Export Current Customers
+                </Button>
+                
+                <Button 
+                  variant="outline"
+                  onClick={() => window.location.href = '/api/customers/import/sample'}
+                >
+                  <Download className="h-4 w-4 mr-2" />
+                  Download Template
+                </Button>
+              </div>
               
               <Button 
                 onClick={handleImport}
