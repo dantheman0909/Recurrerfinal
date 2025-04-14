@@ -1209,24 +1209,49 @@ export async function registerRoutes(app: Express): Promise<Server> {
       // Import the MySQL service to execute the query
       const { mysqlService } = await import('./mysql-service');
       
-      // Execute the saved query
-      const result = await mysqlService.executeQuery(savedQuery.query);
+      if (!mysqlService) {
+        return res.status(500).json({ 
+          success: false,
+          message: 'MySQL service is not configured. Please set up the MySQL connection first.'
+        });
+      }
       
-      // Update the last run timestamp
-      await storage.updateMySQLSavedQueryLastRun(id);
-      
-      // Return the query results
-      res.json({
-        success: true,
-        query: savedQuery,
-        results: result.rows,
-        fields: result.fields
-      });
-    } catch (error) {
+      try {
+        // Execute the saved query - ensure we have a query string
+        const query = typeof savedQuery.query === 'string' ? savedQuery.query : '';
+        
+        if (!query) {
+          return res.status(400).json({
+            success: false,
+            message: 'Query string is empty or invalid'
+          });
+        }
+        
+        const result = await mysqlService.executeQuery(query);
+        
+        // Update the last run timestamp
+        await storage.updateMySQLSavedQueryLastRun(id);
+        
+        // Return the query results
+        res.json({
+          success: true,
+          query: savedQuery,
+          results: result.rows,
+          fields: result.fields
+        });
+      } catch (dbError: any) {
+        console.error('Database error running MySQL saved query:', dbError);
+        res.status(400).json({ 
+          success: false,
+          message: 'Database error while executing saved query', 
+          error: dbError.message || 'Unknown database error'
+        });
+      }
+    } catch (error: any) {
       console.error('Error executing saved query:', error);
       res.status(500).json({ 
         success: false, 
-        message: `Error executing saved query: ${error instanceof Error ? error.message : String(error)}` 
+        message: `Error executing saved query: ${error.message || String(error)}` 
       });
     }
   });
@@ -1278,22 +1303,21 @@ export async function registerRoutes(app: Express): Promise<Server> {
       
       const configData = configSchema.parse(req.body);
       
-      // Set temporary environment variables for testing
-      process.env.CHARGEBEE_SITE = configData.site;
-      process.env.CHARGEBEE_API_KEY = configData.apiKey;
+      // Import ChargebeeService class
+      const { ChargebeeService } = await import('./chargebee');
       
-      // Try to initialize the service with the new credentials
-      const { chargebeeService } = await import('./chargebee');
-      
-      if (!chargebeeService) {
-        return res.status(500).json({ success: false, message: 'Failed to initialize Chargebee service' });
-      }
+      // Create a new instance directly with the provided credentials
+      const testService = new ChargebeeService({
+        site: configData.site,
+        apiKey: configData.apiKey
+      });
       
       // Try a test API call to validate credentials
-      await chargebeeService.getSubscriptions(1);
+      await testService.getSubscriptions(1);
       
       res.json({ success: true, message: 'Connection successful' });
     } catch (error: any) {
+      console.error('Chargebee test connection error:', error);
       res.status(400).json({ 
         success: false, 
         message: 'Chargebee connection failed', 
