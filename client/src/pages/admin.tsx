@@ -28,10 +28,13 @@ import {
 import { Checkbox } from "@/components/ui/checkbox";
 import { Badge } from "@/components/ui/badge";
 import { Switch } from "@/components/ui/switch";
+import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
+import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { useToast } from "@/hooks/use-toast";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger, DialogDescription, DialogFooter } from "@/components/ui/dialog";
 import { queryClient, apiRequest } from "@/lib/queryClient";
 import {
+  AlertCircle,
   Settings,
   Database,
   Upload,
@@ -48,6 +51,7 @@ import {
   BadgeDollarSign,
   Calendar,
   Clock,
+  ChevronDown,
   Trophy,
   Bell,
   Award,
@@ -2054,137 +2058,440 @@ function DataImportTab({ setActiveTab }: { setActiveTab: (tab: string) => void }
             </div>
             
             <div className="border rounded-md p-5">
-              <h3 className="text-md font-medium mb-4">Required and Optional Fields</h3>
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-x-8 gap-y-4">
-                {/* Required Fields - marked with red asterisk */}
-                <div>
-                  <div className="flex items-start">
-                    <span className="text-red-500 mr-1">*</span>
-                    <div>
-                      <p className="font-medium text-sm">name</p>
-                      <p className="text-xs text-gray-500">Company or customer name (required)</p>
+              <Collapsible>
+                <CollapsibleTrigger asChild>
+                  <div className="flex items-center justify-between cursor-pointer pb-2 border-b border-gray-200">
+                    <h3 className="text-md font-medium">Required and Optional Fields</h3>
+                    <ChevronDown className="h-5 w-5 text-gray-500 transition-transform ui-open:rotate-180" />
+                  </div>
+                </CollapsibleTrigger>
+                <CollapsibleContent className="pt-4">
+                  <div className="mb-4">
+                    <h4 className="text-sm font-medium mb-2">Required Fields</h4>
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-x-8 gap-y-3">
+                      <div>
+                        <div className="flex items-start">
+                          <span className="text-red-500 mr-1">*</span>
+                          <div>
+                            <p className="font-medium text-sm">name</p>
+                            <p className="text-xs text-gray-500">Company or customer name</p>
+                          </div>
+                        </div>
+                      </div>
+                      
+                      <div>
+                        <div className="flex items-start">
+                          <span className="text-red-500 mr-1">*</span>
+                          <div>
+                            <p className="font-medium text-sm">recurrer_id</p>
+                            <p className="text-xs text-gray-500">Unique identifier (auto-generated if missing)</p>
+                          </div>
+                        </div>
+                      </div>
+                      
+                      <div>
+                        <div className="flex items-start">
+                          <span className="text-red-500 mr-1">*</span>
+                          <div>
+                            <p className="font-medium text-sm">contact_email</p>
+                            <p className="text-xs text-gray-500">Primary contact email address</p>
+                          </div>
+                        </div>
+                      </div>
+                      
+                      <div>
+                        <div className="flex items-start">
+                          <span className="text-red-500 mr-1">*</span>
+                          <div>
+                            <p className="font-medium text-sm">contact_phone</p>
+                            <p className="text-xs text-gray-500">Primary contact phone number</p>
+                          </div>
+                        </div>
+                      </div>
+                      
+                      <div>
+                        <div className="flex items-start">
+                          <span className="text-red-500 mr-1">*</span>
+                          <div>
+                            <p className="font-medium text-sm">chargebee_customer_id</p>
+                            <p className="text-xs text-gray-500">Chargebee customer identifier</p>
+                          </div>
+                        </div>
+                      </div>
+                      
+                      <div>
+                        <div className="flex items-start">
+                          <span className="text-red-500 mr-1">*</span>
+                          <div>
+                            <p className="font-medium text-sm">chargebee_subscription_id</p>
+                            <p className="text-xs text-gray-500">Chargebee subscription identifier</p>
+                          </div>
+                        </div>
+                      </div>
                     </div>
                   </div>
-                </div>
-                
-                <div>
-                  <div className="flex items-start">
-                    <span className="text-red-500 mr-1">*</span>
-                    <div>
-                      <p className="font-medium text-sm">recurrer_id</p>
-                      <p className="text-xs text-gray-500">Unique identifier in Recurrer (auto-generated if missing, required)</p>
-                    </div>
+                  
+                  <div className="mb-4">
+                    <Tabs defaultValue="contact">
+                      <TabsList className="mb-2">
+                        <TabsTrigger value="contact">Contact & Profile</TabsTrigger>
+                        <TabsTrigger value="financial">Financial</TabsTrigger>
+                        <TabsTrigger value="store">Store Metrics</TabsTrigger>
+                        <TabsTrigger value="engagement">Engagement</TabsTrigger>
+                        <TabsTrigger value="loyalty">Loyalty</TabsTrigger>
+                      </TabsList>
+                      
+                      <TabsContent value="contact" className="pt-2">
+                        <div className="grid grid-cols-1 md:grid-cols-2 gap-x-8 gap-y-3">
+                          <div>
+                            <div className="flex items-start">
+                              <div>
+                                <p className="font-medium text-sm">reelo_id</p>
+                                <p className="text-xs text-gray-500">Reelo system identifier</p>
+                              </div>
+                            </div>
+                          </div>
+                          
+                          <div>
+                            <div className="flex items-start">
+                              <div>
+                                <p className="font-medium text-sm">industry</p>
+                                <p className="text-xs text-gray-500">Customer's business industry</p>
+                              </div>
+                            </div>
+                          </div>
+                          
+                          <div>
+                            <div className="flex items-start">
+                              <div>
+                                <p className="font-medium text-sm">contact_name</p>
+                                <p className="text-xs text-gray-500">Primary contact person's name</p>
+                              </div>
+                            </div>
+                          </div>
+                          
+                          <div>
+                            <div className="flex items-start">
+                              <div>
+                                <p className="font-medium text-sm">mysql_company_id</p>
+                                <p className="text-xs text-gray-500">MySQL database unique ID</p>
+                              </div>
+                            </div>
+                          </div>
+                          
+                          <div>
+                            <div className="flex items-start">
+                              <div>
+                                <p className="font-medium text-sm">logo_url</p>
+                                <p className="text-xs text-gray-500">URL to customer logo image</p>
+                              </div>
+                            </div>
+                          </div>
+                          
+                          <div>
+                            <div className="flex items-start">
+                              <div>
+                                <p className="font-medium text-sm">health_status</p>
+                                <p className="text-xs text-gray-500">Customer health (healthy, at_risk, red_zone)</p>
+                              </div>
+                            </div>
+                          </div>
+                        </div>
+                      </TabsContent>
+                      
+                      <TabsContent value="financial" className="pt-2">
+                        <div className="grid grid-cols-1 md:grid-cols-2 gap-x-8 gap-y-3">
+                          <div>
+                            <div className="flex items-start">
+                              <div>
+                                <p className="font-medium text-sm">mrr</p>
+                                <p className="text-xs text-gray-500">Monthly Recurring Revenue (numeric)</p>
+                              </div>
+                            </div>
+                          </div>
+                          
+                          <div>
+                            <div className="flex items-start">
+                              <div>
+                                <p className="font-medium text-sm">arr</p>
+                                <p className="text-xs text-gray-500">Annual Recurring Revenue (numeric)</p>
+                              </div>
+                            </div>
+                          </div>
+                          
+                          <div>
+                            <div className="flex items-start">
+                              <div>
+                                <p className="font-medium text-sm">currency_code</p>
+                                <p className="text-xs text-gray-500">Currency code (e.g., USD, INR)</p>
+                              </div>
+                            </div>
+                          </div>
+                          
+                          <div>
+                            <div className="flex items-start">
+                              <div>
+                                <p className="font-medium text-sm">renewal_date</p>
+                                <p className="text-xs text-gray-500">Contract renewal date (YYYY-MM-DD)</p>
+                              </div>
+                            </div>
+                          </div>
+                          
+                          <div>
+                            <div className="flex items-start">
+                              <div>
+                                <p className="font-medium text-sm">revenue_1_year</p>
+                                <p className="text-xs text-gray-500">Total revenue over past year</p>
+                              </div>
+                            </div>
+                          </div>
+                          
+                          <div>
+                            <div className="flex items-start">
+                              <div>
+                                <p className="font-medium text-sm">onboarded_at</p>
+                                <p className="text-xs text-gray-500">Date onboarded (YYYY-MM-DD)</p>
+                              </div>
+                            </div>
+                          </div>
+                        </div>
+                      </TabsContent>
+                      
+                      <TabsContent value="store" className="pt-2">
+                        <div className="grid grid-cols-1 md:grid-cols-2 gap-x-8 gap-y-3">
+                          <div>
+                            <div className="flex items-start">
+                              <div>
+                                <p className="font-medium text-sm">active_stores</p>
+                                <p className="text-xs text-gray-500">Number of active store locations</p>
+                              </div>
+                            </div>
+                          </div>
+                          
+                          <div>
+                            <div className="flex items-start">
+                              <div>
+                                <p className="font-medium text-sm">growth_subscription_count</p>
+                                <p className="text-xs text-gray-500">Number of growth subscriptions</p>
+                              </div>
+                            </div>
+                          </div>
+                          
+                          <div>
+                            <div className="flex items-start">
+                              <div>
+                                <p className="font-medium text-sm">assigned_csm</p>
+                                <p className="text-xs text-gray-500">ID of assigned CSM</p>
+                              </div>
+                            </div>
+                          </div>
+                          
+                          <div>
+                            <div className="flex items-start">
+                              <div>
+                                <p className="font-medium text-sm">less_than_300_bills</p>
+                                <p className="text-xs text-gray-500">Flag if customer has less than 300 bills</p>
+                              </div>
+                            </div>
+                          </div>
+                          
+                          <div>
+                            <div className="flex items-start">
+                              <div>
+                                <p className="font-medium text-sm">wa_header_active</p>
+                                <p className="text-xs text-gray-500">WhatsApp header active flag</p>
+                              </div>
+                            </div>
+                          </div>
+                          
+                          <div>
+                            <div className="flex items-start">
+                              <div>
+                                <p className="font-medium text-sm">company_create_date</p>
+                                <p className="text-xs text-gray-500">When company was created (YYYY-MM-DD)</p>
+                              </div>
+                            </div>
+                          </div>
+                        </div>
+                      </TabsContent>
+                      
+                      <TabsContent value="engagement" className="pt-2">
+                        <div className="grid grid-cols-1 md:grid-cols-2 gap-x-8 gap-y-3">
+                          <div>
+                            <div className="flex items-start">
+                              <div>
+                                <p className="font-medium text-sm">bills_received_last_30_days</p>
+                                <p className="text-xs text-gray-500">Bills in last 30 days</p>
+                              </div>
+                            </div>
+                          </div>
+                          
+                          <div>
+                            <div className="flex items-start">
+                              <div>
+                                <p className="font-medium text-sm">campaigns_sent_last_90_days</p>
+                                <p className="text-xs text-gray-500">Campaigns sent in last 90 days</p>
+                              </div>
+                            </div>
+                          </div>
+                          
+                          <div>
+                            <div className="flex items-start">
+                              <div>
+                                <p className="font-medium text-sm">customers_acquired_last_30_days</p>
+                                <p className="text-xs text-gray-500">New customers in last 30 days</p>
+                              </div>
+                            </div>
+                          </div>
+                          
+                          <div>
+                            <div className="flex items-start">
+                              <div>
+                                <p className="font-medium text-sm">unique_customers_captured</p>
+                                <p className="text-xs text-gray-500">Total unique customers</p>
+                              </div>
+                            </div>
+                          </div>
+                          
+                          <div>
+                            <div className="flex items-start">
+                              <div>
+                                <p className="font-medium text-sm">customers_with_min_one_visit</p>
+                                <p className="text-xs text-gray-500">Customers with at least one visit</p>
+                              </div>
+                            </div>
+                          </div>
+                          
+                          <div>
+                            <div className="flex items-start">
+                              <div>
+                                <p className="font-medium text-sm">customers_with_min_two_visit</p>
+                                <p className="text-xs text-gray-500">Customers with at least two visits</p>
+                              </div>
+                            </div>
+                          </div>
+                          
+                          <div>
+                            <div className="flex items-start">
+                              <div>
+                                <p className="font-medium text-sm">customers_without_min_visits</p>
+                                <p className="text-xs text-gray-500">Customers without minimum visits</p>
+                              </div>
+                            </div>
+                          </div>
+                          
+                          <div>
+                            <div className="flex items-start">
+                              <div>
+                                <p className="font-medium text-sm">active_auto_campaigns_count</p>
+                                <p className="text-xs text-gray-500">Number of active auto campaigns</p>
+                              </div>
+                            </div>
+                          </div>
+                          
+                          <div>
+                            <div className="flex items-start">
+                              <div>
+                                <p className="font-medium text-sm">negative_feedbacks_count</p>
+                                <p className="text-xs text-gray-500">Total count of negative feedback</p>
+                              </div>
+                            </div>
+                          </div>
+                          
+                          <div>
+                            <div className="flex items-start">
+                              <div>
+                                <p className="font-medium text-sm">negative_feedback_alert_inactive</p>
+                                <p className="text-xs text-gray-500">Inactive negative feedback alerts</p>
+                              </div>
+                            </div>
+                          </div>
+                          
+                          <div>
+                            <div className="flex items-start">
+                              <div>
+                                <p className="font-medium text-sm">percentage_of_inactive_customers</p>
+                                <p className="text-xs text-gray-500">Percentage of inactive customers</p>
+                              </div>
+                            </div>
+                          </div>
+                        </div>
+                      </TabsContent>
+                      
+                      <TabsContent value="loyalty" className="pt-2">
+                        <div className="grid grid-cols-1 md:grid-cols-2 gap-x-8 gap-y-3">
+                          <div>
+                            <div className="flex items-start">
+                              <div>
+                                <p className="font-medium text-sm">loyalty_active_store_count</p>
+                                <p className="text-xs text-gray-500">Stores with active loyalty programs</p>
+                              </div>
+                            </div>
+                          </div>
+                          
+                          <div>
+                            <div className="flex items-start">
+                              <div>
+                                <p className="font-medium text-sm">loyalty_inactive_store_count</p>
+                                <p className="text-xs text-gray-500">Stores with inactive loyalty programs</p>
+                              </div>
+                            </div>
+                          </div>
+                          
+                          <div>
+                            <div className="flex items-start">
+                              <div>
+                                <p className="font-medium text-sm">loyalty_active_channels</p>
+                                <p className="text-xs text-gray-500">Active communication channels</p>
+                              </div>
+                            </div>
+                          </div>
+                          
+                          <div>
+                            <div className="flex items-start">
+                              <div>
+                                <p className="font-medium text-sm">loyalty_channel_credits</p>
+                                <p className="text-xs text-gray-500">Channel credits for loyalty program</p>
+                              </div>
+                            </div>
+                          </div>
+                          
+                          <div>
+                            <div className="flex items-start">
+                              <div>
+                                <p className="font-medium text-sm">loyalty_type</p>
+                                <p className="text-xs text-gray-500">Type of loyalty program (points, visits, purchases)</p>
+                              </div>
+                            </div>
+                          </div>
+                          
+                          <div>
+                            <div className="flex items-start">
+                              <div>
+                                <p className="font-medium text-sm">loyalty_reward</p>
+                                <p className="text-xs text-gray-500">Reward tier for loyalty program</p>
+                              </div>
+                            </div>
+                          </div>
+                        </div>
+                      </TabsContent>
+                    </Tabs>
                   </div>
-                </div>
-                
-                <div>
-                  <div className="flex items-start">
-                    <span className="text-red-500 mr-1">*</span>
-                    <div>
-                      <p className="font-medium text-sm">contact_email</p>
-                      <p className="text-xs text-gray-500">Primary contact email address (required)</p>
-                    </div>
-                  </div>
-                </div>
-                
-                <div>
-                  <div className="flex items-start">
-                    <span className="text-red-500 mr-1">*</span>
-                    <div>
-                      <p className="font-medium text-sm">contact_phone</p>
-                      <p className="text-xs text-gray-500">Primary contact phone number (required)</p>
-                    </div>
-                  </div>
-                </div>
-                
-                <div>
-                  <div className="flex items-start">
-                    <span className="text-red-500 mr-1">*</span>
-                    <div>
-                      <p className="font-medium text-sm">chargebee_customer_id</p>
-                      <p className="text-xs text-gray-500">Chargebee customer identifier (required)</p>
-                    </div>
-                  </div>
-                </div>
-                
-                <div>
-                  <div className="flex items-start">
-                    <span className="text-red-500 mr-1">*</span>
-                    <div>
-                      <p className="font-medium text-sm">chargebee_subscription_id</p>
-                      <p className="text-xs text-gray-500">Chargebee subscription identifier (required)</p>
-                    </div>
-                  </div>
-                </div>
-                
-                {/* Optional Fields */}
-                <div>
-                  <div className="flex items-start">
-                    <span className="text-red-500 mr-1 opacity-0">*</span>
-                    <div>
-                      <p className="font-medium text-sm">reelo_id</p>
-                      <p className="text-xs text-gray-500">Reelo system identifier</p>
-                    </div>
-                  </div>
-                </div>
-                
-                <div>
-                  <div className="flex items-start">
-                    <span className="text-red-500 mr-1 opacity-0">*</span>
-                    <div>
-                      <p className="font-medium text-sm">industry</p>
-                      <p className="text-xs text-gray-500">Customer's business industry</p>
-                    </div>
-                  </div>
-                </div>
-                
-                <div>
-                  <div className="flex items-start">
-                    <span className="text-red-500 mr-1 opacity-0">*</span>
-                    <div>
-                      <p className="font-medium text-sm">contact_name</p>
-                      <p className="text-xs text-gray-500">Primary contact person's name</p>
-                    </div>
-                  </div>
-                </div>
-                
-                <div>
-                  <div className="flex items-start">
-                    <span className="text-red-500 mr-1 opacity-0">*</span>
-                    <div>
-                      <p className="font-medium text-sm">renewal_date</p>
-                      <p className="text-xs text-gray-500">Contract renewal date (YYYY-MM-DD format)</p>
-                    </div>
-                  </div>
-                </div>
-                
-                <div>
-                  <div className="flex items-start">
-                    <span className="text-red-500 mr-1 opacity-0">*</span>
-                    <div>
-                      <p className="font-medium text-sm">mrr</p>
-                      <p className="text-xs text-gray-500">Monthly Recurring Revenue (numeric)</p>
-                    </div>
-                  </div>
-                </div>
-                
-                <div>
-                  <div className="flex items-start">
-                    <span className="text-red-500 mr-1 opacity-0">*</span>
-                    <div>
-                      <p className="font-medium text-sm">arr</p>
-                      <p className="text-xs text-gray-500">Annual Recurring Revenue (numeric)</p>
-                    </div>
-                  </div>
-                </div>
-              </div>
-              
-              <div className="mt-4">
-                <p className="text-xs text-gray-500">
-                  <span className="font-medium">Note:</span> CSV import supports over 30 additional fields including growth_subscription_count, active_stores, health_status, 
-                  loyalty metrics, customer engagement metrics, and more. Download the sample file to see all available fields.
-                </p>
-              </div>
+                  
+                  <Alert className="bg-blue-50 border-blue-200">
+                    <AlertCircle className="h-4 w-4 text-blue-600" />
+                    <AlertTitle className="text-blue-800 text-sm">CSV Format Information</AlertTitle>
+                    <AlertDescription className="text-blue-700 text-xs">
+                      <ul className="list-disc pl-5 mt-1">
+                        <li>Fields marked with <span className="text-red-500">*</span> are required</li>
+                        <li>All CSV imports must include a header row with exact field names</li>
+                        <li>You can download a sample file with the exact format using the button above</li>
+                        <li>The system will validate all fields and report any errors before importing</li>
+                      </ul>
+                    </AlertDescription>
+                  </Alert>
+                </CollapsibleContent>
+              </Collapsible>
             </div>
             
             <div className="border border-dashed rounded-md p-6 flex flex-col items-center justify-center text-center">
