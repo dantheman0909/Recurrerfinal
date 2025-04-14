@@ -255,24 +255,33 @@ export const importCSV = async (req: Request, res: Response) => {
           continue; // Skip records missing required fields
         }
         
-        // Create a clean copy of the record without extra properties
+        // Create a clean copy of the record with all fields from the export format
         const cleanRecord = {
+          // Required fields (must be present in import)
           name: record.name, // Required field
           recurrer_id: record.recurrer_id, // Required field
-          industry: record.industry || null,
-          logo_url: record.logo_url || null,
-          contact_name: record.contact_name || null,
           contact_email: record.contact_email, // Required field
           contact_phone: record.contact_phone, // Required field
-          assigned_csm: typeof record.assigned_csm === 'number' ? record.assigned_csm : null,
+          chargebee_customer_id: record.chargebee_customer_id, // Required field
+          chargebee_subscription_id: record.chargebee_subscription_id, // Required field
+          
+          // Export format fields (match the exported CSV format)
+          industry: record.industry || null,
+          contact_name: record.contact_name || null,
+          assigned_csm: typeof record.assigned_csm === 'number' ? record.assigned_csm : null, // Internal field mapped from csm_id
           health_status: record.health_status || null,
           mrr: typeof record.mrr === 'number' ? record.mrr : null,
           arr: typeof record.arr === 'number' ? record.arr : null,
-          currency_code: record.currency_code || null,
           renewal_date: record.renewal_date instanceof Date ? record.renewal_date : null,
+          onboarding_stage: record.onboarding_stage || null, // Added to match export format
+          timezone: record.timezone || null, // Added to match export format
+          tags: record.tags || null, // Added to match export format
+          notes: record.notes || null, // Added to match export format
+          
+          // Additional fields preserved when present
+          logo_url: record.logo_url || null,
+          currency_code: record.currency_code || null,
           onboarded_at: record.onboarded_at instanceof Date ? record.onboarded_at : null,
-          chargebee_customer_id: record.chargebee_customer_id, // Required field
-          chargebee_subscription_id: record.chargebee_subscription_id, // Required field
           mysql_company_id: record.mysql_company_id || null,
           active_stores: typeof record.active_stores === 'number' ? record.active_stores : null,
           growth_subscription_count: typeof record.growth_subscription_count === 'number' ? record.growth_subscription_count : null,
@@ -423,25 +432,28 @@ export const processCSV = (csvContent: string, existingCustomers: Record<string,
   // Get headers from first row
   const headers = rows[0].split(',').map(h => h.trim());
   
-  // Field mappings for case-insensitive matching and aliases
+  // Field mappings for case-insensitive matching and aliases - must match export fields
   const fieldMappings: Record<string, string> = {
     // Standard fields
     'name': 'name',
     'company name': 'name',
     'recurrer_id': 'recurrer_id',
     'industry': 'industry',
-    'logo_url': 'logo_url',
     'contact_name': 'contact_name',
     'contact_email': 'contact_email',
     'contact_phone': 'contact_phone',
+    'csm_id': 'assigned_csm',  // Map to internal field
     'assigned_csm': 'assigned_csm',
-    'csm_id': 'assigned_csm',
     'health_status': 'health_status',
     'health status': 'health_status',
     'mrr': 'mrr',
     'arr': 'arr',
-    'currency_code': 'currency_code',
     'renewal_date': 'renewal_date',
+    'onboarding_stage': 'onboarding_stage',  // Add this field to match export format
+    'timezone': 'timezone',  // Add this field to match export format
+    'tags': 'tags',  // Add this field to match export format
+    'notes': 'notes',  // Add this field to match export format
+    'currency_code': 'currency_code',
     'onboarded_at': 'onboarded_at',
     
     // External IDs
@@ -570,10 +582,42 @@ export const processCSV = (csvContent: string, existingCustomers: Record<string,
 };
 
 // Preview CSV import without committing to database
+// Helper function to get field requirements info
+const getFieldRequirements = () => {
+  return {
+    required_fields: [
+      { field: 'name', description: 'Company or customer name' },
+      { field: 'recurrer_id', description: 'Unique identifier for the customer in Recurrer (will be auto-generated if missing)' },
+      { field: 'contact_email', description: 'Primary contact email address' },
+      { field: 'contact_phone', description: 'Primary contact phone number' },
+      { field: 'chargebee_customer_id', description: 'Chargebee customer identifier' },
+      { field: 'chargebee_subscription_id', description: 'Chargebee subscription identifier' }
+    ],
+    optional_fields: [
+      { field: 'industry', description: 'Customer industry or sector' },
+      { field: 'contact_name', description: 'Primary contact person name' },
+      { field: 'csm_id', description: 'ID of assigned Customer Success Manager' },
+      { field: 'health_status', description: 'Customer health (healthy, at_risk, red_zone)' },
+      { field: 'mrr', description: 'Monthly Recurring Revenue (numeric)' },
+      { field: 'arr', description: 'Annual Recurring Revenue (numeric)' },
+      { field: 'renewal_date', description: 'Next renewal date (YYYY-MM-DD)' },
+      { field: 'onboarding_stage', description: 'Current onboarding status' },
+      { field: 'timezone', description: 'Customer timezone' },
+      { field: 'tags', description: 'Comma-separated tags in quotes' },
+      { field: 'notes', description: 'Additional notes in quotes' }
+    ],
+    file_format: 'CSV with header row containing field names'
+  };
+};
+
 export const previewCSVImport = async (req: Request, res: Response) => {
   try {
     if (!req.file) {
-      return res.status(400).json({ success: false, error: 'No file uploaded' });
+      return res.status(400).json({ 
+        success: false, 
+        error: 'No file uploaded',
+        field_requirements: getFieldRequirements() // Include field requirements even on error
+      });
     }
     
     // Read CSV file
@@ -591,7 +635,7 @@ export const previewCSVImport = async (req: Request, res: Response) => {
     // Process CSV content
     const result = processCSV(csvContent, customersByRecurrerId);
     
-    // Return preview results
+    // Return preview results with field requirements
     res.json({
       success: true,
       preview: {
@@ -600,7 +644,8 @@ export const previewCSVImport = async (req: Request, res: Response) => {
         updated: result.updated.length,
         sample: result.records.slice(0, 10), // First 10 records as preview
         validation_errors: result.validationErrors
-      }
+      },
+      field_requirements: getFieldRequirements() // Include field requirements in response
     });
     
   } catch (error: any) {

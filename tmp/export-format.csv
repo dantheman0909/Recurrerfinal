@@ -1,0 +1,4 @@
+name,recurrer_id,industry,contact_name,contact_email,contact_phone,csm_id,chargebee_customer_id,chargebee_subscription_id,health_status,mrr,arr,renewal_date,onboarding_stage,timezone,tags,notes
+Acme Technologies,rec_966e90135808d5bbb23f3e7379639418,Technology,John Doe,john@acmetech.com,(555) 123-4567,,AzyohMUi9BdQpjCc,1sQ5y3UzQcPgJz9X,red_zone,5000,60000,2024-01-15,,,,
+Global Foods Chain,rec_597766cca760a728ab27471cbd9c10b5,Retail,Jane Smith,jane@globalfoods.com,(555) 987-6543,,,,red_zone,8000,96000,2023-11-10,,,,
+Tech Solutions Inc,rec_d7e10c951feb38fee34b49af879bf642,Software,Mike Johnson,mike@techsolutions.com,(555) 456-7890,,KvYrQhB23x5xCcPq,HtF9qP13xVJmL4aZ,at_risk,3500,42000,2024-01-03,,,,
