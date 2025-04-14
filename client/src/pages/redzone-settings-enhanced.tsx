@@ -66,8 +66,9 @@ const RedZoneSettingsPage = () => {
   });
   
   // Fetch RedZone rules
-  const { data: rules = [], isLoading: rulesLoading } = useQuery<RedZoneRule[]>({
+  const { data: rules = [], isLoading: rulesLoading, refetch: refetchRules } = useQuery<RedZoneRule[]>({
     queryKey: ["/api/red-zone/rules"],
+    staleTime: 0, // Always get fresh data
   });
   
   const form = useForm<RedZoneRuleForm>({
@@ -120,7 +121,11 @@ const RedZoneSettingsPage = () => {
       return response.json();
     },
     onSuccess: () => {
+      // First invalidate the cache
       queryClient.invalidateQueries({ queryKey: ["/api/red-zone/rules"] });
+      
+      // Explicitly refetch to ensure UI is updated
+      refetchRules();
       
       toast({
         title: "Success",
@@ -154,7 +159,11 @@ const RedZoneSettingsPage = () => {
       return { success: true };
     },
     onSuccess: () => {
+      // First invalidate the cache 
       queryClient.invalidateQueries({ queryKey: ["/api/red-zone/rules"] });
+      
+      // Then explicitly refetch to ensure UI is updated
+      refetchRules();
       
       toast({
         title: "Success",
