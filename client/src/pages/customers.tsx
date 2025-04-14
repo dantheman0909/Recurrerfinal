@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { useQuery } from "@tanstack/react-query";
+import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { 
   Card, 
   CardContent,
@@ -12,14 +12,16 @@ import {
   UserPlus,
   Users,
   LayoutGrid,
-  LayoutList
+  LayoutList,
+  Trash2,
+  AlertTriangle
 } from "lucide-react";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { cn, formatINR } from "@/lib/utils";
 import { Customer } from "@shared/schema";
-import { Link } from "wouter";
+import { Link, useLocation } from "wouter";
 import {
   Table,
   TableBody,
@@ -35,6 +37,18 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "@/components/ui/alert-dialog";
+import { useToast } from "@/hooks/use-toast";
+import { apiRequest } from "@/lib/queryClient";
 
 export default function Customers() {
   const [searchTerm, setSearchTerm] = useState("");
@@ -42,6 +56,11 @@ export default function Customers() {
   const [csmFilter, setCsmFilter] = useState<number | null>(null);
   const [tlFilter, setTlFilter] = useState<number | null>(null);
   const [viewMode, setViewMode] = useState<"card" | "table">("card");
+  const [customerToDelete, setCustomerToDelete] = useState<Customer | null>(null);
+  const [showDeleteDialog, setShowDeleteDialog] = useState(false);
+  
+  const { toast } = useToast();
+  const queryClient = useQueryClient();
   
   const { data: customers, isLoading: customersLoading } = useQuery({
     queryKey: ['/api/customers'],
@@ -52,6 +71,46 @@ export default function Customers() {
   });
   
   const isLoading = customersLoading || usersLoading;
+  
+  // Mutation for deleting a customer
+  const deleteCustomerMutation = useMutation({
+    mutationFn: (customerId: number) => {
+      return apiRequest(`/api/customers/${customerId}`, { method: 'DELETE' });
+    },
+    onSuccess: () => {
+      toast({
+        title: "Customer deleted",
+        description: `${customerToDelete?.name} has been deleted successfully.`,
+      });
+      // Invalidate the customers query to refresh the data
+      queryClient.invalidateQueries({ queryKey: ['/api/customers'] });
+      setCustomerToDelete(null);
+      setShowDeleteDialog(false);
+    },
+    onError: (error) => {
+      toast({
+        title: "Error",
+        description: "Failed to delete customer. Please try again.",
+        variant: "destructive",
+      });
+      console.error("Error deleting customer:", error);
+    }
+  });
+  
+  // Function to handle delete confirmation
+  const handleDeleteConfirm = () => {
+    if (customerToDelete) {
+      deleteCustomerMutation.mutate(customerToDelete.id);
+    }
+  };
+  
+  // Function to open delete dialog
+  const openDeleteDialog = (customer: Customer, e: React.MouseEvent) => {
+    e.preventDefault();
+    e.stopPropagation();
+    setCustomerToDelete(customer);
+    setShowDeleteDialog(true);
+  };
   
   // Filter CSMs (role === 'csm')
   const csms = users?.filter(user => user.role === 'csm') || [];
@@ -203,6 +262,46 @@ export default function Customers() {
               >
                 Red Zone
               </Button>
+            </div>
+          </div>
+          
+          <div className="flex flex-col md:flex-row gap-2">
+            <div className="w-full md:w-1/2">
+              <Select 
+                value={csmFilter?.toString() || ""} 
+                onValueChange={(value) => setCsmFilter(value ? parseInt(value) : null)}
+              >
+                <SelectTrigger className="w-full">
+                  <SelectValue placeholder="Filter by CSM" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="all">All CSMs</SelectItem>
+                  {csms.map((csm) => (
+                    <SelectItem key={csm.id} value={csm.id.toString()}>
+                      {csm.name}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+            
+            <div className="w-full md:w-1/2">
+              <Select 
+                value={tlFilter?.toString() || ""} 
+                onValueChange={(value) => setTlFilter(value ? parseInt(value) : null)}
+              >
+                <SelectTrigger className="w-full">
+                  <SelectValue placeholder="Filter by Team Lead" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="all">All Team Leads</SelectItem>
+                  {teamLeads.map((tl) => (
+                    <SelectItem key={tl.id} value={tl.id.toString()}>
+                      {tl.name}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
             </div>
           </div>
         </div>
