@@ -184,7 +184,7 @@ export default function CustomerDetails() {
                   <div className="flex items-center">
                     <h1 className="text-2xl font-semibold text-gray-900">{customer.name}</h1>
                     <Badge className={cn("ml-3", getHealthBadgeStyles(customer.health_status))}>
-                      {customer.health_status.replace('_', ' ')}
+                      {customer.health_status ? customer.health_status.replace('_', ' ') : 'Unknown'}
                     </Badge>
                   </div>
                   <p className="mt-1 text-sm text-gray-500">
