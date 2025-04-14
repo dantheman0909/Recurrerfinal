@@ -35,7 +35,7 @@ import { Label } from "@/components/ui/label";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { AnnotationList } from "@/components/annotations/annotation-list";
+import { StandaloneAnnotationList } from "@/components/annotations/standalone-annotation-list";
 
 export default function CustomerDetails() {
   const { id } = useParams();
@@ -513,7 +513,7 @@ export default function CustomerDetails() {
                   </Card>
                   
                   {/* Annotations Component */}
-                  <AnnotationList 
+                  <StandaloneAnnotationList 
                     entityType="customer" 
                     entityId={parseInt(id || "0")} 
                     currentUserId={1} // Hardcoded for demo, should come from auth context
