@@ -46,7 +46,6 @@ import { PlusCircleIcon, XCircleIcon, PlusIcon, TrashIcon, AlertTriangleIcon, Sh
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
-import AppLayout from "@/components/layouts/app-layout";
 import { Skeleton } from "@/components/ui/skeleton";
 import { default as ConditionGroupComponent } from "@/components/red-zone/condition-group";
 
@@ -376,25 +375,24 @@ const RedZoneSettingsPage = () => {
   };
   
   return (
-    <AppLayout>
-      <div className="container pb-8">
-        <h1 className="text-3xl font-bold mb-2">RedZone Settings</h1>
-        <p className="text-muted-foreground mb-6">
-          Configure rules and conditions for the RedZone alert system
-        </p>
-        
-        <Tabs
-          defaultValue="rules"
-          value={activeTab}
-          onValueChange={setActiveTab}
-          className="space-y-4"
-        >
-          <TabsList>
-            <TabsTrigger value="rules">Rule List</TabsTrigger>
-            <TabsTrigger value="create">
-              {editingRuleId ? "Edit Rule" : "Create Rule"}
-            </TabsTrigger>
-          </TabsList>
+    <div className="container pb-8">
+      <h1 className="text-3xl font-bold mb-2">RedZone Settings</h1>
+      <p className="text-muted-foreground mb-6">
+        Configure rules and conditions for the RedZone alert system
+      </p>
+      
+      <Tabs
+        defaultValue="rules"
+        value={activeTab}
+        onValueChange={setActiveTab}
+        className="space-y-4"
+      >
+        <TabsList>
+          <TabsTrigger value="rules">Rule List</TabsTrigger>
+          <TabsTrigger value="create">
+            {editingRuleId ? "Edit Rule" : "Create Rule"}
+          </TabsTrigger>
+        </TabsList>
           
           <TabsContent value="rules" className="space-y-4">
             <div className="flex justify-between items-center">
@@ -815,7 +813,6 @@ const RedZoneSettingsPage = () => {
           </TabsContent>
         </Tabs>
       </div>
-    </AppLayout>
   );
 };
 
