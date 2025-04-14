@@ -132,6 +132,20 @@ export async function registerRoutes(app: Express): Promise<Server> {
   app.get('/api/customers/export/csv', exportCustomersCSV);
   app.get('/api/customers/sample/csv', downloadSampleCSV);
   
+  // Delete customer
+  app.delete('/api/customers/:id', async (req, res) => {
+    const id = parseInt(req.params.id);
+    try {
+      const success = await storage.deleteCustomer(id);
+      if (!success) {
+        return res.status(404).json({ message: 'Customer not found' });
+      }
+      res.json({ success: true });
+    } catch (error) {
+      res.status(500).json({ message: 'Error deleting customer', error });
+    }
+  });
+  
   // Tasks
   app.get('/api/tasks', async (req, res) => {
     const customerId = req.query.customerId ? parseInt(req.query.customerId as string) : undefined;

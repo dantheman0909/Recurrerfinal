@@ -77,6 +77,7 @@ export interface IStorage {
   getCustomerByRecurrerId(recurrerId: string): Promise<Customer | undefined>;
   createCustomer(customer: InsertCustomer): Promise<Customer>;
   updateCustomer(id: number, customer: Partial<Customer>): Promise<Customer | undefined>;
+  deleteCustomer(id: number): Promise<boolean>;
   getCustomerTableFields(): Promise<string[]>;
   getTableFields(tableName: string): Promise<string[]>;
   
