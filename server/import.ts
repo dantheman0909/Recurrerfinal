@@ -265,32 +265,40 @@ export const importCSV = async (req: Request, res: Response) => {
           chargebee_customer_id: record.chargebee_customer_id, // Required field
           chargebee_subscription_id: record.chargebee_subscription_id, // Required field
           
-          // Export format fields (match the exported CSV format)
-          industry: record.industry || null,
-          contact_name: record.contact_name || null,
-          assigned_csm: typeof record.assigned_csm === 'number' ? record.assigned_csm : null, // Internal field mapped from csm_id
-          health_status: record.health_status || null,
-          mrr: typeof record.mrr === 'number' ? record.mrr : null,
-          arr: typeof record.arr === 'number' ? record.arr : null,
-          renewal_date: record.renewal_date instanceof Date ? record.renewal_date : null,
-          onboarding_stage: record.onboarding_stage || null, // Added to match export format
-          timezone: record.timezone || null, // Added to match export format
-          tags: record.tags || null, // Added to match export format
-          notes: record.notes || null, // Added to match export format
-          
-          // Additional fields preserved when present
-          logo_url: record.logo_url || null,
-          currency_code: record.currency_code || null,
-          onboarded_at: record.onboarded_at instanceof Date ? record.onboarded_at : null,
-          mysql_company_id: record.mysql_company_id || null,
+          // All fields from user-defined export format
+          reelo_id: record.reelo_id || null,
           active_stores: typeof record.active_stores === 'number' ? record.active_stores : null,
+          contact_name: record.contact_name || null,
+          arr: typeof record.arr === 'number' ? record.arr : null,
+          mrr: typeof record.mrr === 'number' ? record.mrr : null,
+          assigned_csm: typeof record.assigned_csm === 'number' ? record.assigned_csm : null,
+          currency_code: record.currency_code || null,
           growth_subscription_count: typeof record.growth_subscription_count === 'number' ? record.growth_subscription_count : null,
-          loyalty_active_store_count: typeof record.loyalty_active_store_count === 'number' ? record.loyalty_active_store_count : null,
-          loyalty_inactive_store_count: typeof record.loyalty_inactive_store_count === 'number' ? record.loyalty_inactive_store_count : null,
+          health_status: record.health_status || null,
+          industry: record.industry || null,
+          bills_received_last_30_days: typeof record.bills_received_last_30_days === 'number' ? record.bills_received_last_30_days : null,
+          campaigns_sent_last_90_days: typeof record.campaigns_sent_last_90_days === 'number' ? record.campaigns_sent_last_90_days : null,
+          customers_acquired_last_30_days: typeof record.customers_acquired_last_30_days === 'number' ? record.customers_acquired_last_30_days : null,
+          customers_with_min_one_visit: typeof record.customers_with_min_one_visit === 'number' ? record.customers_with_min_one_visit : null,
+          customers_with_min_two_visit: typeof record.customers_with_min_two_visit === 'number' ? record.customers_with_min_two_visit : null,
+          customers_without_min_visits: typeof record.customers_without_min_visits === 'number' ? record.customers_without_min_visits : null,
+          enableRLS: record.enableRLS || null,
+          less_than_300_bills: typeof record.less_than_300_bills === 'number' ? record.less_than_300_bills : null,
+          logo_url: record.logo_url || null,
           loyalty_active_channels: record.loyalty_active_channels || null,
+          loyalty_active_store_count: typeof record.loyalty_active_store_count === 'number' ? record.loyalty_active_store_count : null,
           loyalty_channel_credits: typeof record.loyalty_channel_credits === 'number' ? record.loyalty_channel_credits : null,
+          loyalty_inactive_store_count: typeof record.loyalty_inactive_store_count === 'number' ? record.loyalty_inactive_store_count : null,
+          loyalty_reward: record.loyalty_reward || null,
           loyalty_type: record.loyalty_type || null,
-          loyalty_reward: record.loyalty_reward || null
+          mysql_company_id: record.mysql_company_id || null,
+          negative_feedback_alert_inactive: typeof record.negative_feedback_alert_inactive === 'number' ? record.negative_feedback_alert_inactive : null,
+          negative_feedbacks_count: typeof record.negative_feedbacks_count === 'number' ? record.negative_feedbacks_count : null,
+          onboarded_at: record.onboarded_at instanceof Date ? record.onboarded_at : null,
+          percentage_of_inactive_customers: typeof record.percentage_of_inactive_customers === 'number' ? record.percentage_of_inactive_customers : null,
+          renewal_date: record.renewal_date instanceof Date ? record.renewal_date : null,
+          revenue_1_year: typeof record.revenue_1_year === 'number' ? record.revenue_1_year : null,
+          unique_customers_captured: typeof record.unique_customers_captured === 'number' ? record.unique_customers_captured : null
         };
         
         const existingCustomer = customersByRecurrerId[record.recurrer_id];
@@ -327,49 +335,96 @@ export const importCSV = async (req: Request, res: Response) => {
 // Generate and download sample CSV file with all customer fields
 export const downloadSampleCSV = async (req: Request, res: Response) => {
   try {
-    // Define the required fields in the exact order we want them
+    // Define the fields in the exact order we want them (must match export format)
     const requiredFields = [
       'name',
       'recurrer_id',
-      'industry',
+      'reelo_id',
+      'active_stores',
       'contact_name',
-      'contact_email',
       'contact_phone',
-      'csm_id',
+      'contact_email',
       'chargebee_customer_id',
       'chargebee_subscription_id',
-      'health_status',
-      'mrr',
       'arr',
+      'mrr',
+      'assigned_csm',
+      'currency_code',
+      'growth_subscription_count',
+      'health_status',
+      'industry',
+      'bills_received_last_30_days',
+      'campaigns_sent_last_90_days',
+      'customers_acquired_last_30_days',
+      'customers_with_min_one_visit',
+      'customers_with_min_two_visit',
+      'customers_without_min_visits',
+      'enableRLS',
+      'less_than_300_bills',
+      'logo_url',
+      'loyalty_active_channels',
+      'loyalty_active_store_count',
+      'loyalty_channel_credits',
+      'loyalty_inactive_store_count',
+      'loyalty_reward',
+      'loyalty_type',
+      'mysql_company_id',
+      'negative_feedback_alert_inactive',
+      'negative_feedbacks_count',
+      'onboarded_at',
+      'percentage_of_inactive_customers',
       'renewal_date',
-      'onboarding_stage',
-      'timezone',
-      'tags',
-      'notes'
+      'revenue_1_year',
+      'unique_customers_captured'
     ];
     
     // Create CSV header row from fields
     const headerRow = requiredFields.join(',');
     
-    // Create a mapping object with field examples - all with required fields
+    // Create a mapping object with field examples - including all required and optional fields
     const fieldExamples: Record<string, string[]> = {
+      // Required fields
       name: ['Acme Industries', 'Beta Solutions', 'Gamma Foods'],
       recurrer_id: ['rec_123456', 'rec_234567', 'rec_345678'],  // Include sample IDs for clarity
-      industry: ['Manufacturing', 'Technology', 'Food & Beverage'],
-      contact_name: ['John Smith', 'Sarah Lee', 'Raj Kumar'],
       contact_email: ['john@acme.com', 'sarah@beta.com', 'raj@gammafoods.com'],
       contact_phone: ['+91 9876543210', '+91 8765432109', '+91 7654321098'],
-      csm_id: ['1', '2', '1'],
-      chargebee_customer_id: ['cb_cust_123', 'cb_cust_456', 'cb_cust_789'], // Required field
-      chargebee_subscription_id: ['cb_sub_123', 'cb_sub_456', 'cb_sub_789'], // Required field
-      health_status: ['healthy', 'at_risk', 'healthy'],
-      mrr: ['54000', '25000', '18000'],
+      chargebee_customer_id: ['cb_cust_123', 'cb_cust_456', 'cb_cust_789'], 
+      chargebee_subscription_id: ['cb_sub_123', 'cb_sub_456', 'cb_sub_789'],
+      
+      // All other fields based on user requirements
+      reelo_id: ['618cece4633e300aa89bfba0', '626fc380ad1e9d301415d090', '62e23515db2250adbfa5a80b'],
+      active_stores: ['12', '5', '8'],
+      contact_name: ['John Smith', 'Sarah Lee', 'Raj Kumar'],
       arr: ['648000', '300000', '216000'],
+      mrr: ['54000', '25000', '18000'],
+      assigned_csm: ['1', '2', '1'],
+      currency_code: ['INR', 'USD', 'INR'],
+      growth_subscription_count: ['2', '1', '3'],
+      health_status: ['healthy', 'at_risk', 'healthy'],
+      industry: ['Manufacturing', 'Technology', 'Food & Beverage'],
+      bills_received_last_30_days: ['452', '215', '378'],
+      campaigns_sent_last_90_days: ['12', '5', '8'],
+      customers_acquired_last_30_days: ['45', '22', '37'],
+      customers_with_min_one_visit: ['320', '180', '250'],
+      customers_with_min_two_visit: ['210', '120', '175'],
+      customers_without_min_visits: ['110', '60', '75'],
+      enableRLS: ['true', 'false', 'true'],
+      less_than_300_bills: ['0', '1', '0'],
+      logo_url: ['https://example.com/logo1.png', 'https://example.com/logo2.png', 'https://example.com/logo3.png'],
+      loyalty_active_channels: ['sms,email,whatsapp', 'email', 'sms,email'],
+      loyalty_active_store_count: ['10', '4', '7'],
+      loyalty_channel_credits: ['5000', '2000', '3500'],
+      loyalty_inactive_store_count: ['2', '1', '1'],
+      loyalty_reward: ['tier1', 'tier2', 'tier1'],
+      loyalty_type: ['points', 'visits', 'points'],
+      mysql_company_id: ['mysql_123', 'mysql_456', 'mysql_789'],
+      negative_feedback_alert_inactive: ['0', '1', '0'],
+      negative_feedbacks_count: ['2', '5', '1'],
+      onboarded_at: ['2023-01-15', '2023-03-22', '2023-02-10'],
+      percentage_of_inactive_customers: ['25.5', '32.7', '18.2'],
       renewal_date: ['2025-12-15', '2025-06-30', '2025-09-10'],
-      onboarding_stage: ['completed', 'in_progress', 'completed'],
-      timezone: ['Asia/Kolkata', 'Asia/Kolkata', 'Asia/Kolkata'],
-      tags: ['"enterprise,manufacturing"', '"tech,startup"', '"food,retail"'],
-      notes: ['Enterprise customer with 50+ locations', 'Needs attention for onboarding completion', 'Multiple locations in South India']
+      revenue_1_year: ['7500000', '3200000', '5100000'],
+      unique_customers_captured: ['4500', '2200', '3800']
     };
     
     // Create sample data rows
@@ -438,38 +493,47 @@ export const processCSV = (csvContent: string, existingCustomers: Record<string,
     'name': 'name',
     'company name': 'name',
     'recurrer_id': 'recurrer_id',
-    'industry': 'industry',
-    'contact_name': 'contact_name',
-    'contact_email': 'contact_email',
-    'contact_phone': 'contact_phone',
-    'csm_id': 'assigned_csm',  // Map to internal field
-    'assigned_csm': 'assigned_csm',
-    'health_status': 'health_status',
-    'health status': 'health_status',
-    'mrr': 'mrr',
-    'arr': 'arr',
-    'renewal_date': 'renewal_date',
-    'onboarding_stage': 'onboarding_stage',  // Add this field to match export format
-    'timezone': 'timezone',  // Add this field to match export format
-    'tags': 'tags',  // Add this field to match export format
-    'notes': 'notes',  // Add this field to match export format
-    'currency_code': 'currency_code',
-    'onboarded_at': 'onboarded_at',
     
-    // External IDs
+    // All fields from the customer data model (based on user's request)
+    'reelo_id': 'reelo_id',
+    'active_stores': 'active_stores',
+    'contact_name': 'contact_name',
+    'contact_phone': 'contact_phone',
+    'contact_email': 'contact_email',
     'chargebee_customer_id': 'chargebee_customer_id',
     'chargebee_subscription_id': 'chargebee_subscription_id',
-    'mysql_company_id': 'mysql_company_id',
-    
-    // MySQL company fields
-    'active_stores': 'active_stores',
+    'arr': 'arr',
+    'mrr': 'mrr',
+    'assigned_csm': 'assigned_csm',
+    'csm_id': 'assigned_csm',  // Map to internal field
+    'currency_code': 'currency_code', 
     'growth_subscription_count': 'growth_subscription_count',
-    'loyalty_active_store_count': 'loyalty_active_store_count',
-    'loyalty_inactive_store_count': 'loyalty_inactive_store_count',
+    'health_status': 'health_status',
+    'health status': 'health_status',
+    'industry': 'industry',
+    'bills_received_last_30_days': 'bills_received_last_30_days',
+    'campaigns_sent_last_90_days': 'campaigns_sent_last_90_days',
+    'customers_acquired_last_30_days': 'customers_acquired_last_30_days',
+    'customers_with_min_one_visit': 'customers_with_min_one_visit',
+    'customers_with_min_two_visit': 'customers_with_min_two_visit',
+    'customers_without_min_visits': 'customers_without_min_visits',
+    'enableRLS': 'enableRLS',
+    'less_than_300_bills': 'less_than_300_bills',
+    'logo_url': 'logo_url',
     'loyalty_active_channels': 'loyalty_active_channels',
+    'loyalty_active_store_count': 'loyalty_active_store_count',
     'loyalty_channel_credits': 'loyalty_channel_credits',
-    'loyalty_type': 'loyalty_type', 
+    'loyalty_inactive_store_count': 'loyalty_inactive_store_count',
     'loyalty_reward': 'loyalty_reward',
+    'loyalty_type': 'loyalty_type',
+    'mysql_company_id': 'mysql_company_id',
+    'negative_feedback_alert_inactive': 'negative_feedback_alert_inactive',
+    'negative_feedbacks_count': 'negative_feedbacks_count',
+    'onboarded_at': 'onboarded_at',
+    'percentage_of_inactive_customers': 'percentage_of_inactive_customers',
+    'renewal_date': 'renewal_date',
+    'revenue_1_year': 'revenue_1_year',
+    'unique_customers_captured': 'unique_customers_captured'
   };
   
   // Process each row
@@ -594,17 +658,54 @@ const getFieldRequirements = () => {
       { field: 'chargebee_subscription_id', description: 'Chargebee subscription identifier' }
     ],
     optional_fields: [
+      // Core customer info
+      { field: 'reelo_id', description: 'Reelo system identifier' },
       { field: 'industry', description: 'Customer industry or sector' },
       { field: 'contact_name', description: 'Primary contact person name' },
-      { field: 'csm_id', description: 'ID of assigned Customer Success Manager' },
-      { field: 'health_status', description: 'Customer health (healthy, at_risk, red_zone)' },
+      { field: 'assigned_csm', description: 'ID of assigned Customer Success Manager' },
+      
+      // Financial data
       { field: 'mrr', description: 'Monthly Recurring Revenue (numeric)' },
       { field: 'arr', description: 'Annual Recurring Revenue (numeric)' },
+      { field: 'currency_code', description: 'Currency code (e.g., USD, INR)' },
       { field: 'renewal_date', description: 'Next renewal date (YYYY-MM-DD)' },
-      { field: 'onboarding_stage', description: 'Current onboarding status' },
-      { field: 'timezone', description: 'Customer timezone' },
-      { field: 'tags', description: 'Comma-separated tags in quotes' },
-      { field: 'notes', description: 'Additional notes in quotes' }
+      { field: 'revenue_1_year', description: 'Total revenue over the past year' },
+      
+      // Health & status
+      { field: 'health_status', description: 'Customer health (healthy, at_risk, red_zone)' },
+      { field: 'onboarded_at', description: 'Date customer completed onboarding (YYYY-MM-DD)' },
+      
+      // Store data
+      { field: 'active_stores', description: 'Number of active store locations' },
+      { field: 'growth_subscription_count', description: 'Number of growth subscriptions' },
+      
+      // Loyalty program data
+      { field: 'loyalty_active_store_count', description: 'Number of stores with active loyalty programs' },
+      { field: 'loyalty_inactive_store_count', description: 'Number of stores with inactive loyalty programs' },
+      { field: 'loyalty_active_channels', description: 'Active communication channels for loyalty program' },
+      { field: 'loyalty_channel_credits', description: 'Channel credits for loyalty program' },
+      { field: 'loyalty_type', description: 'Type of loyalty program' },
+      { field: 'loyalty_reward', description: 'Reward tier for loyalty program' },
+      
+      // Customer metrics
+      { field: 'bills_received_last_30_days', description: 'Number of bills received in the last 30 days' },
+      { field: 'campaigns_sent_last_90_days', description: 'Number of campaigns sent in the last 90 days' },
+      { field: 'customers_acquired_last_30_days', description: 'Number of new customers acquired in the last 30 days' },
+      { field: 'customers_with_min_one_visit', description: 'Number of customers with at least one visit' },
+      { field: 'customers_with_min_two_visit', description: 'Number of customers with at least two visits' },
+      { field: 'customers_without_min_visits', description: 'Number of customers without minimum visits' },
+      { field: 'unique_customers_captured', description: 'Total number of unique customers captured' },
+      { field: 'percentage_of_inactive_customers', description: 'Percentage of inactive customers' },
+      
+      // Feedback & alerts
+      { field: 'negative_feedback_alert_inactive', description: 'Number of inactive negative feedback alerts' },
+      { field: 'negative_feedbacks_count', description: 'Total count of negative feedback received' },
+      { field: 'less_than_300_bills', description: 'Flag if customer has less than 300 bills (1=yes, 0=no)' },
+      
+      // System data
+      { field: 'enableRLS', description: 'Enable row-level security (true/false)' },
+      { field: 'mysql_company_id', description: 'MySQL database company identifier' },
+      { field: 'logo_url', description: 'URL to customer logo image' }
     ],
     file_format: 'CSV with header row containing field names'
   };
@@ -659,25 +760,47 @@ export const exportCustomersCSV = async (req: Request, res: Response) => {
     // Get all customers
     const allCustomers = await storage.getCustomers();
     
-    // Define required fields in the exact order we want them (must match sample file)
+    // Define fields in the exact order we want them (must match sample file and user requirements)
     const requiredFields = [
       'name',
       'recurrer_id',
-      'industry',
+      'reelo_id',
+      'active_stores',
       'contact_name',
-      'contact_email',
       'contact_phone',
-      'csm_id',
+      'contact_email',
       'chargebee_customer_id',
       'chargebee_subscription_id',
-      'health_status',
-      'mrr',
       'arr',
+      'mrr',
+      'assigned_csm',
+      'currency_code',
+      'growth_subscription_count',
+      'health_status',
+      'industry',
+      'bills_received_last_30_days',
+      'campaigns_sent_last_90_days',
+      'customers_acquired_last_30_days',
+      'customers_with_min_one_visit',
+      'customers_with_min_two_visit',
+      'customers_without_min_visits',
+      'enableRLS',
+      'less_than_300_bills',
+      'logo_url',
+      'loyalty_active_channels',
+      'loyalty_active_store_count',
+      'loyalty_channel_credits',
+      'loyalty_inactive_store_count',
+      'loyalty_reward',
+      'loyalty_type',
+      'mysql_company_id',
+      'negative_feedback_alert_inactive',
+      'negative_feedbacks_count',
+      'onboarded_at',
+      'percentage_of_inactive_customers',
       'renewal_date',
-      'onboarding_stage',
-      'timezone',
-      'tags',
-      'notes'
+      'revenue_1_year',
+      'unique_customers_captured'
     ];
     
     // Create a mapping for field names from database to export (handle field name differences)
