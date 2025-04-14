@@ -27,15 +27,22 @@ export async function getAvailableFields(): Promise<AvailableFields> {
 
     // Map customer fields
     if (customerFields.length > 0) {
+      // Use a Set to track field names we've already processed to avoid duplicates
+      const processedFields = new Set<string>();
+      
       customerFields.forEach((field: any) => {
-        const fieldType = mapPostgresTypeToFieldType(field.data_type);
-        availableFields.customer.push({
-          id: `customer_${field.column_name}`,
-          label: formatFieldLabel(field.column_name),
-          entityType: 'customer',
-          fieldType,
-          path: field.column_name
-        });
+        // Skip if we've already processed this field
+        if (!processedFields.has(field.column_name)) {
+          processedFields.add(field.column_name);
+          const fieldType = mapPostgresTypeToFieldType(field.data_type);
+          availableFields.customer.push({
+            id: `customer_${field.column_name}`,
+            label: formatFieldLabel(field.column_name),
+            entityType: 'customer',
+            fieldType,
+            path: field.column_name
+          });
+        }
       });
     }
 
@@ -50,15 +57,22 @@ export async function getAvailableFields(): Promise<AvailableFields> {
 
     // Map metrics fields
     if (metricsFields.length > 0) {
+      // Use a Set to track field names we've already processed to avoid duplicates
+      const processedFields = new Set<string>();
+      
       metricsFields.forEach((field: any) => {
-        const fieldType = mapPostgresTypeToFieldType(field.data_type);
-        availableFields.customer_metrics.push({
-          id: `customer_metrics_${field.column_name}`,
-          label: formatFieldLabel(field.column_name),
-          entityType: 'customer_metrics',
-          fieldType,
-          path: field.column_name
-        });
+        // Skip if we've already processed this field
+        if (!processedFields.has(field.column_name)) {
+          processedFields.add(field.column_name);
+          const fieldType = mapPostgresTypeToFieldType(field.data_type);
+          availableFields.customer_metrics.push({
+            id: `customer_metrics_${field.column_name}`,
+            label: formatFieldLabel(field.column_name),
+            entityType: 'customer_metrics',
+            fieldType,
+            path: field.column_name
+          });
+        }
       });
     }
 
@@ -73,15 +87,25 @@ export async function getAvailableFields(): Promise<AvailableFields> {
 
     // Map MySQL fields to company entity
     if (mysqlMappings.length > 0) {
+      // Use a Set to track field paths we've already processed to avoid duplicates
+      const processedFields = new Set<string>();
+      
       mysqlMappings.forEach((mapping: any) => {
         const fieldType = mapping.field_type ? mapping.field_type : 'string';
-        availableFields.company.push({
-          id: `company_${mapping.mysql_field}`,
-          label: formatFieldLabel(mapping.mysql_field),
-          entityType: 'company',
-          fieldType: mapFieldType(fieldType),
-          path: mapping.local_field
-        });
+        // Create a unique ID by combining entity, field and path to ensure uniqueness
+        const uniqueId = `company_${mapping.mysql_field}_${mapping.local_field}`;
+        
+        // Skip if we've already processed a field with this path
+        if (!processedFields.has(mapping.local_field)) {
+          processedFields.add(mapping.local_field);
+          availableFields.company.push({
+            id: uniqueId,
+            label: formatFieldLabel(mapping.mysql_field),
+            entityType: 'company',
+            fieldType: mapFieldType(fieldType),
+            path: mapping.local_field
+          });
+        }
       });
     }
 
@@ -95,17 +119,33 @@ export async function getAvailableFields(): Promise<AvailableFields> {
 
     // Map Chargebee fields to their respective entities
     if (chargebeeMappings.length > 0) {
+      // Use Sets to track field paths we've already processed to avoid duplicates
+      const processedSubscriptionFields = new Set<string>();
+      const processedInvoiceFields = new Set<string>();
+      
       chargebeeMappings.forEach((mapping: any) => {
         const entity = mapping.chargebee_entity as EntityType;
         
         if (entity === 'subscription' || entity === 'invoice') {
-          availableFields[entity].push({
-            id: `${entity}_${mapping.chargebee_field}`,
-            label: formatFieldLabel(mapping.chargebee_field),
-            entityType: entity,
-            fieldType: inferFieldType(mapping.chargebee_field),
-            path: mapping.local_field
-          });
+          // Create a unique ID by combining entity, field and path
+          const uniqueId = `${entity}_${mapping.chargebee_field}_${mapping.local_field}`;
+          
+          // Get the appropriate set based on entity type
+          const processedSet = entity === 'subscription' 
+            ? processedSubscriptionFields 
+            : processedInvoiceFields;
+          
+          // Skip if we've already processed this field path for this entity
+          if (!processedSet.has(mapping.local_field)) {
+            processedSet.add(mapping.local_field);
+            availableFields[entity].push({
+              id: uniqueId,
+              label: formatFieldLabel(mapping.chargebee_field),
+              entityType: entity,
+              fieldType: inferFieldType(mapping.chargebee_field),
+              path: mapping.local_field
+            });
+          }
         }
       });
     }
