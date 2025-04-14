@@ -258,9 +258,9 @@ function DatabaseConfigTab() {
   
   // Auto-select the active saved query when saved queries are loaded
   React.useEffect(() => {
-    if (existingSavedQueries && existingSavedQueries.length > 0) {
+    if (existingSavedQueries && Array.isArray(existingSavedQueries) && existingSavedQueries.length > 0) {
       // Find the active query or the most recently used one
-      const activeQuery = existingSavedQueries.find((q: any) => q.is_active === true);
+      const activeQuery = existingSavedQueries.find((q: any) => q && q.is_active === true);
       if (activeQuery) {
         setSelectedSavedQuery(activeQuery.id.toString());
         setSqlQuery(activeQuery.query);
