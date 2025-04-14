@@ -3,6 +3,7 @@ import NotFound from "@/pages/not-found";
 import Dashboard from "@/pages/dashboard";
 import Customers from "@/pages/customers";
 import CustomerDetails from "@/pages/customer-details";
+import ImportDiagnostics from "@/pages/import-diagnostics";
 import Tasks from "@/pages/tasks";
 import Playbooks from "@/pages/playbooks";
 import PlaybookWorkflow from "@/pages/playbooks/workflow";
@@ -19,6 +20,7 @@ function App() {
     <AppLayout>
       <Switch>
         <Route path="/" component={Dashboard} />
+        <Route path="/customers/import/diagnostics" component={ImportDiagnostics} />
         <Route path="/customers" component={Customers} />
         <Route path="/customers/:id" component={CustomerDetails} />
         <Route path="/tasks" component={Tasks} />

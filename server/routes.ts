@@ -34,7 +34,8 @@ import {
   exportCustomersCSV, 
   previewCSVImport, 
   downloadSampleCSV,
-  upload
+  upload,
+  getLastImportSession
 } from "./import";
 
 export async function registerRoutes(app: Express): Promise<Server> {
@@ -131,6 +132,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   app.post('/api/customers/import/preview', upload.single('file'), previewCSVImport);
   app.get('/api/customers/export/csv', exportCustomersCSV);
   app.get('/api/customers/sample/csv', downloadSampleCSV);
+  app.get('/api/customers/import/last-session', getLastImportSession);
   
   // Delete customer
   app.delete('/api/customers/:id', async (req, res) => {
