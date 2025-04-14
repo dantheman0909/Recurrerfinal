@@ -224,17 +224,16 @@ export const createAnnotationReply = async (req: Request, res: Response) => {
   try {
     const { id } = req.params;
     
-    // Use a simplified schema that accepts entity_type/entity_id but ignores them
+    // Use a minimal schema without requiring entity_type/entity_id fields
     const replySchema = z.object({
       content: z.string().min(1),
       type: z.enum(['comment', 'highlight', 'suggestion', 'action_item']).default('comment'),
       position_data: z.any().optional(),
       mentioned_user_ids: z.array(z.number()).optional(),
       user_id: z.number(),
-      // These will be ignored but we accept them to be compatible with the client
-      entity_type: z.string().optional(),
-      entity_id: z.number().optional(),
-    });
+    })
+    // Allow any additional fields
+    .passthrough();
     
     const validationResult = replySchema.safeParse(req.body);
     
