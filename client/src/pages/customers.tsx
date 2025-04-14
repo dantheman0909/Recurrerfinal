@@ -187,21 +187,22 @@ export default function Customers() {
       </div>
       
       <div className="px-4 sm:px-6 lg:px-8 py-6">
-        <div className="mb-6 flex flex-col md:flex-row justify-between gap-4">
-          <div className="relative w-full md:w-1/3">
-            <div className="absolute inset-y-0 left-0 flex items-center pl-3 pointer-events-none">
-              <Search className="h-5 w-5 text-gray-400" />
+        <div className="mb-6 space-y-4">
+          {/* First row: Search + View Toggle */}
+          <div className="flex flex-col md:flex-row justify-between gap-4">
+            <div className="relative w-full md:w-1/2">
+              <div className="absolute inset-y-0 left-0 flex items-center pl-3 pointer-events-none">
+                <Search className="h-5 w-5 text-gray-400" />
+              </div>
+              <Input
+                type="search"
+                placeholder="Search customers..."
+                className="pl-10"
+                value={searchTerm}
+                onChange={(e) => setSearchTerm(e.target.value)}
+              />
             </div>
-            <Input
-              type="search"
-              placeholder="Search customers..."
-              className="pl-10"
-              value={searchTerm}
-              onChange={(e) => setSearchTerm(e.target.value)}
-            />
-          </div>
-          
-          <div className="flex items-center gap-4">
+            
             <div className="flex border rounded-md overflow-hidden">
               <Button 
                 variant="ghost" 
@@ -228,46 +229,28 @@ export default function Customers() {
                 Table
               </Button>
             </div>
-            
-            <div className="flex flex-wrap gap-2">
-              <Button 
-                variant="outline" 
-                size="sm"
-                className={cn(getHealthFilterStyles(null))}
-                onClick={() => setHealthFilter(null)}
-              >
-                <Filter className="h-4 w-4 mr-1" />
-                All
-              </Button>
-              <Button 
-                variant="outline" 
-                size="sm" 
-                className={cn(getHealthFilterStyles('healthy'))}
-                onClick={() => setHealthFilter(healthFilter === 'healthy' ? null : 'healthy')}
-              >
-                Healthy
-              </Button>
-              <Button 
-                variant="outline" 
-                size="sm" 
-                className={cn(getHealthFilterStyles('at_risk'))}
-                onClick={() => setHealthFilter(healthFilter === 'at_risk' ? null : 'at_risk')}
-              >
-                At Risk
-              </Button>
-              <Button 
-                variant="outline" 
-                size="sm"
-                className={cn(getHealthFilterStyles('red_zone'))}
-                onClick={() => setHealthFilter(healthFilter === 'red_zone' ? null : 'red_zone')}
-              >
-                Red Zone
-              </Button>
-            </div>
           </div>
           
-          <div className="flex flex-col md:flex-row gap-2">
-            <div className="w-full md:w-1/2">
+          {/* Second row: All filters */}
+          <div className="flex flex-col md:flex-row gap-4">
+            <div className="w-full md:w-1/3">
+              <Select 
+                value={healthFilter || "all"} 
+                onValueChange={(value) => setHealthFilter(value !== "all" ? value : null)}
+              >
+                <SelectTrigger className="w-full">
+                  <SelectValue placeholder="Filter by Health" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="all">All Health Status</SelectItem>
+                  <SelectItem value="healthy">Healthy</SelectItem>
+                  <SelectItem value="at_risk">At Risk</SelectItem>
+                  <SelectItem value="red_zone">Red Zone</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+            
+            <div className="w-full md:w-1/3">
               <Select 
                 value={csmFilter?.toString() || "all"} 
                 onValueChange={(value) => setCsmFilter(value !== "all" ? parseInt(value) : null)}
@@ -286,7 +269,7 @@ export default function Customers() {
               </Select>
             </div>
             
-            <div className="w-full md:w-1/2">
+            <div className="w-full md:w-1/3">
               <Select 
                 value={tlFilter?.toString() || "all"} 
                 onValueChange={(value) => setTlFilter(value !== "all" ? parseInt(value) : null)}
@@ -312,71 +295,71 @@ export default function Customers() {
         ) : viewMode === "card" ? (
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
             {filteredCustomers?.map((customer: Customer) => (
-              <Link key={customer.id} href={`/customers/${customer.id}`}>
-                <a className="block h-full">
-                  <Card className="h-full hover:shadow-md transition-shadow duration-200">
-                    <CardContent className="p-6">
-                      <div className="flex justify-between items-start">
-                        <div className="flex items-center">
-                          <div className="bg-gray-100 rounded-md p-3 flex items-center justify-center">
-                            {customer.logo_url ? (
-                              <img 
-                                src={customer.logo_url} 
-                                alt={customer.name} 
-                                className="h-10 w-10 object-contain" 
-                              />
-                            ) : (
-                              <Building className="h-10 w-10 text-gray-600" />
-                            )}
-                          </div>
-                          <div className="ml-3">
-                            <h3 className="text-lg font-medium text-gray-900">{customer.name}</h3>
-                            <p className="text-sm text-gray-500">{customer.industry || 'No industry'}</p>
-                          </div>
+              <div key={customer.id} className="relative">
+                <Card className="h-full hover:shadow-md transition-shadow duration-200">
+                  <CardContent className="p-6">
+                    <div className="flex justify-between items-start">
+                      <div className="flex items-center">
+                        <div className="bg-gray-100 rounded-md p-3 flex items-center justify-center">
+                          {customer.logo_url ? (
+                            <img 
+                              src={customer.logo_url} 
+                              alt={customer.name} 
+                              className="h-10 w-10 object-contain" 
+                            />
+                          ) : (
+                            <Building className="h-10 w-10 text-gray-600" />
+                          )}
                         </div>
-                        <Badge className={cn(getHealthBadgeStyles(customer.health_status || ""))}>
-                          {(customer.health_status || "unknown").replace('_', ' ')}
-                        </Badge>
-                      </div>
-                      
-                      <div className="mt-6 grid grid-cols-2 gap-4">
-                        <div className="text-center p-2 bg-gray-50 rounded-md">
-                          <p className="text-sm text-gray-500">MRR</p>
-                          <p className="text-lg font-semibold">{formatINR(customer.mrr || 0)}</p>
-                        </div>
-                        <div className="text-center p-2 bg-gray-50 rounded-md">
-                          <p className="text-sm text-gray-500">ARR</p>
-                          <p className="text-lg font-semibold">{formatINR(customer.arr || 0)}</p>
+                        <div className="ml-3">
+                          <h3 className="text-lg font-medium text-gray-900">{customer.name}</h3>
+                          <p className="text-sm text-gray-500">{customer.industry || 'No industry'}</p>
                         </div>
                       </div>
-                      
-                      <div className="mt-4 flex items-center justify-between">
-                        <div>
-                          <p className="text-sm text-gray-500">Renewal</p>
-                          <p className="text-sm font-medium">
-                            {customer.renewal_date 
-                              ? new Date(customer.renewal_date).toLocaleDateString() 
-                              : 'No date set'}
-                          </p>
-                        </div>
-                        <div className="flex items-center gap-2">
+                      <Badge className={cn(getHealthBadgeStyles(customer.health_status || ""))}>
+                        {(customer.health_status || "unknown").replace('_', ' ')}
+                      </Badge>
+                    </div>
+                    
+                    <div className="mt-6 grid grid-cols-2 gap-4">
+                      <div className="text-center p-2 bg-gray-50 rounded-md">
+                        <p className="text-sm text-gray-500">MRR</p>
+                        <p className="text-lg font-semibold">{formatINR(customer.mrr || 0)}</p>
+                      </div>
+                      <div className="text-center p-2 bg-gray-50 rounded-md">
+                        <p className="text-sm text-gray-500">ARR</p>
+                        <p className="text-lg font-semibold">{formatINR(customer.arr || 0)}</p>
+                      </div>
+                    </div>
+                    
+                    <div className="mt-4 flex items-center justify-between">
+                      <div>
+                        <p className="text-sm text-gray-500">Renewal</p>
+                        <p className="text-sm font-medium">
+                          {customer.renewal_date 
+                            ? new Date(customer.renewal_date).toLocaleDateString() 
+                            : 'No date set'}
+                        </p>
+                      </div>
+                      <div className="flex items-center gap-2">
+                        <Link href={`/customers/${customer.id}`}>
                           <Button variant="ghost" size="sm" className="text-teal-600">
                             Details <ArrowUpRight className="ml-1 h-4 w-4" />
                           </Button>
-                          <Button 
-                            variant="ghost" 
-                            size="sm" 
-                            className="text-red-600 hover:text-red-700 hover:bg-red-50 p-2"
-                            onClick={(e) => openDeleteDialog(customer, e)}
-                          >
-                            <Trash2 className="h-4 w-4" />
-                          </Button>
-                        </div>
+                        </Link>
+                        <Button 
+                          variant="ghost" 
+                          size="sm" 
+                          className="text-red-600 hover:text-red-700 hover:bg-red-50 p-2"
+                          onClick={(e) => openDeleteDialog(customer, e)}
+                        >
+                          <Trash2 className="h-4 w-4" />
+                        </Button>
                       </div>
-                    </CardContent>
-                  </Card>
-                </a>
-              </Link>
+                    </div>
+                  </CardContent>
+                </Card>
+              </div>
             ))}
           </div>
         ) : (

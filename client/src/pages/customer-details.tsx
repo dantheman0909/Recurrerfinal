@@ -727,21 +727,21 @@ export default function CustomerDetails() {
                 <CardTitle className="text-lg">Account Manager</CardTitle>
               </CardHeader>
               <CardContent>
-                <div className="flex items-center">
-                  <img 
-                    src="https://images.unsplash.com/photo-1472099645785-5658abf4ff4e?ixlib=rb-1.2.1&ixid=eyJhcHBfaWQiOjEyMDd9&auto=format&fit=facearea&facepad=2&w=256&h=256&q=80" 
-                    alt="Account Manager" 
-                    className="h-12 w-12 rounded-full" 
-                  />
-                  <div className="ml-3">
-                    <p className="font-medium">Sarah Johnson</p>
-                    <p className="text-sm text-gray-500">Team Lead</p>
+                {customer.assigned_csm && userMap[customer.assigned_csm] ? (
+                  <div className="flex items-center">
+                    <div className="h-12 w-12 rounded-full bg-gray-200 flex items-center justify-center text-gray-600">
+                      {userMap[customer.assigned_csm].name.charAt(0)}
+                    </div>
+                    <div className="ml-3">
+                      <p className="font-medium">{userMap[customer.assigned_csm].name}</p>
+                      <p className="text-sm text-gray-500">{userMap[customer.assigned_csm].role === 'csm' ? 'Customer Success Manager' : userMap[customer.assigned_csm].role === 'team_lead' ? 'Team Lead' : userMap[customer.assigned_csm].role}</p>
+                    </div>
                   </div>
-                </div>
-                <div className="mt-4 flex space-x-2">
-                  <Button variant="outline" className="flex-1">Message</Button>
-                  <Button variant="outline" className="flex-1">Schedule</Button>
-                </div>
+                ) : (
+                  <div className="text-gray-500 text-center">
+                    No account manager assigned
+                  </div>
+                )}
               </CardContent>
             </Card>
           </div>
