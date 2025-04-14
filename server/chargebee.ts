@@ -235,7 +235,6 @@ export const initChargebeeService = (): ChargebeeService | null => {
     return null;
   }
 
-  console.log(`Initializing Chargebee service with site: ${site}`);
   return new ChargebeeService({ apiKey, site });
 };
 
