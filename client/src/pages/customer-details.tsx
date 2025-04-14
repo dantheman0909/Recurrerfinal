@@ -148,18 +148,90 @@ export default function CustomerDetails() {
     }
   };
   
-  // Prepare metrics data for chart
+  // Prepare metrics data from Chargebee invoices
   const prepareChartData = () => {
-    const monthlyRevenue = [
-      { name: 'Jan', value: customer?.mrr || 0 },
-      { name: 'Feb', value: (customer?.mrr || 0) * 0.95 },
-      { name: 'Mar', value: (customer?.mrr || 0) * 1.1 },
-      { name: 'Apr', value: (customer?.mrr || 0) * 1.05 },
-      { name: 'May', value: (customer?.mrr || 0) * 1.2 },
-      { name: 'Jun', value: (customer?.mrr || 0) * 1.15 },
-    ];
+    // Default to MRR-based data if no Chargebee invoices are available
+    if (!externalData?.chargebee?.invoices || !externalData.chargebee.invoices.length) {
+      return [
+        { name: 'Jan', value: customer?.mrr || 0 },
+        { name: 'Feb', value: customer?.mrr || 0 },
+        { name: 'Mar', value: customer?.mrr || 0 },
+        { name: 'Apr', value: customer?.mrr || 0 },
+        { name: 'May', value: customer?.mrr || 0 },
+        { name: 'Jun', value: customer?.mrr || 0 },
+      ];
+    }
     
-    return monthlyRevenue;
+    // Get invoices and sort by date
+    const invoices = [...externalData.chargebee.invoices]
+      .filter(invoice => invoice.status === 'paid')
+      .sort((a, b) => a.date - b.date);
+      
+    // Group invoices by month
+    const invoicesByMonth = invoices.reduce((months, invoice) => {
+      const date = new Date(invoice.date * 1000);
+      const monthKey = `${date.getFullYear()}-${date.getMonth() + 1}`;
+      
+      if (!months[monthKey]) {
+        months[monthKey] = {
+          name: date.toLocaleString('default', { month: 'short' }),
+          value: 0,
+          rawDate: date
+        };
+      }
+      
+      months[monthKey].value += invoice.total / 100; // Convert from cents to dollars
+      return months;
+    }, {});
+    
+    // Convert to array and sort by date
+    let monthlyData = Object.values(invoicesByMonth)
+      .sort((a: any, b: any) => a.rawDate - b.rawDate)
+      .map((m: any) => ({ name: m.name, value: m.value }));
+      
+    // Get last 6 months or pad if less than 6
+    if (monthlyData.length > 6) {
+      monthlyData = monthlyData.slice(monthlyData.length - 6);
+    } else if (monthlyData.length < 6) {
+      const missingMonths = 6 - monthlyData.length;
+      const lastValue = monthlyData.length > 0 ? monthlyData[monthlyData.length - 1].value : customer?.mrr || 0;
+      
+      for (let i = 0; i < missingMonths; i++) {
+        monthlyData.push({ name: '—', value: lastValue });
+      }
+    }
+    
+    return monthlyData;
+  };
+  
+  // Calculate revenue growth from Chargebee invoices
+  const calculateGrowth = (): { percentage: number, label: string } => {
+    if (!externalData?.chargebee?.invoices || !externalData.chargebee.invoices.length) {
+      return { percentage: 0, label: 'No data' };
+    }
+    
+    const invoices = externalData.chargebee.invoices
+      .filter(invoice => invoice.status === 'paid')
+      .sort((a, b) => a.date - b.date);
+    
+    if (invoices.length < 2) {
+      return { percentage: 0, label: 'Not enough data' };
+    }
+    
+    // Get first invoice and sum of all subsequent invoices
+    const firstInvoice = invoices[0];
+    const subsequentInvoices = invoices.slice(1);
+    const firstAmount = firstInvoice.total / 100;
+    const subsequentTotal = subsequentInvoices.reduce((sum, inv) => sum + (inv.total / 100), 0);
+    const avgSubsequent = subsequentTotal / subsequentInvoices.length;
+    
+    // Calculate growth percentage
+    const growthPercentage = ((avgSubsequent - firstAmount) / firstAmount) * 100;
+    
+    return {
+      percentage: growthPercentage,
+      label: `${growthPercentage.toFixed(1)}% growth`
+    };
   };
 
   return (
@@ -249,11 +321,31 @@ export default function CustomerDetails() {
                       </div>
                       
                       <div className="mt-2 flex justify-between items-center">
-                        <div className="flex items-center">
-                          <TrendingUp className="h-4 w-4 text-green-500 mr-1" />
-                          <span className="text-sm font-medium text-green-600">15% growth</span>
-                        </div>
-                        <a href="https://app.chargebee.com" target="_blank" rel="noopener noreferrer" className="text-sm text-teal-600 hover:text-teal-800 flex items-center">
+                        {(() => {
+                          const growth = calculateGrowth();
+                          const isPositiveGrowth = growth.percentage > 0;
+                          
+                          return (
+                            <div className="flex items-center">
+                              {isPositiveGrowth ? (
+                                <TrendingUp className="h-4 w-4 text-green-500 mr-1" />
+                              ) : (
+                                <TrendingDown className="h-4 w-4 text-red-500 mr-1" />
+                              )}
+                              <span className={`text-sm font-medium ${isPositiveGrowth ? 'text-green-600' : 'text-red-600'}`}>
+                                {growth.label}
+                              </span>
+                            </div>
+                          );
+                        })()}
+                        <a 
+                          href={customer.chargebee_customer_id ? 
+                            `https://app.chargebee.com/customers/${customer.chargebee_customer_id}` : 
+                            "https://app.chargebee.com"} 
+                          target="_blank" 
+                          rel="noopener noreferrer" 
+                          className="text-sm text-teal-600 hover:text-teal-800 flex items-center"
+                        >
                           View in Chargebee <ExternalLink className="h-3 w-3 ml-1" />
                         </a>
                       </div>
@@ -528,22 +620,18 @@ export default function CustomerDetails() {
                     </div>
                   </div>
                   
-                  {customer.contact_name && (
-                    <div className="flex items-start">
-                      <Mail className="h-5 w-5 text-gray-400 mt-0.5 mr-3" />
-                      <div>
-                        <p className="font-medium">{customer.contact_name}</p>
-                        <p className="text-sm text-gray-500">{customer.contact_email || 'No email'}</p>
-                      </div>
+                  <div className="flex items-start">
+                    <Mail className="h-5 w-5 text-gray-400 mt-0.5 mr-3" />
+                    <div>
+                      <p className="font-medium">{customer.name}</p>
+                      <p className="text-sm text-gray-500">{customer.contact_email || 'No email'}</p>
                     </div>
-                  )}
+                  </div>
                   
-                  {customer.contact_phone && (
-                    <div className="flex items-start">
-                      <Phone className="h-5 w-5 text-gray-400 mt-0.5 mr-3" />
-                      <p>{customer.contact_phone}</p>
-                    </div>
-                  )}
+                  <div className="flex items-start">
+                    <Phone className="h-5 w-5 text-gray-400 mt-0.5 mr-3" />
+                    <p>{customer.contact_phone || 'No phone number'}</p>
+                  </div>
                 </div>
                 
                 <div className="mt-6">
@@ -595,48 +683,7 @@ export default function CustomerDetails() {
                       </div>
                     )}
 
-                    {/* MySQL Data */}
-                    <div>
-                      <div className="flex items-center mb-2">
-                        <svg className="w-4 h-4 mr-2" viewBox="0 0 24 24" fill="#00758F">
-                          <path d="M16.405 5.501c-.115 0-.193.014-.274.033v.013h.014c.054.104.146.18.214.273.054.107.1.214.154.32l.014-.015c.094-.066.14-.172.14-.333-.04-.047-.046-.094-.08-.14-.04-.067-.126-.1-.18-.153zM5.77 18.695h-.927a50.854 50.854 0 00-.27-4.41h-.008l-1.41 4.41H2.45l-1.4-4.41h-.01a72.892 72.892 0 00-.195 4.41H0c.055-1.966.192-3.81.41-5.53h1.15l1.335 4.064h.008l1.347-4.064h1.095c.242 2.015.384 3.86.428 5.53zm4.017-4.08c-.378 2.045-.876 3.533-1.492 4.46-.482.716-1.01 1.073-1.583 1.073-.153 0-.34-.046-.566-.138v-.494c.11.017.24.026.386.026.268 0 .483-.075.647-.222.197-.18.295-.382.295-.605 0-.155-.077-.47-.23-.944L6.23 14.615h.91l.727 2.36c.164.536.233.91.205 1.123.4-1.064.786-2.24 1.142-3.483h.88zm10.987 4.08h-1.046c0-.057 0-.15.007-.28.002-.118.007-.305.01-.562.002-.268.005-.6.005-.998l0-1.884c0-.723-.077-1.223-.232-1.502-.15-.282-.4-.423-.752-.423-.35 0-.67.162-.974.487L17.784 18.695h-.9v-4.845-.534-.806h.9v.652c.488-.55.994-.824 1.51-.824.383 0 .722.13 1.02.386.295.26.494.61.596 1.057.103.455.155 1.16.155 2.134z" />
-                        </svg>
-                        <span className="font-medium text-sm">MySQL Imported Data</span>
-                      </div>
-                      
-                      {externalData?.mysql?.error ? (
-                        <p className="text-xs text-red-500 ml-2">
-                          Error fetching MySQL data
-                        </p>
-                      ) : externalData?.mysql?.company && (
-                        <div className="text-xs text-gray-500 border rounded p-2 mb-2">
-                          <p><span className="font-medium">Company ID:</span> {customer.mysql_company_id}</p>
-                          {externalData.mysql.company?.company_name && (
-                            <p><span className="font-medium">Name:</span> {externalData.mysql.company.company_name}</p>
-                          )}
-                          {externalData.mysql.company?.active_stores && (
-                            <p><span className="font-medium">Active Stores:</span> {externalData.mysql.company.active_stores}</p>
-                          )}
-                          
-                          {/* Additional MySQL data fields */}
-                          {externalData.mysql.company?.growth_subscription_count && (
-                            <p><span className="font-medium">Growth Subscriptions:</span> {externalData.mysql.company.growth_subscription_count}</p>
-                          )}
-                          {externalData.mysql.company?.loyalty_active_store_count && (
-                            <p><span className="font-medium">Loyalty Active Stores:</span> {externalData.mysql.company.loyalty_active_store_count}</p>
-                          )}
-                          {externalData.mysql.company?.loyalty_type && (
-                            <p><span className="font-medium">Loyalty Type:</span> {externalData.mysql.company.loyalty_type}</p>
-                          )}
-                          {externalData.mysql.company?.revenue_1_year && (
-                            <p><span className="font-medium">Revenue (1Y):</span> {formatINR(externalData.mysql.company.revenue_1_year)}</p>
-                          )}
-                          {customer.updated_from_mysql_at && (
-                            <p className="mt-2"><span className="font-medium">Last Sync:</span> {new Date(customer.updated_from_mysql_at).toLocaleString()}</p>
-                          )}
-                        </div>
-                      )}
-                    </div>
+
 
                     {/* Intercom */}
                     <Button variant="outline" className="w-full justify-start" asChild>
