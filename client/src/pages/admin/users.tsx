@@ -120,16 +120,32 @@ export default function AdminUsersPage() {
   // Update user mutation
   const updateUserMutation = useMutation({
     mutationFn: async (userData: typeof formData & { id: number }) => {
+      console.log('Updating user with data:', userData);
+      
+      // Transform data to match API expectations
+      const apiData: any = {
+        name: userData.name,
+        email: userData.email,
+        role: userData.role,
+        teamLeadId: userData.teamLeadId,
+      };
+      
+      // Only include password if it's provided
+      if (userData.password && userData.password.trim() !== '') {
+        apiData.password = userData.password;
+      }
+      
       const response = await fetch(`/api/users/${userData.id}`, {
         method: 'PUT',
         headers: {
           'Content-Type': 'application/json',
         },
-        body: JSON.stringify(userData),
+        body: JSON.stringify(apiData),
       });
       
       if (!response.ok) {
         const error = await response.json();
+        console.error('Error updating user:', error);
         throw new Error(error.message || 'Failed to update user');
       }
       

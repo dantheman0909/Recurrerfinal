@@ -205,9 +205,13 @@ router.put('/:id', async (req: Request, res: Response) => {
     // Process team lead ID (could be string from frontend)
     let team_lead_id = otherUpdates.team_lead_id;
     if (teamLeadId) {
-      team_lead_id = parseInt(teamLeadId, 10);
-      if (isNaN(team_lead_id)) {
+      if (teamLeadId === '') {
         team_lead_id = null;
+      } else {
+        team_lead_id = parseInt(teamLeadId, 10);
+        if (isNaN(team_lead_id)) {
+          team_lead_id = null;
+        }
       }
     }
     
