@@ -1,7 +1,20 @@
-import { Router } from 'express';
+import { Router, Request, Response } from 'express';
 import { googleOAuthService } from '../google-oauth-service';
 import { z } from 'zod';
 import { oauthScopeEnum } from '@shared/schema';
+import * as expressSession from 'express-session';
+
+// Extend Express Request to include session
+declare module 'express-session' {
+  interface SessionData {
+    userId?: number;
+  }
+}
+
+// Define a typed request with session
+interface RequestWithSession extends Request {
+  session: expressSession.Session & expressSession.SessionData;
+}
 
 const router = Router();
 
@@ -26,7 +39,7 @@ const exchangeCodeSchema = z.object({
  * Store Google OAuth configuration
  * POST /api/oauth/google/config
  */
-router.post('/config', async (req, res) => {
+router.post('/config', async (req: Request, res: Response) => {
   try {
     // Validate request body
     const validationResult = configSchema.safeParse(req.body);
@@ -67,7 +80,7 @@ router.post('/config', async (req, res) => {
  * Get Google OAuth configuration status
  * GET /api/oauth/google/status
  */
-router.get('/status', async (req, res) => {
+router.get('/status', async (req: Request, res: Response) => {
   try {
     const initResult = await googleOAuthService.initialize();
     
@@ -90,7 +103,7 @@ router.get('/status', async (req, res) => {
  * Start Google OAuth authorization flow
  * POST /api/oauth/google/auth
  */
-router.post('/auth', async (req, res) => {
+router.post('/auth', async (req: RequestWithSession, res: Response) => {
   try {
     // Check if user is authenticated
     if (!req.session.userId) {
@@ -137,7 +150,7 @@ router.post('/auth', async (req, res) => {
  * Exchange authorization code for tokens
  * POST /api/oauth/google/token
  */
-router.post('/token', async (req, res) => {
+router.post('/token', async (req: RequestWithSession, res: Response) => {
   try {
     // Check if user is authenticated
     if (!req.session.userId) {
@@ -186,7 +199,7 @@ router.post('/token', async (req, res) => {
  * Revoke Google OAuth access
  * POST /api/oauth/google/revoke
  */
-router.post('/revoke', async (req, res) => {
+router.post('/revoke', async (req: RequestWithSession, res: Response) => {
   try {
     // Check if user is authenticated
     if (!req.session.userId) {

@@ -56,6 +56,10 @@ app.get('/api/chargebee/subscriptions', getChargebeeSubscriptions);
 app.get('/api/chargebee/subscriptions/:id', getChargebeeSubscription);
 app.get('/api/chargebee/customers', getChargebeeCustomers);
 
+// Load and configure Google OAuth routes
+import googleOAuthRoutes from './routes/google-oauth';
+app.use('/api/oauth/google', googleOAuthRoutes);
+
 // Data synchronization endpoints (direct route to avoid Vite middleware interference)
 app.post('/api/admin/mysql-sync', async (req, res) => {
   try {
