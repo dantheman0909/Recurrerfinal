@@ -713,7 +713,7 @@ export default function CustomerDetails() {
                         <Button variant="outline" className="w-full justify-start mb-1" asChild>
                           <a 
                             href={customer.chargebee_customer_id ? 
-                              `https://getreelo.chargebee.com/customers/${customer.chargebee_customer_id}` : 
+                              `https://getreelo.chargebee.com/d/customers/${customer.chargebee_customer_id}` : 
                               "https://getreelo.chargebee.com"} 
                             target="_blank" 
                             rel="noopener noreferrer"
