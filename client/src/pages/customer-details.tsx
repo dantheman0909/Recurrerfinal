@@ -535,18 +535,7 @@ export default function CustomerDetails() {
                                   </div>
                                 </div>
                                 
-                                <div className="flex justify-end mt-2">
-                                  <a 
-                                    href={customer.chargebee_customer_id ? 
-                                      `https://app.chargebee.com/customers/${customer.chargebee_customer_id}#invoices` : 
-                                      "https://app.chargebee.com"} 
-                                    target="_blank" 
-                                    rel="noopener noreferrer" 
-                                    className="text-sm text-teal-600 hover:text-teal-800 flex items-center"
-                                  >
-                                    View All Invoices <ExternalLink className="h-3 w-3 ml-1" />
-                                  </a>
-                                </div>
+                                {/* External invoice link removed as requested */}
                               </>
                             );
                           })()}
@@ -844,32 +833,22 @@ export default function CustomerDetails() {
                 <div className="mt-6">
                   <h4 className="text-sm font-medium text-gray-500 mb-2">External Systems</h4>
                   <div className="space-y-2">
-                    {/* HubSpot */}
-                    <Button variant="outline" className="w-full justify-start" asChild>
-                      <a href="https://app.hubspot.com" target="_blank" rel="noopener noreferrer">
+                    {/* HubSpot - external link removed */}
+                    <Button variant="outline" className="w-full justify-start" disabled>
                         <svg className="w-4 h-4 mr-2" viewBox="0 0 24 24" fill="#ff7a59">
                           <path d="M22.447 9.564h-5.01v5.011h5.01V9.564zm-9.206 0h-5.01v5.011h5.01V9.564zm-9.207 0h-2.43l-1.8 5.011h4.23V9.564zm18.413 7.525h-5.01v5.011h5.01v-5.011zm-9.206 0h-5.01v5.011h5.01v-5.011zm-9.207 0H.021l-0.021 5.011h4.23v-5.011zm18.413-15.049h-5.01v5.011h5.01V2.04zm-9.206 0h-5.01v5.011h5.01V2.04zm-9.207 0H.021L0 7.051h4.23V2.04z"/>
                         </svg>
-                        View in HubSpot
-                      </a>
+                        HubSpot Data
                     </Button>
 
-                    {/* Chargebee */}
+                    {/* Chargebee information - external link removed */}
                     {(customer.chargebee_customer_id || externalData?.chargebee?.customer) && (
                       <div>
-                        <Button variant="outline" className="w-full justify-start mb-1" asChild>
-                          <a 
-                            href={customer.chargebee_customer_id ? 
-                              `https://getreelo.chargebee.com/d/customers/${customer.chargebee_customer_id}` : 
-                              "https://getreelo.chargebee.com"} 
-                            target="_blank" 
-                            rel="noopener noreferrer"
-                          >
+                        <Button variant="outline" className="w-full justify-start mb-1" disabled>
                             <svg className="w-4 h-4 mr-2" viewBox="0 0 24 24" fill="#FF7846">
                               <path d="M19.998 6.293L15.04 2H4v20h16V6.293zM12 16.5c-2.48 0-4.5-2.02-4.5-4.5S9.52 7.5 12 7.5s4.5 2.02 4.5 4.5-2.02 4.5-4.5 4.5z"/>
                             </svg>
-                            View in Chargebee
-                          </a>
+                            Chargebee Data
                         </Button>
                         
                         {externalData?.chargebee?.error ? (
@@ -892,14 +871,12 @@ export default function CustomerDetails() {
 
 
 
-                    {/* Intercom */}
-                    <Button variant="outline" className="w-full justify-start" asChild>
-                      <a href="https://app.intercom.com" target="_blank" rel="noopener noreferrer">
+                    {/* Intercom - external link removed */}
+                    <Button variant="outline" className="w-full justify-start" disabled>
                         <svg className="w-4 h-4 mr-2" viewBox="0 0 24 24" fill="#1F8DED">
                           <path d="M12 1.6C6.273 1.6 1.6 6.273 1.6 12c0 5.727 4.673 10.4 10.4 10.4 5.727 0 10.4-4.673 10.4-10.4 0-5.727-4.673-10.4-10.4-10.4zM7.2 14.4c-1.323 0-2.4-1.077-2.4-2.4s1.077-2.4 2.4-2.4c1.323 0 2.4 1.077 2.4 2.4s-1.077 2.4-2.4 2.4zm5.5 1.323c0 .827-.673 1.5-1.5 1.5s-1.5-.673-1.5-1.5.673-1.5 1.5-1.5 1.5.673 1.5 1.5zm3.3-1.323c-1.323 0-2.4-1.077-2.4-2.4s1.077-2.4 2.4-2.4c1.323 0 2.4 1.077 2.4 2.4s-1.077 2.4-2.4 2.4z"/>
                         </svg>
-                        View in Intercom
-                      </a>
+                        Intercom Data
                     </Button>
                   </div>
                 </div>
