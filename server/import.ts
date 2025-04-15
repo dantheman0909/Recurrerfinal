@@ -81,15 +81,22 @@ const convertValueType = (field: string, value: string | null): any => {
     return parsed;
   }
   
-  // Decimal/float fields - fields that should allow decimal points
+  // Decimal/float fields - these fields need special handling for database storage
+  // Since they're stored as integers in the database but may have decimal inputs
   if ([
     'percentage_of_inactive_customers'
   ].includes(field)) {
-    const parsed = parseFloat(value);
-    if (isNaN(parsed)) {
+    try {
+      const parsed = parseFloat(value);
+      if (isNaN(parsed)) {
+        return null;
+      }
+      // Convert to integer by rounding since the database schema requires integers
+      return Math.round(parsed);
+    } catch (e) {
+      console.error(`Error converting decimal field ${field}: ${e}`);
       return null;
     }
-    return parsed;
   }
   
   // Boolean fields - convert string representations to boolean
@@ -473,11 +480,54 @@ export const importCSV = async (req: Request, res: Response) => {
         // Get the list of valid column names from database schema
         const validColumns = Object.keys(customers);
         
+        // Process all number fields that might be decimals to handle them properly
+        // These fields are stored as integers in the database but might have decimal values in the import
+        const decimalFields = [
+          'percentage_of_inactive_customers',
+          'revenue_1_year',
+          'bills_received_last_30_days',
+          'campaigns_sent_last_90_days',
+          'customers_acquired_last_30_days',
+          'customers_with_min_one_visit',
+          'customers_with_min_two_visit',
+          'customers_without_min_visits',
+          'negative_feedbacks_count',
+          'negative_feedback_alert_inactive',
+          'less_than_300_bills',
+          'active_stores',
+          'growth_subscription_count',
+          'loyalty_active_store_count',
+          'loyalty_inactive_store_count',
+          'loyalty_channel_credits',
+          'unique_customers_captured',
+          'mrr',
+          'arr'
+        ];
+        
         // Only include fields that exist in the schema
         for (const key of Object.keys(cleanRecord)) {
           if (validColumns.includes(key)) {
+            let value = cleanRecord[key];
+            
+            // Special handling for fields that might contain decimal values but need to be integers
+            if (decimalFields.includes(key) && value !== null) {
+              try {
+                // Convert any value to float, then to integer
+                const valueToConvert = typeof value === 'string' ? value : String(value);
+                const floatValue = parseFloat(valueToConvert);
+                if (!isNaN(floatValue)) {
+                  value = Math.round(floatValue);
+                } else {
+                  value = null; // If not a valid number, set to null
+                }
+              } catch (e) {
+                console.log(`Error converting ${key} value "${value}" to number: ${e}`);
+                value = null;
+              }
+            }
+            
             // @ts-ignore - We know these fields exist in the schema
-            cleanedRecord[key] = cleanRecord[key];
+            cleanedRecord[key] = value;
           }
         }
         
