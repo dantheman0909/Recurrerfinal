@@ -1,4 +1,5 @@
 import { Route, Switch } from "wouter";
+import { useState, useEffect } from "react";
 import NotFound from "@/pages/not-found";
 import Dashboard from "@/pages/dashboard";
 import Customers from "@/pages/customers";
@@ -21,25 +22,52 @@ import { AuthLayout } from "@/components/layouts/auth-layout";
 import LoginPage from "@/pages/auth/login";
 import SignupPage from "@/pages/auth/signup";
 import { useLocation } from "wouter";
-import { useAuth } from "./context/auth-context";
+
+// React Router-style navigation
+const navigate = (path: string) => {
+  window.location.href = path;
+  return null;
+};
 
 function App() {
   const [location] = useLocation();
   const isAuthRoute = location.startsWith('/auth');
+  const [loading, setLoading] = useState(true);
+  const [authenticated, setAuthenticated] = useState(false);
+  const [user, setUser] = useState(null);
   
-  // Use auth context for authentication state
-  const { authenticated, loading } = useAuth();
+  // Check authentication status on mount
+  useEffect(() => {
+    const checkAuthStatus = async () => {
+      try {
+        const response = await fetch('/api/me');
+        const data = await response.json();
+
+        if (data.authenticated && data.user) {
+          setUser(data.user);
+          setAuthenticated(true);
+        } else {
+          setUser(null);
+          setAuthenticated(false);
+        }
+      } catch (error) {
+        console.error('Error checking authentication status:', error);
+        setUser(null);
+        setAuthenticated(false);
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    checkAuthStatus();
+  }, []);
   
-  // Separate content based on authentication routes
   const authRoutes = (
     <AuthLayout title="Recurrer Authentication" description="Sign in to your account">
       <Switch>
         <Route path="/auth/login" component={LoginPage} />
         <Route path="/auth/signup" component={SignupPage} />
-        <Route component={() => {
-          window.location.href = '/auth/login';
-          return null;
-        }} />
+        <Route component={() => navigate('/auth/login')} />
       </Switch>
     </AuthLayout>
   );
@@ -76,15 +104,12 @@ function App() {
   
   // If not authenticated and not on auth route, redirect to login
   if (!authenticated && !isAuthRoute) {
-    // Redirect to login
-    window.location.href = '/auth/login';
-    return null;
+    return navigate('/auth/login');
   }
   
   // If authenticated and on auth route, redirect to dashboard
   if (authenticated && isAuthRoute) {
-    window.location.href = '/';
-    return null;
+    return navigate('/');
   }
   
   // Otherwise, return the appropriate routes

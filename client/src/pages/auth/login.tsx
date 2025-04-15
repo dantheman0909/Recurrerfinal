@@ -1,5 +1,4 @@
 import React, { useState } from 'react';
-import { useAuth } from '@/context/auth-context';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
@@ -19,7 +18,6 @@ export default function LoginPage() {
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [isLoading, setIsLoading] = useState(false);
-  const { login, googleLogin } = useAuth();
   const { toast } = useToast();
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -37,12 +35,20 @@ export default function LoginPage() {
     setIsLoading(true);
     
     try {
-      const result = await login(email, password);
+      const response = await fetch('/api/auth/login', {
+        method: 'POST',
+        body: JSON.stringify({ email, password }),
+        headers: {
+          'Content-Type': 'application/json',
+        },
+      });
       
-      if (!result.success) {
+      const data = await response.json();
+      
+      if (!data.success) {
         toast({
           title: 'Login failed',
-          description: result.error || 'Please check your credentials and try again',
+          description: data.error || 'Please check your credentials and try again',
           variant: 'destructive',
         });
       } else {
@@ -50,6 +56,9 @@ export default function LoginPage() {
           title: 'Login successful',
           description: 'Welcome back to Recurrer',
         });
+        
+        // Redirect to dashboard
+        window.location.href = '/';
       }
     } catch (error) {
       console.error('Login error:', error);
@@ -64,7 +73,7 @@ export default function LoginPage() {
   };
 
   const handleGoogleLogin = () => {
-    googleLogin();
+    window.location.href = '/api/auth/google';
   };
 
   return (

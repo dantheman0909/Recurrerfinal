@@ -1,5 +1,4 @@
 import React, { useState } from 'react';
-import { useAuth } from '@/context/auth-context';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
@@ -13,7 +12,6 @@ export default function SignupPage() {
   const [password, setPassword] = useState('');
   const [confirmPassword, setConfirmPassword] = useState('');
   const [isLoading, setIsLoading] = useState(false);
-  const { register, googleSignup } = useAuth();
   const { toast } = useToast();
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -40,12 +38,20 @@ export default function SignupPage() {
     setIsLoading(true);
     
     try {
-      const result = await register(name, email, password);
+      const response = await fetch('/api/auth/register', {
+        method: 'POST',
+        body: JSON.stringify({ name, email, password }),
+        headers: {
+          'Content-Type': 'application/json',
+        },
+      });
       
-      if (!result.success) {
+      const data = await response.json();
+      
+      if (!data.success) {
         toast({
           title: 'Registration failed',
-          description: result.error || 'Please try again with different credentials',
+          description: data.error || 'Please try again with different credentials',
           variant: 'destructive',
         });
       } else {
@@ -53,6 +59,9 @@ export default function SignupPage() {
           title: 'Registration successful',
           description: 'Welcome to Recurrer!',
         });
+        
+        // Redirect to dashboard
+        window.location.href = '/';
       }
     } catch (error) {
       console.error('Registration error:', error);
@@ -67,7 +76,7 @@ export default function SignupPage() {
   };
 
   const handleGoogleSignup = () => {
-    googleSignup();
+    window.location.href = '/api/auth/google/signup';
   };
 
   return (
