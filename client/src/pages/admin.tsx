@@ -1648,19 +1648,25 @@ function ChargebeeConfigTab() {
                             <div className="flex space-x-4 mt-1">
                               <span>
                                 <Badge variant="outline" className="bg-blue-50 text-blue-800 mr-1">
-                                  {chargebeeConfig.last_sync_stats.customers || 0}
+                                  {typeof chargebeeConfig.last_sync_stats.customers === 'object' 
+                                    ? chargebeeConfig.last_sync_stats.customers.total || 0 
+                                    : chargebeeConfig.last_sync_stats.customers || 0}
                                 </Badge>
                                 customers
                               </span>
                               <span>
                                 <Badge variant="outline" className="bg-green-50 text-green-800 mr-1">
-                                  {chargebeeConfig.last_sync_stats.subscriptions || 0}
+                                  {typeof chargebeeConfig.last_sync_stats.subscriptions === 'object'
+                                    ? chargebeeConfig.last_sync_stats.subscriptions.total || 0
+                                    : chargebeeConfig.last_sync_stats.subscriptions || 0}
                                 </Badge>
                                 subscriptions
                               </span>
                               <span>
                                 <Badge variant="outline" className="bg-purple-50 text-purple-800 mr-1">
-                                  {chargebeeConfig.last_sync_stats.invoices || 0}
+                                  {typeof chargebeeConfig.last_sync_stats.invoices === 'object'
+                                    ? chargebeeConfig.last_sync_stats.invoices.total || 0
+                                    : chargebeeConfig.last_sync_stats.invoices || 0}
                                 </Badge>
                                 invoices
                               </span>
