@@ -1682,32 +1682,41 @@ function ChargebeeConfigTab() {
                         </p>
                         {chargebeeConfig.last_sync_stats && (
                           <div className="text-xs text-gray-600 pt-1">
-                            <p className="font-medium">Last sync results:</p>
+                            <div className="flex items-center mb-1">
+                              <p className="font-medium">Current database totals:</p>
+                              <Tooltip>
+                                <TooltipTrigger asChild>
+                                  <InfoIcon className="h-3 w-3 ml-1 text-gray-400" />
+                                </TooltipTrigger>
+                                <TooltipContent>
+                                  <p className="w-[240px] text-xs">
+                                    These are the actual counts in the database, not just from the last sync.
+                                  </p>
+                                </TooltipContent>
+                              </Tooltip>
+                            </div>
                             <div className="flex space-x-4 mt-1">
                               <span>
                                 <Badge variant="outline" className="bg-blue-50 text-blue-800 mr-1">
-                                  {typeof chargebeeConfig.last_sync_stats.customers === 'object' 
-                                    ? chargebeeConfig.last_sync_stats.customers.total || 0 
-                                    : chargebeeConfig.last_sync_stats.customers || 0}
+                                  <TotalRecordsCounter entity="customers" chargebeeConfig={chargebeeConfig} />
                                 </Badge>
                                 customers
                               </span>
                               <span>
                                 <Badge variant="outline" className="bg-green-50 text-green-800 mr-1">
-                                  {typeof chargebeeConfig.last_sync_stats.subscriptions === 'object'
-                                    ? chargebeeConfig.last_sync_stats.subscriptions.total || 0
-                                    : chargebeeConfig.last_sync_stats.subscriptions || 0}
+                                  <TotalRecordsCounter entity="subscriptions" chargebeeConfig={chargebeeConfig} />
                                 </Badge>
                                 subscriptions
                               </span>
                               <span>
                                 <Badge variant="outline" className="bg-purple-50 text-purple-800 mr-1">
-                                  {typeof chargebeeConfig.last_sync_stats.invoices === 'object'
-                                    ? chargebeeConfig.last_sync_stats.invoices.total || 0
-                                    : chargebeeConfig.last_sync_stats.invoices || 0}
+                                  <TotalRecordsCounter entity="invoices" chargebeeConfig={chargebeeConfig} />
                                 </Badge>
                                 invoices
                               </span>
+                            </div>
+                            <div className="mt-1 text-gray-500">
+                              <p>Last sync processed: {chargebeeConfig.last_sync_stats?.processed || 'Unknown'} records</p>
                             </div>
                           </div>
                         )}
