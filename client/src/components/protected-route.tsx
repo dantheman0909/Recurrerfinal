@@ -1,8 +1,36 @@
-import React from 'react';
+import React, { useContext } from 'react';
 import { Redirect } from 'wouter';
-import { useAuth } from '@/context/auth-context';
 import { usePermissions } from '@/hooks/use-permissions';
 import { Spinner } from '@/components/ui/spinner';
+import { createContext } from 'react';
+import { User } from '@/context/auth-context';
+
+// Define the AuthContextType same as in App.tsx
+type AuthContextType = {
+  user: User | null;
+  loading: boolean;
+  authenticated: boolean;
+  isAuthenticated: boolean;
+  isLoading: boolean;
+  login: (email: string, password: string) => Promise<{ success: boolean; error?: string }>;
+  logout: () => Promise<void>;
+  register: (name: string, email: string, password: string) => Promise<{ success: boolean; error?: string }>;
+  googleLogin: () => void;
+  googleSignup: () => void;
+  refreshUser: () => Promise<void>;
+};
+
+// Create Auth Context - must match the one in App.tsx
+const AuthContext = createContext<AuthContextType | undefined>(undefined);
+
+// Custom hook to use the auth context
+const useAuth = () => {
+  const context = useContext(AuthContext);
+  if (context === undefined) {
+    throw new Error('useAuth must be used within an AuthProvider');
+  }
+  return context;
+};
 
 interface ProtectedRouteProps {
   children: React.ReactNode;
