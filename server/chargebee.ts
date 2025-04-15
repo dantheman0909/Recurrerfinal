@@ -230,30 +230,33 @@ export class ChargebeeService {
   
   // Get non-recurring invoices for a specific customer (add-ons, one-time charges)
   async getNonRecurringInvoicesForCustomer(customerId: string): Promise<ChargebeeInvoice[]> {
+    console.log(`Fetching all invoices for customer ${customerId} with pagination`);
+    
+    // Setup pagination parameters for the first call
     const queryParams = new URLSearchParams();
     queryParams.append('customer_id[is]', customerId);
     queryParams.append('status[is]', 'paid'); // Only get paid invoices
-    
-    // Sort by date ascending to get the correct chronological order
-    queryParams.append('sort_by[asc]', 'date');
-    
-    // Use a limit high enough to get all invoices
-    queryParams.append('limit', '100');
+    queryParams.append('sort_by[asc]', 'date'); // Sort by date ascending
 
-    const response = await this.makeRequest(`/invoices?${queryParams.toString()}`);
+    // Create a specific endpoint for this customer's invoices
+    const endpoint = `/invoices`;
     
-    // Get invoices
-    const invoices = response.list.map((item: any) => {
-      // Make sure we include the full invoice with line items
+    // Use our pagination helper to fetch all pages
+    const allInvoices = await this.fetchAllPages(`${endpoint}?${queryParams.toString()}`, 'invoice');
+    
+    console.log(`Fetched ${allInvoices.length} total invoices for customer ${customerId}`);
+    
+    // Augment invoice data
+    const processedInvoices = allInvoices.map((invoice: any) => {
       return {
-        ...item.invoice, 
-        line_items: item.invoice.line_items || [],
-        recurring: !!item.invoice.subscription_id // Flag to easily identify recurring vs non-recurring
+        ...invoice,
+        line_items: invoice.line_items || [],
+        recurring: !!invoice.subscription_id // Flag to easily identify recurring vs non-recurring
       };
     });
     
     // Filter to include only non-recurring invoices
-    return invoices.filter((invoice: any) => {
+    const nonRecurringInvoices = processedInvoices.filter((invoice: any) => {
       // Consider it non-recurring if:
       // 1. No subscription_id (one-time charge)
       // 2. Has add-on line items
@@ -261,6 +264,9 @@ export class ChargebeeService {
         item.entity_type === 'addon' || !item.subscription_id
       ));
     });
+    
+    console.log(`Found ${nonRecurringInvoices.length} non-recurring invoices for customer ${customerId}`);
+    return nonRecurringInvoices;
   }
   
   // Get current month's paid non-recurring invoices for a customer
@@ -269,30 +275,44 @@ export class ChargebeeService {
     const startOfMonth = new Date(now.getFullYear(), now.getMonth(), 1);
     const endOfMonth = new Date(now.getFullYear(), now.getMonth() + 1, 0);
     
+    console.log(`Fetching current month's invoices for customer ${customerId}`);
+    
+    // Setup pagination parameters
     const queryParams = new URLSearchParams();
     queryParams.append('customer_id[is]', customerId);
     queryParams.append('date[between]', `[${Math.floor(startOfMonth.getTime() / 1000)},${Math.floor(endOfMonth.getTime() / 1000)}]`);
     queryParams.append('status[is]', 'paid');
     queryParams.append('sort_by[asc]', 'date');
-    queryParams.append('limit', '100');
 
-    const response = await this.makeRequest(`/invoices?${queryParams.toString()}`);
+    // Create a specific endpoint for this customer's invoices in the current month
+    const endpoint = `/invoices`;
     
-    // Get invoices with additional properties
-    const invoices = response.list.map((item: any) => {
+    // Use our pagination helper to fetch all pages
+    const allInvoices = await this.fetchAllPages(`${endpoint}?${queryParams.toString()}`, 'invoice');
+    
+    console.log(`Fetched ${allInvoices.length} total invoices for customer ${customerId} in current month`);
+    
+    // Augment invoice data
+    const processedInvoices = allInvoices.map((invoice: any) => {
       return {
-        ...item.invoice, 
-        line_items: item.invoice.line_items || [],
-        recurring: !!item.invoice.subscription_id
+        ...invoice,
+        line_items: invoice.line_items || [],
+        recurring: !!invoice.subscription_id
       };
     });
     
     // Filter to include only non-recurring invoices
-    return invoices.filter((invoice: any) => {
+    const nonRecurringInvoices = processedInvoices.filter((invoice: any) => {
+      // Consider it non-recurring if:
+      // 1. No subscription_id (one-time charge)
+      // 2. Has add-on line items
       return !invoice.subscription_id || (invoice.line_items && invoice.line_items.some((item: any) => 
         item.entity_type === 'addon' || !item.subscription_id
       ));
     });
+    
+    console.log(`Found ${nonRecurringInvoices.length} non-recurring invoices for customer ${customerId} in current month`);
+    return nonRecurringInvoices;
   }
   
   // Get available fields for mapping for each entity type
