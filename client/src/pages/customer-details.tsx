@@ -312,7 +312,14 @@ export default function CustomerDetails() {
       };
     }
     
-    const paidInvoices = currentMonthNonRecurringInvoices.filter(invoice => invoice.status === 'paid');
+    console.log("Current month non-recurring invoices:", currentMonthNonRecurringInvoices);
+    
+    // Filter to only paid and truly non-recurring invoices
+    const paidInvoices = currentMonthNonRecurringInvoices.filter(invoice => 
+      invoice.status === 'paid' && invoice.recurring === false
+    );
+    
+    console.log("Filtered paid non-recurring invoices for current month:", paidInvoices);
     
     return {
       count: paidInvoices.length,
