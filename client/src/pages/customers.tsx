@@ -59,6 +59,8 @@ export default function Customers() {
   const [viewMode, setViewMode] = useState<"card" | "table">("card");
   const [customerToDelete, setCustomerToDelete] = useState<Customer | null>(null);
   const [showDeleteDialog, setShowDeleteDialog] = useState(false);
+  const [currentPage, setCurrentPage] = useState(1);
+  const ITEMS_PER_PAGE = 50;
   
   const { toast } = useToast();
   const queryClient = useQueryClient();
@@ -109,6 +111,7 @@ export default function Customers() {
   const openDeleteDialog = (customer: Customer, e: React.MouseEvent) => {
     e.preventDefault();
     e.stopPropagation();
+    console.log("Opening delete dialog for customer:", customer.id);
     setCustomerToDelete(customer);
     setShowDeleteDialog(true);
   };
