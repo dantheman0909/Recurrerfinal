@@ -190,6 +190,21 @@ export default function SignupPage() {
         </svg>
         Sign up with Google
       </Button>
+      
+      <div className="mt-2 rounded-md bg-amber-50 border border-amber-200 p-2">
+        <div className="flex items-center">
+          <div className="flex-shrink-0">
+            <svg className="h-4 w-4 text-amber-500" viewBox="0 0 20 20" fill="currentColor">
+              <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm1-10a1 1 0 10-2 0v5a1 1 0 102 0V8zm-1-1.5a1 1 0 100-2 1 1 0 000 2z" clipRule="evenodd" />
+            </svg>
+          </div>
+          <div className="ml-2">
+            <p className="text-xs text-amber-700">
+              <span className="font-semibold">Development Mode:</span> Using mock authentication - In production, this will connect to Google's actual sign-in service.
+            </p>
+          </div>
+        </div>
+      </div>
 
       <div className="mt-4 rounded-md bg-blue-50 p-4">
         <div className="flex">

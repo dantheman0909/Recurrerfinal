@@ -16,6 +16,19 @@ declare module 'express-session' {
   }
 }
 
+/**
+ * PRODUCTION CONFIGURATION
+ * 
+ * Set this to false before deploying to production!
+ * When false, the real Google OAuth flow will be used.
+ * Make sure you have properly configured Google OAuth credentials in the database
+ * and that the redirect URIs in the Google Developer Console match your production domain.
+ * 
+ * This mock mode is only needed for development in environments where
+ * direct connection to Google's authentication services is not possible (like Replit).
+ */
+const USE_MOCK_OAUTH = true;
+
 const router = Router();
 
 /**
