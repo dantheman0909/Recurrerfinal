@@ -206,20 +206,22 @@ export class ChargebeeSyncService {
 
   /**
    * Check if all required columns exist in the local table, and create them if not
+   * Improved to safely handle existing columns and prevent errors
    */
   private async ensureColumnsExist(
     tableName: string,
     mappings: { local_field: string }[]
   ): Promise<void> {
     try {
-      // Get existing columns in the table
+      // Get existing columns in the table with a more reliable method
       const columnsQuery = `
         SELECT column_name 
         FROM information_schema.columns 
-        WHERE table_name = '${tableName}'
+        WHERE table_name = $1
+        AND table_schema = 'public'
       `;
       
-      const columns = await db.execute(sql.raw(columnsQuery));
+      const columns = await db.execute(sql.raw(columnsQuery, [tableName]));
       const existingColumns = Array.isArray(columns) 
         ? columns.map((col: any) => col.column_name?.toLowerCase())
         : [];
@@ -227,12 +229,18 @@ export class ChargebeeSyncService {
       // Make sure the updated_from_chargebee_at column exists
       // Check if the column already exists (case-insensitive)
       if (!existingColumns.includes('updated_from_chargebee_at'.toLowerCase())) {
-        const alterQuery = `
-          ALTER TABLE ${tableName} 
-          ADD COLUMN updated_from_chargebee_at TIMESTAMP NULL
-        `;
-        await db.execute(sql.raw(alterQuery));
-        console.log(`Added updated_from_chargebee_at column to ${tableName}`);
+        try {
+          const alterQuery = `
+            ALTER TABLE ${tableName} 
+            ADD COLUMN IF NOT EXISTS updated_from_chargebee_at TIMESTAMP NULL
+          `;
+          await db.execute(sql.raw(alterQuery));
+          console.log(`Added updated_from_chargebee_at column to ${tableName}`);
+        } catch (columnError) {
+          // Log but continue if there's an error (likely column already exists)
+          console.log(`Note: Could not add updated_from_chargebee_at column to ${tableName}: ${columnError}`);
+          // Don't throw here - continue with other columns
+        }
       } else {
         console.log(`Column updated_from_chargebee_at already exists in ${tableName}`);
       }
@@ -242,21 +250,29 @@ export class ChargebeeSyncService {
         const fieldName = mapping.local_field.toLowerCase();
         // Check if the column already exists (case-insensitive)
         if (!existingColumns.includes(fieldName)) {
-          // Default to TEXT for Chargebee fields since we don't have field type information
-          const alterQuery = `
-            ALTER TABLE ${tableName} 
-            ADD COLUMN ${fieldName} TEXT NULL
-          `;
-          
-          await db.execute(sql.raw(alterQuery));
-          console.log(`Added column ${fieldName} to ${tableName}`);
+          try {
+            // Default to TEXT for Chargebee fields since we don't have field type information
+            // Use IF NOT EXISTS to ensure we don't get an error if the column already exists
+            const alterQuery = `
+              ALTER TABLE ${tableName} 
+              ADD COLUMN IF NOT EXISTS ${fieldName} TEXT NULL
+            `;
+            
+            await db.execute(sql.raw(alterQuery));
+            console.log(`Added column ${fieldName} to ${tableName}`);
+          } catch (columnError) {
+            // Log but continue - don't fail the whole sync for one column
+            console.log(`Note: Could not add column ${fieldName} to ${tableName}: ${columnError}`);
+          }
         } else {
           console.log(`Column ${fieldName} already exists in ${tableName}`);
         }
       }
     } catch (error) {
       console.error(`Error ensuring columns for ${tableName}:`, error);
-      throw error;
+      // Don't re-throw the error here - this allows the sync to continue even if column checks fail
+      // Return instead of throw to allow the process to continue
+      return;
     }
   }
 }
