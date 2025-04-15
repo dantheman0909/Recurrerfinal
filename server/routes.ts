@@ -1734,6 +1734,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
   // Note: External data routes are now registered directly in server/index.ts
 
+  // Register user management routes - managed separately
+
   const httpServer = createServer(app);
   return httpServer;
 }

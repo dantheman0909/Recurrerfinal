@@ -2,35 +2,34 @@ import React from 'react';
 import { Card, CardHeader, CardTitle, CardDescription, CardContent } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Users, Database, Settings, BarChart } from 'lucide-react';
-import { useNavigate } from 'wouter';
+import { Link } from 'wouter';
 
 export default function AdminPage() {
-  const [, navigate] = useNavigate();
 
   const adminSections = [
     {
       title: 'User Management',
       description: 'Manage users, roles, and team assignments',
       icon: Users,
-      action: () => navigate('/admin/users')
+      href: '/admin/users'
     },
     {
       title: 'Integrations',
       description: 'Configure external data sources and integrations',
       icon: Database,
-      action: () => navigate('/admin/integrations')
+      href: '/admin/integrations'
     },
     {
       title: 'Chargebee Settings',
       description: 'Configure Chargebee billing integration settings',
       icon: Settings,
-      action: () => navigate('/settings/chargebee')
+      href: '/settings/chargebee'
     },
     {
       title: 'Analytics Settings',
       description: 'Configure analytics and reporting settings',
       icon: BarChart,
-      action: () => navigate('/admin/analytics')
+      href: '/admin/analytics'
     }
   ];
 
@@ -52,12 +51,11 @@ export default function AdminPage() {
               </div>
             </CardHeader>
             <CardContent>
-              <Button 
-                onClick={section.action}
-                className="w-full"
-              >
-                Manage {section.title}
-              </Button>
+              <Link href={section.href}>
+                <Button className="w-full">
+                  Manage {section.title}
+                </Button>
+              </Link>
             </CardContent>
           </Card>
         ))}
