@@ -1,17 +1,44 @@
 import { db } from "./db";
-import { googleOAuthConfig, userOAuthTokens, emailMessages, calendarEvents } from "@shared/schema";
+import { googleOAuthConfig, userOAuthTokens, emailMessages, calendarEvents, oauthProviderEnum, oauthScopeEnum } from "@shared/schema";
 
 /**
  * Creates Google OAuth related tables for integration with Gmail and Google Calendar
+ * @returns {Promise<{success: boolean, error?: string, message?: string}>} Result of the operation
  */
 async function createGoogleOAuthTables() {
   try {
+    // Create enum types first if they don't exist
+    try {
+      console.log("Creating oauth_provider enum type if it doesn't exist...");
+      await db.execute(`
+        DO $$
+        BEGIN
+          IF NOT EXISTS (SELECT 1 FROM pg_type WHERE typname = 'oauth_provider') THEN
+            CREATE TYPE "oauth_provider" AS ENUM ('google');
+          END IF;
+        END
+        $$;
+      `);
+
+      console.log("Creating oauth_scope enum type if it doesn't exist...");
+      await db.execute(`
+        DO $$
+        BEGIN
+          IF NOT EXISTS (SELECT 1 FROM pg_type WHERE typname = 'oauth_scope') THEN
+            CREATE TYPE "oauth_scope" AS ENUM ('email', 'profile', 'gmail', 'calendar');
+          END IF;
+        END
+        $$;
+      `);
+    } catch (enumError) {
+      console.error("Error creating enum types:", enumError);
+    }
+
     // Check if tables exist first to avoid errors
     const existingTables = await db.execute(
       `SELECT table_name FROM information_schema.tables 
        WHERE table_schema = 'public' 
-       AND table_name IN ($1, $2, $3, $4)`,
-      ["google_oauth_config", "user_oauth_tokens", "email_messages", "calendar_events"]
+       AND table_name IN ('google_oauth_config', 'user_oauth_tokens', 'email_messages', 'calendar_events')`
     );
 
     const tableNames = existingTables.rows.map(row => row.table_name);
@@ -109,9 +136,14 @@ async function createGoogleOAuthTables() {
     }
 
     console.log("Google OAuth tables created successfully");
+    return { success: true, message: "Google OAuth tables created successfully" };
   } catch (error) {
     console.error("Error creating Google OAuth tables:", error);
-    throw error;
+    return { 
+      success: false, 
+      error: error instanceof Error ? error.message : String(error),
+      message: "Failed to create Google OAuth tables"
+    };
   }
 }
 

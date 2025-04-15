@@ -290,6 +290,19 @@ app.get('/', (req, res, next) => {
       } catch (error) {
         console.error('Error creating notifications and achievements tables:', error);
       }
+      
+      try {
+        // Create Google OAuth tables for Gmail and Calendar integration
+        const createGoogleOAuthTables = (await import('./create-google-oauth-tables')).default;
+        const googleOAuthResult = await createGoogleOAuthTables();
+        if (googleOAuthResult.success) {
+          log('Google OAuth tables created successfully');
+        } else {
+          console.warn('Google OAuth tables warning:', googleOAuthResult.error);
+        }
+      } catch (error) {
+        console.error('Error creating Google OAuth tables:', error);
+      }
     }
   } catch (error) {
     console.error('Error during database initialization:', error);
