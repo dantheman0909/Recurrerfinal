@@ -486,16 +486,6 @@ export default function CustomerDetails() {
                                 </div>
                               );
                             })()}
-                            <a 
-                              href={customer.chargebee_customer_id ? 
-                                `https://app.chargebee.com/customers/${customer.chargebee_customer_id}` : 
-                                "https://app.chargebee.com"} 
-                              target="_blank" 
-                              rel="noopener noreferrer" 
-                              className="text-sm text-teal-600 hover:text-teal-800 flex items-center"
-                            >
-                              View in Chargebee <ExternalLink className="h-3 w-3 ml-1" />
-                            </a>
                           </div>
                         </TabsContent>
                         
