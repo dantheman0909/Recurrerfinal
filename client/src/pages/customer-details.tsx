@@ -841,14 +841,22 @@ export default function CustomerDetails() {
                         HubSpot Data
                     </Button>
 
-                    {/* Chargebee information - external link removed */}
+                    {/* Chargebee information */}
                     {(customer.chargebee_customer_id || externalData?.chargebee?.customer) && (
                       <div>
-                        <Button variant="outline" className="w-full justify-start mb-1" disabled>
+                        <Button variant="outline" className="w-full justify-start mb-1" asChild>
+                          <a 
+                            href={customer.chargebee_customer_id ? 
+                              `https://getreelo.chargebee.com/d/customers/${customer.chargebee_customer_id}` : 
+                              "https://getreelo.chargebee.com"} 
+                            target="_blank" 
+                            rel="noopener noreferrer"
+                          >
                             <svg className="w-4 h-4 mr-2" viewBox="0 0 24 24" fill="#FF7846">
                               <path d="M19.998 6.293L15.04 2H4v20h16V6.293zM12 16.5c-2.48 0-4.5-2.02-4.5-4.5S9.52 7.5 12 7.5s4.5 2.02 4.5 4.5-2.02 4.5-4.5 4.5z"/>
                             </svg>
-                            Chargebee Data
+                            View in Chargebee
+                          </a>
                         </Button>
                         
                         {externalData?.chargebee?.error ? (
