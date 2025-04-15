@@ -28,13 +28,26 @@ import { GradientChart } from "@/components/ui/gradient-chart";
 import { format } from "date-fns";
 import { TaskList } from "@/components/dashboard/task-list";
 import { queryClient, apiRequest } from "@/lib/queryClient";
-import { useToast } from "@/hooks/use-toast";
-import { useState } from "react";
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
+import { 
+  Dialog, 
+  DialogContent, 
+  DialogDescription, 
+  DialogHeader, 
+  DialogTitle, 
+  DialogTrigger 
+} from "@/components/ui/dialog";
+import { 
+  Select, 
+  SelectContent, 
+  SelectItem, 
+  SelectTrigger, 
+  SelectValue 
+} from "@/components/ui/select";
 import { Label } from "@/components/ui/label";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { useState } from "react";
+import { useToast } from "@/hooks/use-toast";
 
 export default function CustomerDetails() {
   const { id } = useParams();
@@ -118,6 +131,49 @@ export default function CustomerDetails() {
       });
     } finally {
       setIsCreatingTask(false);
+    }
+  };
+  
+  // Handle CSM assignment
+  const handleAssignCSM = async (csmId: number) => {
+    if (!csmId) {
+      toast({
+        title: "Error",
+        description: "Please select a valid CSM",
+        variant: "destructive"
+      });
+      return;
+    }
+    
+    setIsLoading(true);
+    
+    try {
+      // Get the CSM details from the users data
+      const selectedCsm = users.find(user => user.id === csmId);
+      
+      if (!selectedCsm) {
+        throw new Error("Selected CSM not found");
+      }
+      
+      // Call the API to assign the CSM
+      await apiRequest(`/api/customers/${id}/assign-csm`, 'POST', { csmId });
+      
+      // Invalidate the customer query to refresh data
+      queryClient.invalidateQueries({ queryKey: [`/api/customers/${id}`] });
+      
+      toast({
+        title: "Success",
+        description: `${selectedCsm.name} has been assigned as the CSM for this customer.`
+      });
+    } catch (error) {
+      console.error("Error assigning CSM:", error);
+      toast({
+        title: "Error",
+        description: "Failed to assign CSM. Please try again.",
+        variant: "destructive"
+      });
+    } finally {
+      setIsLoading(false);
     }
   };
   
