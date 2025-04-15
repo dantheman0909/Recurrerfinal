@@ -1,7 +1,7 @@
 import React from 'react';
 import { Card, CardHeader, CardTitle, CardDescription, CardContent } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
-import { Users, Database, Settings, BarChart } from 'lucide-react';
+import { Users, Database, Settings, BarChart, Shield, UserCog } from 'lucide-react';
 import { Link } from 'wouter';
 
 export default function AdminPage() {
@@ -9,9 +9,15 @@ export default function AdminPage() {
   const adminSections = [
     {
       title: 'User Management',
-      description: 'Manage users, roles, and team assignments',
+      description: 'Manage users and team assignments',
       icon: Users,
       href: '/admin/users'
+    },
+    {
+      title: 'Role Management',
+      description: 'Configure role permissions and access levels',
+      icon: Shield,
+      href: '/admin/roles'
     },
     {
       title: 'Integrations',

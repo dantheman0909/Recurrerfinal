@@ -277,7 +277,8 @@ const RolePermissionsPage = () => {
                             id={`admin-${permission.id}`}
                             checked={permission.roles.admin}
                             onCheckedChange={() => togglePermission(permission.id, 'admin')}
-                            disabled={permission.id === 'manage_users'} /* Admin must always have user management */
+                            disabled={permission.id === 'manage_users'} 
+                            // Admin must always have user management
                           />
                         </div>
                       </TableCell>

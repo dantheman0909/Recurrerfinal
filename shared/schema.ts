@@ -18,6 +18,13 @@ export const achievementTypeEnum = pgEnum('achievement_type', ['tasks_completed'
 export const oauthProviderEnum = pgEnum('oauth_provider', ['google']);
 export const oauthScopeEnum = pgEnum('oauth_scope', ['email', 'profile', 'gmail', 'calendar']);
 
+// Permission Types
+export const permissionIdEnum = pgEnum('permission_id', [
+  'view_customers', 'edit_customers', 'delete_customers', 'assign_customers',
+  'view_tasks', 'manage_tasks', 'view_reports', 'manage_users',
+  'manage_settings', 'manage_integrations'
+]);
+
 // Users & Profiles
 export const users = pgTable("users", {
   id: serial("id").primaryKey(),
@@ -503,6 +510,21 @@ export type InsertCustomer = z.infer<typeof insertCustomerSchema>;
 
 export type Task = typeof tasks.$inferSelect;
 export type InsertTask = z.infer<typeof insertTaskSchema>;
+
+// Permissions table for role-based access control
+export const permissions = pgTable("permissions", {
+  id: text("id").primaryKey(), // permission unique identifier
+  name: text("name").notNull(), // human-readable name 
+  description: text("description").notNull(), // details about what this permission grants
+  admin_access: boolean("admin_access").notNull().default(true), // whether admin role has this permission
+  team_lead_access: boolean("team_lead_access").notNull().default(false), // whether team lead role has this permission
+  csm_access: boolean("csm_access").notNull().default(false), // whether csm role has this permission
+  created_at: timestamp("created_at").defaultNow(),
+});
+
+export const insertPermissionSchema = createInsertSchema(permissions).omit({ created_at: true });
+export type Permission = typeof permissions.$inferSelect;
+export type InsertPermission = z.infer<typeof insertPermissionSchema>;
 
 export type TaskComment = typeof taskComments.$inferSelect;
 
