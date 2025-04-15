@@ -269,6 +269,7 @@ export const chargebeeConfig = pgTable("chargebee_config", {
   apiKey: text("apiKey").notNull(),
   status: integrationStatusEnum("status").default('active'),
   last_synced_at: timestamp("last_synced_at"),
+  last_sync_stats: jsonb("last_sync_stats"), // Statistics from last sync (customers, subscriptions, invoices)
   sync_frequency: integer("sync_frequency").default(24), // Sync frequency in hours
   created_by: integer("created_by").references(() => users.id),
   created_at: timestamp("created_at").defaultNow(),
@@ -495,7 +496,7 @@ export const insertRedZoneAlertSchema = createInsertSchema(redZoneAlerts).omit({
 export const insertMySQLConfigSchema = createInsertSchema(mysqlConfig).omit({ id: true, created_at: true });
 export const insertMySQLFieldMappingSchema = createInsertSchema(mysqlFieldMappings).omit({ id: true, created_at: true });
 export const insertMySQLSavedQuerySchema = createInsertSchema(mysqlSavedQueries).omit({ id: true, created_at: true, last_run_at: true });
-export const insertChargebeeConfigSchema = createInsertSchema(chargebeeConfig).omit({ id: true, created_at: true, last_synced_at: true });
+export const insertChargebeeConfigSchema = createInsertSchema(chargebeeConfig).omit({ id: true, created_at: true, last_synced_at: true, last_sync_stats: true });
 export const insertChargebeeFieldMappingSchema = createInsertSchema(chargebeeFieldMappings).omit({ id: true, created_at: true });
 export const insertNotificationSchema = createInsertSchema(notifications).omit({ id: true, created_at: true });
 export const insertUserAchievementSchema = createInsertSchema(userAchievements).omit({ id: true, earned_at: true });

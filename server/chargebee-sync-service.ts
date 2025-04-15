@@ -69,12 +69,15 @@ export class ChargebeeSyncService {
         switch (entityType) {
           case 'customer':
             entityData = await chargebeeService.getCustomers(100);
+            syncStats.customers = entityData.length;
             break;
           case 'subscription':
             entityData = await chargebeeService.getSubscriptions(100);
+            syncStats.subscriptions = entityData.length;
             break;
           case 'invoice':
             entityData = await chargebeeService.getInvoices(100);
+            syncStats.invoices = entityData.length;
             break;
           default:
             console.warn(`Unknown Chargebee entity type: ${entityType}`);
@@ -95,10 +98,19 @@ export class ChargebeeSyncService {
         }
       }
 
+      // Store sync stats in the database
+      await db.update(chargebeeConfig)
+        .set({ 
+          last_synced_at: new Date(),
+          last_sync_stats: JSON.stringify(syncStats)
+        })
+        .where(eq(chargebeeConfig.id, config.id));
+
       return { 
         success: true, 
         message: `Successfully synchronized ${totalRecords} records from Chargebee`, 
-        records: totalRecords 
+        records: totalRecords,
+        syncStats 
       };
     } catch (error) {
       console.error('Chargebee synchronization error:', error);
