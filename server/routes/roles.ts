@@ -3,6 +3,7 @@ import { db } from '../db';
 import { permissions } from '@shared/schema';
 import { isAuthenticated, isAdmin } from '../middleware/auth';
 import { eq } from 'drizzle-orm';
+import { requirePermission, getUserPermissions } from '../utils/permission-check';
 
 const router = express.Router();
 
@@ -59,26 +60,8 @@ router.get('/user-permissions', isAuthenticated, async (req, res) => {
       return res.status(401).json({ error: 'User not authenticated' });
     }
     
-    const userRole = req.user.role;
-    
-    // Get all permissions
-    const allPermissions = await db.query.permissions.findMany();
-    
-    // Filter permissions based on user role
-    const userPermissions = allPermissions
-      .filter(permission => {
-        switch (userRole) {
-          case 'admin':
-            return permission.admin_access;
-          case 'team_lead':
-            return permission.team_lead_access;
-          case 'csm':
-            return permission.csm_access;
-          default:
-            return false;
-        }
-      })
-      .map(p => p.id);
+    // Get permissions using our utility function
+    const userPermissions = await getUserPermissions(req.user.id);
     
     res.json({ permissions: userPermissions });
   } catch (error) {

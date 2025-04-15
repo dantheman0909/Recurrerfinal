@@ -1,6 +1,7 @@
 import { Route, Switch } from "wouter";
 import { useState, useEffect } from "react";
 import NotFound from "@/pages/not-found";
+import UnauthorizedPage from "@/pages/unauthorized";
 import Dashboard from "@/pages/dashboard";
 import Customers from "@/pages/customers";
 import CustomerDetails from "@/pages/customer-details";
@@ -23,6 +24,8 @@ import { AuthLayout } from "@/components/layouts/auth-layout";
 import LoginPage from "@/pages/auth/login";
 import SignupPage from "@/pages/auth/signup";
 import { useLocation } from "wouter";
+import { useAuth } from "@/context/auth-context";
+import ProtectedRoute from "@/components/protected-route";
 
 // React Router-style navigation
 const navigate = (path: string) => {
@@ -77,23 +80,103 @@ function App() {
     <AppLayout>
       <Switch>
         <Route path="/" component={Dashboard} />
-        <Route path="/customers/import/diagnostics" component={ImportDiagnostics} />
-        <Route path="/customers" component={Customers} />
-        <Route path="/customers/:id" component={CustomerDetails} />
-        <Route path="/tasks" component={Tasks} />
-        <Route path="/playbooks" component={Playbooks} />
-        <Route path="/playbooks/workflow" component={PlaybookWorkflow} />
-        <Route path="/reports" component={Reports} />
-        <Route path="/red-zone" component={RedZone} />
-        <Route path="/red-zone/settings" component={RedZoneSettingsEnhanced} />
-        <Route path="/admin" component={Admin} />
-        <Route path="/admin/users" component={AdminUsers} />
-        <Route path="/admin/roles" component={AdminRoles} />
-        <Route path="/achievements" component={Achievements} />
-        <Route path="/profile" component={Profile} />
-        <Route path="/settings" component={Settings} />
-        <Route path="/settings/google-oauth" component={GoogleOAuth} />
+        <Route path="/unauthorized" component={UnauthorizedPage} />
+        
+        {/* Customer routes */}
+        <Route path="/customers/import/diagnostics">
+          <ProtectedRoute requiredPermission="edit_customers">
+            <ImportDiagnostics />
+          </ProtectedRoute>
+        </Route>
+        <Route path="/customers">
+          <ProtectedRoute requiredPermission="view_customers">
+            <Customers />
+          </ProtectedRoute>
+        </Route>
+        <Route path="/customers/:id">
+          <ProtectedRoute requiredPermission="view_customers">
+            <CustomerDetails />
+          </ProtectedRoute>
+        </Route>
+        
+        {/* Task routes */}
+        <Route path="/tasks">
+          <ProtectedRoute requiredPermission="view_tasks">
+            <Tasks />
+          </ProtectedRoute>
+        </Route>
+        
+        {/* Playbook routes */}
+        <Route path="/playbooks">
+          <ProtectedRoute requiredPermission="manage_tasks">
+            <Playbooks />
+          </ProtectedRoute>
+        </Route>
+        <Route path="/playbooks/workflow">
+          <ProtectedRoute requiredPermission="manage_tasks">
+            <PlaybookWorkflow />
+          </ProtectedRoute>
+        </Route>
+        
+        {/* Reports route */}
+        <Route path="/reports">
+          <ProtectedRoute requiredPermission="view_reports">
+            <Reports />
+          </ProtectedRoute>
+        </Route>
+        
+        {/* Red zone routes */}
+        <Route path="/red-zone">
+          <ProtectedRoute>
+            <RedZone />
+          </ProtectedRoute>
+        </Route>
+        <Route path="/red-zone/settings">
+          <ProtectedRoute teamLeadOrAdminOnly>
+            <RedZoneSettingsEnhanced />
+          </ProtectedRoute>
+        </Route>
+        
+        {/* Admin routes */}
+        <Route path="/admin">
+          <ProtectedRoute adminOnly>
+            <Admin />
+          </ProtectedRoute>
+        </Route>
+        <Route path="/admin/users">
+          <ProtectedRoute requiredPermission="manage_users">
+            <AdminUsers />
+          </ProtectedRoute>
+        </Route>
+        <Route path="/admin/roles">
+          <ProtectedRoute adminOnly>
+            <AdminRoles />
+          </ProtectedRoute>
+        </Route>
+        
+        {/* User profile and settings */}
+        <Route path="/achievements">
+          <ProtectedRoute>
+            <Achievements />
+          </ProtectedRoute>
+        </Route>
+        <Route path="/profile">
+          <ProtectedRoute>
+            <Profile />
+          </ProtectedRoute>
+        </Route>
+        <Route path="/settings">
+          <ProtectedRoute>
+            <Settings />
+          </ProtectedRoute>
+        </Route>
+        <Route path="/settings/google-oauth">
+          <ProtectedRoute requiredPermission="manage_settings">
+            <GoogleOAuth />
+          </ProtectedRoute>
+        </Route>
         <Route path="/settings/google-oauth/callback" component={GoogleOAuth} />
+        
         <Route component={NotFound} />
       </Switch>
     </AppLayout>
