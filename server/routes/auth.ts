@@ -1,198 +1,266 @@
-import { Router, Request, Response } from 'express';
-import { z } from 'zod';
+import { Request, Response, Router } from 'express';
 import { db } from '../db';
+import { users } from '../../shared/schema';
 import { eq } from 'drizzle-orm';
-import { users } from '@shared/schema';
 import { googleOAuthService } from '../google-oauth-service';
-import { oauthScopeEnum } from '@shared/schema';
+import bcrypt from 'bcrypt';
 
 const router = Router();
 
 /**
- * Initiates Google OAuth flow
- * GET /api/auth/google
+ * Initiate Google OAuth flow for login
  */
-router.get('/google', async (req: Request, res: Response) => {
+export const googleAuthLogin = async (req: Request, res: Response) => {
   try {
-    // Generate authorization URL with required scopes
-    const scopes = ['email', 'profile'] as const;
-    const authUrlResult = await googleOAuthService.getAuthUrl(scopes);
-    
-    if (!authUrlResult.success) {
-      return res.status(500).json({ 
-        message: 'Failed to generate Google OAuth URL',
-        error: authUrlResult.error
-      });
+    // Initialize Google OAuth service
+    const initResult = await googleOAuthService.initialize();
+    if (!initResult.success) {
+      return res.status(500).json({ error: initResult.error || 'Failed to initialize Google OAuth' });
     }
     
-    // Store info in session if needed
-    if (req.session) {
-      req.session.oauthFlow = { state: 'login' };
+    // Get OAuth URL with appropriate scopes
+    const authUrlResult = await googleOAuthService.getAuthUrl(['email', 'profile']);
+    if (!authUrlResult.success || !authUrlResult.url) {
+      return res.status(500).json({ error: authUrlResult.error || 'Failed to generate authorization URL' });
     }
     
-    // Redirect to Google's authorization page
-    return res.redirect(authUrlResult.url as string);
+    // Save OAuth flow information in session
+    req.session.oauthFlow = 'login';
+    
+    // Redirect to Google's OAuth page
+    res.redirect(authUrlResult.url);
   } catch (error) {
-    console.error('Google OAuth initialization error:', error);
-    return res.status(500).json({ 
-      message: 'Failed to initiate Google authentication',
-      error: error instanceof Error ? error.message : String(error)
-    });
+    console.error('Google auth initiation error:', error);
+    res.status(500).json({ error: 'An error occurred during OAuth initiation' });
   }
-});
+};
 
 /**
- * Handles Google OAuth callback
- * GET /api/auth/google/callback
+ * Handle Google OAuth callback for login
  */
-router.get('/google/callback', async (req: Request, res: Response) => {
+export const googleAuthCallback = async (req: Request, res: Response) => {
   try {
     const { code } = req.query;
     
     if (!code || typeof code !== 'string') {
-      return res.status(400).json({ message: 'Authorization code missing or invalid' });
+      return res.redirect('/auth/login?error=invalid_code');
     }
     
-    // For now, we'll use a dummy user ID until we implement proper sessions
-    const userId = 1; // This should be the actual user's ID from session
+    // Initialize Google OAuth service
+    const initResult = await googleOAuthService.initialize();
+    if (!initResult.success) {
+      return res.redirect('/auth/login?error=initialization_failed');
+    }
     
-    // Exchange the authorization code for tokens
-    const exchangeResult = await googleOAuthService.exchangeCodeForTokens(code, userId);
+    // Check if this is login or signup flow
+    const isSignup = req.session.oauthFlow === 'signup';
+    
+    // Exchange code for tokens
+    // For simplicity without a user yet, we'll use a placeholder userId
+    // In production, this would handle both existing and new users properly
+    const temporaryUserId = 0; // placeholder
+    const exchangeResult = await googleOAuthService.exchangeCodeForTokens(code, temporaryUserId);
     
     if (!exchangeResult.success) {
-      return res.status(500).json({ 
-        message: 'Failed to exchange code for tokens',
-        error: exchangeResult.error
-      });
+      return res.redirect(`/auth/${isSignup ? 'signup' : 'login'}?error=token_exchange_failed`);
     }
     
     // Get user info from Google
-    const userInfoResult = await googleOAuthService.getUserInfo(userId);
+    const userInfoResult = await googleOAuthService.getUserInfo(temporaryUserId);
     
-    if (!userInfoResult.success) {
-      return res.status(500).json({ 
-        message: 'Failed to get user info from Google',
-        error: userInfoResult.error
-      });
+    if (!userInfoResult.success || !userInfoResult.userInfo) {
+      return res.redirect(`/auth/${isSignup ? 'signup' : 'login'}?error=user_info_failed`);
     }
     
-    const userInfo = userInfoResult.userInfo;
-    const email = userInfo?.email;
+    const googleUser = userInfoResult.userInfo;
+    const email = googleUser.email;
     
-    if (!email) {
-      return res.status(500).json({ message: 'Could not retrieve email from Google' });
-    }
+    // Check if user exists
+    const existingUsers = await db.select().from(users).where(eq(users.email, email));
     
-    // Check if this is a signup or login attempt
-    const isSignup = req.session?.oauthFlow?.state === 'signup';
-    
-    // See if user already exists
-    const existingUser = await db.query.users.findFirst({
-      where: eq(users.email, email)
-    });
-    
-    if (existingUser) {
-      // User exists - handle as login
-      // Set session authentication here
-      if (req.session) {
-        req.session.userId = existingUser.id;
-        req.session.userRole = existingUser.role;
-      }
-      
-      return res.redirect('/'); // Redirect to dashboard
-    } else if (isSignup) {
-      // New user - create account
-      // Check if domain is reelo.io for automatic CSM role
-      const isReeloEmail = email.endsWith('@reelo.io');
-      const role = isReeloEmail ? 'csm' : 'csm'; // Default to CSM for now
-      
-      // Create the user
-      const newUser = {
-        name: userInfo?.name || email.split('@')[0],
-        email: email,
-        role: role
-      };
-      
-      try {
+    if (existingUsers.length === 0) {
+      // User doesn't exist
+      if (isSignup) {
+        // For signup, create the user
+        const isReeloEmail = email.endsWith('@reelo.io');
+        const userRole = isReeloEmail ? 'csm' : 'csm'; // Default to CSM, but this could be configurable
+        
+        // Create new user
+        const newUser = {
+          name: googleUser.name || `${googleUser.given_name} ${googleUser.family_name}`,
+          email: email,
+          role: userRole as 'admin' | 'team_lead' | 'csm',
+          password: '', // no password for OAuth users
+          created_at: new Date(),
+          updated_at: new Date()
+        };
+        
         const result = await db.insert(users).values(newUser).returning();
-        
-        // Set session authentication here
-        if (req.session && result.length > 0) {
+        if (result && result.length > 0) {
+          // Set user in session
           req.session.userId = result[0].id;
-          req.session.userRole = role;
+          req.session.userRole = userRole;
+          
+          return res.redirect('/');
+        } else {
+          return res.redirect('/auth/signup?error=user_creation_failed');
         }
-        
-        return res.redirect('/'); // Redirect to dashboard
-      } catch (error) {
-        console.error('Error creating user:', error);
-        return res.status(500).json({ 
-          message: 'Failed to create user account',
-          error: error instanceof Error ? error.message : String(error)
-        });
+      } else {
+        // For login, redirect to signup with email prefilled
+        return res.redirect(`/auth/signup?email=${encodeURIComponent(email)}`);
       }
     } else {
-      // User doesn't exist and not a signup attempt
-      return res.redirect('/auth/signup?email=' + encodeURIComponent(email));
+      // User exists, log them in
+      const user = existingUsers[0];
+      req.session.userId = user.id;
+      return res.redirect('/');
     }
   } catch (error) {
-    console.error('Google OAuth callback error:', error);
-    return res.status(500).json({ 
-      message: 'Failed to process Google authentication',
-      error: error instanceof Error ? error.message : String(error)
-    });
+    console.error('Google auth callback error:', error);
+    res.redirect('/auth/login?error=callback_failed');
   }
-});
+};
 
 /**
- * Initiates Google OAuth flow specifically for signup
- * GET /api/auth/google/signup
+ * Initiate Google OAuth flow for signup
  */
-router.get('/google/signup', async (req: Request, res: Response) => {
+export const googleAuthSignup = async (req: Request, res: Response) => {
   try {
-    // Generate authorization URL with required scopes
-    const scopes = ['email', 'profile'] as const;
-    const authUrlResult = await googleOAuthService.getAuthUrl(scopes);
+    // Initialize Google OAuth service
+    const initResult = await googleOAuthService.initialize();
+    if (!initResult.success) {
+      return res.status(500).json({ error: initResult.error || 'Failed to initialize Google OAuth' });
+    }
     
-    if (!authUrlResult.success) {
-      return res.status(500).json({ 
-        message: 'Failed to generate Google OAuth URL',
-        error: authUrlResult.error
+    // Get OAuth URL with appropriate scopes
+    const authUrlResult = await googleOAuthService.getAuthUrl(['email', 'profile']);
+    if (!authUrlResult.success || !authUrlResult.url) {
+      return res.status(500).json({ error: authUrlResult.error || 'Failed to generate authorization URL' });
+    }
+    
+    // Save OAuth flow information in session
+    req.session.oauthFlow = 'signup';
+    
+    // Redirect to Google's OAuth page
+    res.redirect(authUrlResult.url);
+  } catch (error) {
+    console.error('Google auth signup initiation error:', error);
+    res.status(500).json({ error: 'An error occurred during OAuth initiation' });
+  }
+};
+
+/**
+ * Login with email and password
+ */
+export const login = async (req: Request, res: Response) => {
+  try {
+    const { email, password } = req.body;
+    
+    if (!email || !password) {
+      return res.status(400).json({ error: 'Email and password are required' });
+    }
+    
+    // Find user by email
+    const userResult = await db.select().from(users).where(eq(users.email, email));
+    
+    if (!userResult || userResult.length === 0) {
+      return res.status(401).json({ error: 'Invalid email or password' });
+    }
+    
+    const user = userResult[0];
+    
+    // Check if user has a password (might be OAuth-only user)
+    if (!user.password) {
+      return res.status(401).json({ 
+        error: 'This account uses Google sign-in. Please login with Google.',
+        useGoogle: true
       });
     }
     
-    // Store info in session
-    if (req.session) {
-      req.session.oauthFlow = { state: 'signup' };
+    // Validate password
+    const isValidPassword = await bcrypt.compare(password, user.password);
+    
+    if (!isValidPassword) {
+      return res.status(401).json({ error: 'Invalid email or password' });
     }
     
-    // Redirect to Google's authorization page
-    return res.redirect(authUrlResult.url as string);
-  } catch (error) {
-    console.error('Google OAuth signup initialization error:', error);
-    return res.status(500).json({ 
-      message: 'Failed to initiate Google signup',
-      error: error instanceof Error ? error.message : String(error)
+    // Set user in session
+    req.session.userId = user.id;
+    
+    // Return user info without password
+    const { password: _, ...safeUser } = user;
+    return res.json({ 
+      success: true, 
+      user: safeUser 
     });
+  } catch (error) {
+    console.error('Login error:', error);
+    res.status(500).json({ error: 'An error occurred during login' });
   }
-});
+};
 
 /**
- * Logout endpoint
- * GET /api/auth/logout
+ * Register a new user
  */
-router.get('/logout', (req: Request, res: Response) => {
-  if (req.session) {
-    req.session.destroy((err) => {
-      if (err) {
-        console.error('Logout error:', err);
-        return res.status(500).json({ message: 'Failed to logout' });
-      }
-      
-      res.redirect('/auth/login');
+export const register = async (req: Request, res: Response) => {
+  try {
+    const { name, email, password } = req.body;
+    
+    if (!name || !email || !password) {
+      return res.status(400).json({ error: 'Name, email, and password are required' });
+    }
+    
+    // Check if email already exists
+    const existingUser = await db.select().from(users).where(eq(users.email, email));
+    
+    if (existingUser && existingUser.length > 0) {
+      return res.status(409).json({ error: 'Email already in use' });
+    }
+    
+    // Hash password
+    const saltRounds = 10;
+    const hashedPassword = await bcrypt.hash(password, saltRounds);
+    
+    // Determine role based on email domain
+    const isReeloEmail = email.endsWith('@reelo.io');
+    const role = isReeloEmail ? 'csm' : 'csm'; // Default to CSM, but this could be configurable
+    
+    // Create new user
+    const newUser = {
+      name,
+      email,
+      password: hashedPassword,
+      role: role as 'admin' | 'team_lead' | 'csm',
+      created_at: new Date(),
+      updated_at: new Date()
+    };
+    
+    const result = await db.insert(users).values(newUser).returning();
+    
+    if (!result || result.length === 0) {
+      return res.status(500).json({ error: 'Failed to create user' });
+    }
+    
+    // Set user in session
+    req.session.userId = result[0].id;
+    
+    // Return user without password
+    const { password: _, ...safeUser } = result[0];
+    return res.json({ 
+      success: true, 
+      user: safeUser 
     });
-  } else {
-    res.redirect('/auth/login');
+  } catch (error) {
+    console.error('Registration error:', error);
+    res.status(500).json({ error: 'An error occurred during registration' });
   }
-});
+};
+
+// Set up the routes
+router.post('/login', login);
+router.post('/register', register);
+router.get('/google', googleAuthLogin);
+router.get('/google/callback', googleAuthCallback);
+router.get('/google/signup', googleAuthSignup);
 
 export default router;

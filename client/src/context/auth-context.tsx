@@ -1,129 +1,167 @@
-import React, { createContext, useContext, useState, useEffect } from 'react';
-import { useLocation } from 'wouter';
+import React, { createContext, useContext, useState, useEffect, ReactNode } from 'react';
+import { apiRequest } from '@/lib/queryClient';
 
-// User type definition
-export interface User {
+// Define the User type
+export type User = {
   id: number;
   name: string;
   email: string;
   role: 'admin' | 'team_lead' | 'csm';
-  team_lead_id?: number | null;
-}
+  created_at: string;
+  updated_at: string;
+};
 
-// Auth context type definition
-interface AuthContextType {
+// Define the AuthContextType
+type AuthContextType = {
   user: User | null;
-  isAuthenticated: boolean;
-  isLoading: boolean;
-  login: (email: string, password: string) => Promise<boolean>;
+  loading: boolean;
+  authenticated: boolean;
+  login: (email: string, password: string) => Promise<{ success: boolean; error?: string }>;
   logout: () => Promise<void>;
-  checkAuth: () => Promise<boolean>;
+  register: (name: string, email: string, password: string) => Promise<{ success: boolean; error?: string }>;
+  googleLogin: () => void;
+  googleSignup: () => void;
+};
+
+// Create the context with a default value
+const AuthContext = createContext<AuthContextType | undefined>(undefined);
+
+// AuthProvider props
+interface AuthProviderProps {
+  children: ReactNode;
 }
 
-// Create the auth context with default values
-const AuthContext = createContext<AuthContextType>({
-  user: null,
-  isAuthenticated: false,
-  isLoading: true,
-  login: async () => false,
-  logout: async () => {},
-  checkAuth: async () => false,
-});
-
-// Auth provider component
-export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
+// AuthProvider component
+export const AuthProvider = ({ children }: AuthProviderProps) => {
   const [user, setUser] = useState<User | null>(null);
-  const [isAuthenticated, setIsAuthenticated] = useState(false);
-  const [isLoading, setIsLoading] = useState(true);
-  const [, setLocation] = useLocation();
-  
+  const [loading, setLoading] = useState<boolean>(true);
+  const [authenticated, setAuthenticated] = useState<boolean>(false);
+
   // Check authentication status on mount
   useEffect(() => {
-    checkAuth();
-  }, []);
-  
-  // Login function
-  const login = async (email: string, password: string): Promise<boolean> => {
-    try {
-      // In the future, implement actual login API call
-      // For now, simulate successful login
-      setIsAuthenticated(true);
-      setUser({
-        id: 1,
-        name: 'Test User',
-        email: email,
-        role: 'csm',
-      });
-      sessionStorage.setItem('isLoggedIn', 'true');
-      return true;
-    } catch (error) {
-      console.error('Login failed:', error);
-      return false;
-    }
-  };
-  
-  // Logout function
-  const logout = async (): Promise<void> => {
-    try {
-      // Call logout API
-      await fetch('/api/auth/logout');
-      
-      // Clear auth state
-      setUser(null);
-      setIsAuthenticated(false);
-      sessionStorage.removeItem('isLoggedIn');
-      
-      // Redirect to login page
-      setLocation('/auth/login');
-    } catch (error) {
-      console.error('Logout failed:', error);
-    }
-  };
-  
-  // Check if user is authenticated
-  const checkAuth = async (): Promise<boolean> => {
-    setIsLoading(true);
-    try {
-      // Get current user info from API
-      const response = await fetch('/api/me');
-      const data = await response.json();
-      
-      if (data.authenticated && data.user) {
-        setUser(data.user);
-        setIsAuthenticated(true);
-        sessionStorage.setItem('isLoggedIn', 'true');
-        setIsLoading(false);
-        return true;
-      } else {
+    const checkAuthStatus = async () => {
+      try {
+        const response = await fetch('/api/me');
+        const data = await response.json();
+
+        if (data.authenticated && data.user) {
+          setUser(data.user);
+          setAuthenticated(true);
+        } else {
+          setUser(null);
+          setAuthenticated(false);
+        }
+      } catch (error) {
+        console.error('Error checking authentication status:', error);
         setUser(null);
-        setIsAuthenticated(false);
-        sessionStorage.removeItem('isLoggedIn');
-        setIsLoading(false);
-        return false;
+        setAuthenticated(false);
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    checkAuthStatus();
+  }, []);
+
+  // Login function
+  const login = async (email: string, password: string) => {
+    try {
+      const response = await fetch('/api/auth/login', {
+        method: 'POST',
+        body: JSON.stringify({ email, password }),
+        headers: {
+          'Content-Type': 'application/json',
+        },
+      });
+
+      const data = await response.json();
+
+      if (data.success && data.user) {
+        setUser(data.user);
+        setAuthenticated(true);
+        return { success: true };
+      } else {
+        return { success: false, error: data.error || 'Login failed' };
       }
     } catch (error) {
-      console.error('Authentication check failed:', error);
-      setUser(null);
-      setIsAuthenticated(false);
-      sessionStorage.removeItem('isLoggedIn');
-      setIsLoading(false);
-      return false;
+      console.error('Login error:', error);
+      return { success: false, error: 'An error occurred during login' };
     }
   };
-  
-  return (
-    <AuthContext.Provider value={{ 
-      user, 
-      isAuthenticated, 
-      isLoading,
-      login, 
-      logout,
-      checkAuth
-    }}>
-      {children}
-    </AuthContext.Provider>
-  );
+
+  // Logout function
+  const logout = async () => {
+    try {
+      await fetch('/api/me/logout', {
+        method: 'POST',
+      });
+      
+      setUser(null);
+      setAuthenticated(false);
+    } catch (error) {
+      console.error('Logout error:', error);
+      // Still clear the user state even if the logout request fails
+      setUser(null);
+      setAuthenticated(false);
+    }
+  };
+
+  // Register function
+  const register = async (name: string, email: string, password: string) => {
+    try {
+      const response = await fetch('/api/auth/register', {
+        method: 'POST',
+        body: JSON.stringify({ name, email, password }),
+        headers: {
+          'Content-Type': 'application/json',
+        },
+      });
+
+      const data = await response.json();
+
+      if (data.success && data.user) {
+        setUser(data.user);
+        setAuthenticated(true);
+        return { success: true };
+      } else {
+        return { success: false, error: data.error || 'Registration failed' };
+      }
+    } catch (error) {
+      console.error('Registration error:', error);
+      return { success: false, error: 'An error occurred during registration' };
+    }
+  };
+
+  // Google login
+  const googleLogin = () => {
+    window.location.href = '/api/auth/google';
+  };
+
+  // Google signup
+  const googleSignup = () => {
+    window.location.href = '/api/auth/google/signup';
+  };
+
+  // Context value
+  const value = {
+    user,
+    loading,
+    authenticated,
+    login,
+    logout,
+    register,
+    googleLogin,
+    googleSignup,
+  };
+
+  return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;
 };
 
 // Custom hook to use the auth context
-export const useAuth = () => useContext(AuthContext);
+export const useAuth = () => {
+  const context = useContext(AuthContext);
+  if (context === undefined) {
+    throw new Error('useAuth must be used within an AuthProvider');
+  }
+  return context;
+};

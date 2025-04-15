@@ -17,34 +17,22 @@ import Profile from "@/pages/profile";
 import Settings from "@/pages/settings";
 import GoogleOAuth from "@/pages/settings/google-oauth";
 import AppLayout from "@/components/layouts/app-layout";
-import AuthLayout from "@/components/layouts/auth-layout";
+import { AuthLayout } from "@/components/layouts/auth-layout";
 import LoginPage from "@/pages/auth/login";
 import SignupPage from "@/pages/auth/signup";
-import { useEffect, useState } from "react";
 import { useLocation } from "wouter";
+import { useAuth } from "./context/auth-context";
 
 function App() {
   const [location] = useLocation();
   const isAuthRoute = location.startsWith('/auth');
   
-  // Auth state management (simulated for now)
-  const [isAuthenticated, setIsAuthenticated] = useState(true); // Default to true for development
-  
-  // Simulate checking auth status on app load
-  useEffect(() => {
-    // This would typically verify a token, session cookie, etc.
-    const checkAuthStatus = async () => {
-      // For implementation later, currently just assuming logged in
-      const loggedIn = sessionStorage.getItem('isLoggedIn') === 'true';
-      setIsAuthenticated(loggedIn || true); // Default to true for development
-    };
-    
-    checkAuthStatus();
-  }, []);
+  // Use auth context for authentication state
+  const { authenticated, loading } = useAuth();
   
   // Separate content based on authentication routes
   const authRoutes = (
-    <AuthLayout>
+    <AuthLayout title="Recurrer Authentication" description="Sign in to your account">
       <Switch>
         <Route path="/auth/login" component={LoginPage} />
         <Route path="/auth/signup" component={SignupPage} />
@@ -81,6 +69,25 @@ function App() {
     </AppLayout>
   );
   
+  // Handle loading state
+  if (loading) {
+    return <div className="flex items-center justify-center h-screen">Loading...</div>;
+  }
+  
+  // If not authenticated and not on auth route, redirect to login
+  if (!authenticated && !isAuthRoute) {
+    // Redirect to login
+    window.location.href = '/auth/login';
+    return null;
+  }
+  
+  // If authenticated and on auth route, redirect to dashboard
+  if (authenticated && isAuthRoute) {
+    window.location.href = '/';
+    return null;
+  }
+  
+  // Otherwise, return the appropriate routes
   return isAuthRoute ? authRoutes : appRoutes;
 }
 
