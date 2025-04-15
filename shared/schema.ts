@@ -82,6 +82,9 @@ export const customers = pgTable("customers", {
   loyalty_type: text("loyalty_type"),
   loyalty_reward: text("loyalty_reward"),
   updated_from_mysql_at: timestamp("updated_from_mysql_at"),
+  updated_from_chargebee_at: timestamp("updated_from_chargebee_at"),
+  subscription_status: text("subscription_status"),
+  plan_id: text("plan_id"),
 });
 
 // Tasks
