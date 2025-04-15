@@ -1,4 +1,4 @@
-import { Route, Switch } from "wouter";
+import { Route, Switch, useLocation } from "wouter";
 import NotFound from "@/pages/not-found";
 import UnauthorizedPage from "@/pages/unauthorized";
 import Dashboard from "@/pages/dashboard";
@@ -24,7 +24,13 @@ import LoginPage from "@/pages/auth/login";
 import SignupPage from "@/pages/auth/signup";
 import ProtectedRoute from "@/components/protected-route";
 
-// Simple router component
+// Navigation helper
+const navigate = (path: string) => {
+  window.location.href = path;
+  return null;
+};
+
+// Simplified App Component
 function App() {
   return (
     <Switch>
@@ -40,26 +46,22 @@ function App() {
         </AuthLayout>
       </Route>
       
-      {/* App routes wrapped in the AppLayout */}
-      <Route path="/unauthorized" component={UnauthorizedPage} />
-      
-      <Route path="/google-oauth-callback" component={GoogleOAuth} /> 
-      
-      {/* Protected routes requiring authentication */}
+      {/* Main application routes */}
       <Route path="/">
         <AppLayout>
           <Switch>
             <Route path="/" component={Dashboard} />
+            <Route path="/unauthorized" component={UnauthorizedPage} />
             
             {/* Customer routes */}
-            <Route path="/customers/import/diagnostics">
-              <ProtectedRoute requiredPermission="edit_customers">
-                <ImportDiagnostics />
-              </ProtectedRoute>
-            </Route>
             <Route path="/customers">
               <ProtectedRoute requiredPermission="view_customers">
                 <Customers />
+              </ProtectedRoute>
+            </Route>
+            <Route path="/customers/import/diagnostics">
+              <ProtectedRoute requiredPermission="edit_customers">
+                <ImportDiagnostics />
               </ProtectedRoute>
             </Route>
             <Route path="/customers/:id">
@@ -144,13 +146,13 @@ function App() {
                 <GoogleOAuth />
               </ProtectedRoute>
             </Route>
+            <Route path="/settings/google-oauth/callback" component={GoogleOAuth} />
             
+            {/* Not found route */}
             <Route component={NotFound} />
           </Switch>
         </AppLayout>
       </Route>
-      
-      <Route component={NotFound} />
     </Switch>
   );
 }
