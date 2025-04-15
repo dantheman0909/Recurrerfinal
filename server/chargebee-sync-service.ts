@@ -125,141 +125,265 @@ export class ChargebeeSyncService {
   }
 
   /**
-   * Synchronize data to a local table
+   * Synchronize data to a local table - Simplified approach
    */
   private async syncToLocalTable(
     localTableName: string,
     mappings: { chargebee_field: string; local_field: string; is_key_field: boolean }[],
     sourceData: any[]
   ): Promise<void> {
-    // Ensure all required columns exist in the local table
-    await this.ensureColumnsExist(localTableName, mappings);
-
-    // Map data from Chargebee format to local format
-    const transformedData = sourceData.map(row => {
-      const result: Record<string, any> = {};
-      
-      // Special handling for subscription data
-      const isSubscription = row.object === 'subscription';
-      const isCustomer = row.object === 'customer';
-      
-      for (const mapping of mappings) {
-        // Check if Chargebee field exists in the row
-        if (row[mapping.chargebee_field] !== undefined) {
-          result[mapping.local_field] = row[mapping.chargebee_field];
-        }
-      }
-      
-      // Special case: If this is subscription data and we're updating customers table,
-      // make sure to include subscription status and plan data
-      if (isSubscription && localTableName === 'customers') {
-        if (row.status !== undefined) {
-          result.subscription_status = row.status;
-        }
-        if (row.plan_id !== undefined) {
-          result.plan_id = row.plan_id;
-        }
-      }
-      
-      // If customer record has a subscription ID but we don't have subscription status,
-      // set a default for data consistency
-      if (isCustomer && localTableName === 'customers' && result.chargebee_subscription_id && !result.subscription_status) {
-        result.subscription_status = 'unknown';
-      }
-      
-      return result;
-    });
-
-    // Get key fields for this table
-    const keyFields = mappings.filter(m => m.is_key_field).map(m => m.local_field);
-    
-    // For each record, update if it exists (based on key fields) or insert if it doesn't
-    for (const record of transformedData) {
-      try {
-        // Build a condition to find existing records based on key fields
-        const conditions: string[] = [];
-        const params: any[] = [];
+    try {
+      // Ensure all required columns exist in the local table
+      await this.ensureColumnsExist(localTableName, mappings);
+  
+      // Map data from Chargebee format to local format
+      const transformedData = sourceData.map(row => {
+        const result: Record<string, any> = {};
         
-        let hasKeyField = false;
+        // Special handling for subscription data
+        const isSubscription = row.object === 'subscription';
+        const isCustomer = row.object === 'customer';
         
-        for (const keyField of keyFields) {
-          if (record[keyField] !== undefined) {
-            conditions.push(`${keyField} = ?`);
-            params.push(record[keyField]);
-            hasKeyField = true;
+        for (const mapping of mappings) {
+          // Check if Chargebee field exists in the row
+          if (row[mapping.chargebee_field] !== undefined) {
+            result[mapping.local_field] = row[mapping.chargebee_field];
           }
         }
         
-        // Special handling for subscription data going to customers table
-        if (conditions.length === 0 && localTableName === 'customers' && record['chargebee_subscription_id']) {
-          conditions.push(`chargebee_subscription_id = ?`);
-          params.push(record['chargebee_subscription_id']);
-          hasKeyField = true;
+        // Special case: If this is subscription data and we're updating customers table,
+        // make sure to include subscription status and plan data
+        if (isSubscription && localTableName === 'customers') {
+          if (row.status !== undefined) {
+            result.subscription_status = row.status;
+          }
+          if (row.plan_id !== undefined) {
+            result.plan_id = row.plan_id;
+          }
         }
         
-        if (!hasKeyField) {
-          // Instead of skipping, just log and continue
-          if (Object.keys(record).length > 0) {
-            console.log(`No key fields found, but record has data. Will try to sync via other means if possible.`);
-            
-            // If we have custom ID fields or can generate an ID, we could handle it here
-            // For now, just log that we're skipping
-            console.warn('No valid key fields found in record, skipping');
-          } else {
+        // If customer record has a subscription ID but we don't have subscription status,
+        // set a default for data consistency
+        if (isCustomer && localTableName === 'customers' && 
+            result.chargebee_subscription_id && !result.subscription_status) {
+          result.subscription_status = 'unknown';
+        }
+        
+        return result;
+      });
+  
+      // Get key fields for this table
+      const keyFields = mappings.filter(m => m.is_key_field).map(m => m.local_field);
+      
+      console.log(`Processing ${transformedData.length} records for table ${localTableName}`);
+      
+      // For each record, update if it exists (based on key fields) or insert if it doesn't
+      for (const record of transformedData) {
+        try {
+          if (Object.keys(record).length === 0) {
             console.warn('Empty record, skipping');
-          }
-          continue;
-        }
-        
-        const whereClause = conditions.join(' AND ');
-        
-        // Check if record exists
-        const checkQuery = `SELECT id FROM ${localTableName} WHERE ${whereClause} LIMIT 1`;
-        const result = await db.execute(sql.raw(checkQuery, params));
-        
-        // If the record doesn't exist, perform an INSERT
-        // Otherwise, perform an UPDATE
-        if (!Array.isArray(result) || result.length === 0) {
-          // Build INSERT query
-          const fields = Object.keys(record);
-          const values = Object.values(record);
-          const placeholders = fields.map(() => '?').join(', ');
-          
-          const insertQuery = `
-            INSERT INTO ${localTableName} (${fields.join(', ')}, updated_from_chargebee_at) 
-            VALUES (${placeholders}, NOW())
-          `;
-          
-          await db.execute(sql.raw(insertQuery, values));
-          console.log(`Inserted new record into ${localTableName}`);
-        } else {
-          // Build UPDATE query
-          const setClause = Object.keys(record)
-            .filter(field => !keyFields.includes(field)) // Don't update key fields
-            .map(field => `${field} = ?`)
-            .join(', ');
-          
-          const updateValues = Object.entries(record)
-            .filter(([field]) => !keyFields.includes(field))
-            .map(([_, value]) => value);
-          
-          // If there's nothing to update (only key fields), skip
-          if (setClause.length === 0) {
             continue;
           }
           
-          const updateQuery = `
-            UPDATE ${localTableName} 
-            SET ${setClause}, updated_from_chargebee_at = NOW() 
-            WHERE ${whereClause}
-          `;
+          // Build conditions to find existing records based on key fields
+          let keyConditions: Record<string, any> = {};
+          let hasKeyField = false;
           
-          await db.execute(sql.raw(updateQuery, [...updateValues, ...params]));
-          console.log(`Updated existing record in ${localTableName}`);
+          // Add key fields to conditions
+          for (const keyField of keyFields) {
+            if (record[keyField] !== undefined) {
+              keyConditions[keyField] = record[keyField];
+              hasKeyField = true;
+            }
+          }
+          
+          // Special handling for subscription data going to customers table
+          if (Object.keys(keyConditions).length === 0 && 
+              localTableName === 'customers' && 
+              record['chargebee_subscription_id']) {
+            keyConditions['chargebee_subscription_id'] = record['chargebee_subscription_id'];
+            hasKeyField = true;
+          }
+          
+          if (!hasKeyField) {
+            console.log(`No key fields found for record in ${localTableName}, skipping`);
+            continue;
+          }
+          
+          // Use a safer approach - check if the record exists first
+          // Do this with a simple query based on key fields
+          let existingRecords;
+          
+          if (localTableName === 'customers') {
+            const query = db.select()
+              .from(schema.customers)
+              .where((eb) => {
+                // Build a dynamic WHERE clause based on key conditions
+                // Need to handle each field specially
+                const conditions = [];
+                
+                if (keyConditions['recurrer_id']) {
+                  conditions.push(eb.eq(schema.customers.recurrer_id, keyConditions['recurrer_id']));
+                }
+                
+                if (keyConditions['chargebee_customer_id']) {
+                  conditions.push(eb.eq(schema.customers.chargebee_customer_id, keyConditions['chargebee_customer_id']));
+                }
+                
+                if (keyConditions['chargebee_subscription_id']) {
+                  conditions.push(eb.eq(schema.customers.chargebee_subscription_id, keyConditions['chargebee_subscription_id']));
+                }
+                
+                if (conditions.length === 0) {
+                  // Fallback - use ID if available
+                  if (keyConditions['id']) {
+                    return eb.eq(schema.customers.id, keyConditions['id']);
+                  }
+                  // Return a condition that's always false if no key fields
+                  return eb.eq(schema.customers.id, -1);
+                }
+                
+                // Combine conditions with OR
+                return eb.or(...conditions);
+              })
+              .limit(1);
+              
+            existingRecords = await query;
+          } else {
+            // For tables other than customers, use a more generic approach
+            // Build a simple query string for other tables
+            const conditions = Object.entries(keyConditions)
+              .map(([field, value]) => `"${field}" = $${field}`)
+              .join(' AND ');
+              
+            const params = Object.entries(keyConditions).reduce((acc, [field, value]) => {
+              acc[`$${field}`] = value;
+              return acc;
+            }, {} as Record<string, any>);
+            
+            try {
+              const checkQuery = `SELECT id FROM "${localTableName}" WHERE ${conditions} LIMIT 1`;
+              existingRecords = await db.execute(sql.raw(checkQuery, Object.values(keyConditions)));
+            } catch (queryError) {
+              console.error(`Error querying ${localTableName}:`, queryError);
+              console.error(`Key conditions:`, keyConditions);
+              continue; // Skip this record if query fails
+            }
+          }
+          
+          const recordExists = Array.isArray(existingRecords) && existingRecords.length > 0;
+          
+          // Add timestamp for when this record was updated from Chargebee
+          record.updated_from_chargebee_at = new Date();
+          
+          if (!recordExists) {
+            // Record doesn't exist, insert it
+            try {
+              if (localTableName === 'customers') {
+                await db.insert(schema.customers).values(record as any);
+              } else {
+                // Generate a simplified generic insert for other tables
+                const columns = Object.keys(record).join(', ');
+                const values = Object.values(record);
+                const placeholders = values.map((_, i) => `$${i+1}`).join(', ');
+                
+                await db.execute(
+                  sql.raw(`INSERT INTO "${localTableName}" (${columns}) VALUES (${placeholders})`, 
+                  values)
+                );
+              }
+              console.log(`Inserted new record into ${localTableName}`);
+            } catch (insertError) {
+              console.error(`Error inserting into ${localTableName}:`, insertError);
+              console.error(`Record:`, record);
+              continue; // Skip to next record
+            }
+          } else {
+            // Record exists, update it
+            // Filter out key fields from the update
+            const updateData = { ...record };
+            keyFields.forEach(field => {
+              delete updateData[field];
+            });
+            
+            if (Object.keys(updateData).length === 0) {
+              console.log(`No non-key fields to update in ${localTableName}, skipping update`);
+              continue;
+            }
+            
+            try {
+              if (localTableName === 'customers') {
+                await db.update(schema.customers)
+                  .set(updateData as any)
+                  .where((eb) => {
+                    // Build a dynamic WHERE clause based on key conditions
+                    const conditions = [];
+                    
+                    if (keyConditions['recurrer_id']) {
+                      conditions.push(eb.eq(schema.customers.recurrer_id, keyConditions['recurrer_id']));
+                    }
+                    
+                    if (keyConditions['chargebee_customer_id']) {
+                      conditions.push(eb.eq(schema.customers.chargebee_customer_id, keyConditions['chargebee_customer_id']));
+                    }
+                    
+                    if (keyConditions['chargebee_subscription_id']) {
+                      conditions.push(eb.eq(schema.customers.chargebee_subscription_id, keyConditions['chargebee_subscription_id']));
+                    }
+                    
+                    if (conditions.length === 0) {
+                      // Fallback - use ID if available
+                      if (keyConditions['id']) {
+                        return eb.eq(schema.customers.id, keyConditions['id']);
+                      }
+                      // Return a condition that's always false if no key fields
+                      return eb.eq(schema.customers.id, -1);
+                    }
+                    
+                    // Combine conditions with OR
+                    return eb.or(...conditions);
+                  });
+              } else {
+                // For tables other than customers, use a more generic approach
+                // Build set clause
+                const setClause = Object.keys(updateData)
+                  .map((key, i) => `"${key}" = $${i+1}`)
+                  .join(', ');
+                  
+                // Build where clause based on key conditions
+                const whereClause = Object.entries(keyConditions)
+                  .map(([key, _], i) => `"${key}" = $${Object.keys(updateData).length + i + 1}`)
+                  .join(' AND ');
+                
+                const updateQuery = `
+                  UPDATE "${localTableName}" 
+                  SET ${setClause}
+                  WHERE ${whereClause}
+                `;
+                
+                await db.execute(
+                  sql.raw(updateQuery, 
+                  [...Object.values(updateData), ...Object.values(keyConditions)])
+                );
+              }
+              console.log(`Updated existing record in ${localTableName}`);
+            } catch (updateError) {
+              console.error(`Error updating ${localTableName}:`, updateError);
+              console.error(`Update data:`, updateData);
+              console.error(`Key conditions:`, keyConditions);
+              continue; // Skip to next record
+            }
+          }
+        } catch (recordError) {
+          console.error(`Error processing record for ${localTableName}:`, recordError);
+          // Continue with next record
+          continue;
         }
-      } catch (error) {
-        console.error(`Error processing record for ${localTableName}:`, error);
       }
+      
+      console.log(`Completed processing for table ${localTableName}`);
+    } catch (error) {
+      console.error(`Error in syncToLocalTable for ${localTableName}:`, error);
     }
   }
 
