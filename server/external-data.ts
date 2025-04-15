@@ -3,7 +3,7 @@ import { chargebeeService } from "./chargebee";
 import { mysqlService } from "./mysql-service";
 import { log } from "./vite";
 import { db } from "./db";
-import { customers, chargebeeInvoices } from "@shared/schema";
+import { customers } from "@shared/schema";
 import { eq, sql } from "drizzle-orm";
 import { chargebeeSyncService } from "./chargebee-sync-service";
 

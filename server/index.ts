@@ -145,6 +145,26 @@ app.post('/api/admin/chargebee-sync', async (req, res) => {
   }
 });
 
+// Dedicated endpoint for non-recurring invoices sync
+app.post('/api/admin/chargebee-sync/non-recurring', async (req, res) => {
+  try {
+    // Import our sync service
+    const { syncNonRecurringInvoices } = await import('./sync-non-recurring-invoices');
+    
+    // Forward the request to our handler
+    await syncNonRecurringInvoices(req, res);
+  } catch (error) {
+    console.error('Non-recurring invoices sync error:', error);
+    
+    // Ensure correct content type and response
+    res.setHeader('Content-Type', 'application/json');
+    res.status(500).json({ 
+      success: false, 
+      message: `Error synchronizing non-recurring invoices: ${error instanceof Error ? error.message : String(error)}` 
+    });
+  }
+});
+
 // Customer external data integration routes
 app.post('/api/customers/import-mysql-data', importMySQLDataToCustomer);
 

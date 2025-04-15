@@ -25,10 +25,8 @@ export const syncNonRecurringInvoices = async (req: Request, res: Response) => {
       // Store them in our database
       let savedCount = 0;
       if (invoices.length > 0) {
-        const result = await chargebeeSyncService.syncToLocalTable('invoice', invoices, {
-          ensureColumns: true,
-          mode: 'update+add'
-        });
+        // Use the main synchronization method to sync the invoices data
+        const result = await chargebeeSyncService.synchronizeData();
         savedCount = result?.records || 0;
       }
       
@@ -63,10 +61,7 @@ export const syncNonRecurringInvoices = async (req: Request, res: Response) => {
           totalFound += invoices.length;
           
           if (invoices.length > 0) {
-            const result = await chargebeeSyncService.syncToLocalTable('invoice', invoices, {
-              ensureColumns: true,
-              mode: 'update+add'
-            });
+            const result = await chargebeeSyncService.synchronizeData();
             totalSynced += result?.records || 0;
           }
           
