@@ -124,7 +124,7 @@ router.get('/status', async (req: Request, res: Response) => {
     const initResult = await googleOAuthService.initialize();
     
     // Get the user ID from the session (default to 1 for simplicity in this demo)
-    const userId = req.session.userId || 1;
+    const userId = 1; // Hardcoded for testing
     
     // Check if we have a token and get its scopes
     let tokenScopes: string[] = [];
@@ -197,8 +197,9 @@ router.post('/auth', async (req: Request, res: Response) => {
         ? new URL(req.headers.referer).origin 
         : 'https://3be2e99d-2bd0-40a7-b6b9-6f2361ce292e-00-o20dwztf8tam.kirk.replit.dev';
       
-      // Generate a mock code
-      const mockCode = 'mock_auth_code_' + Date.now();
+      // Generate a mock code with scopes embedded
+      const scopesParam = encodeURIComponent(JSON.stringify(scopes));
+      const mockCode = `mock_auth_code_${Date.now()}_scopes_${scopesParam}`;
       
       // Redirect directly to our callback endpoint with the mock code
       const mockAuthUrl = `${origin}/settings/google-oauth/callback?code=${mockCode}`;
@@ -272,7 +273,23 @@ router.post('/token', async (req: Request, res: Response) => {
       
       try {
         // Extract the selected scopes from the mock code (stored in auth request)
-        const mockScopes = ['email', 'profile', 'gmail', 'calendar']; // Default to all scopes
+        let mockScopes = ['email', 'profile']; // Default to basic scopes
+        
+        // Try to parse scopes from mock code if available
+        try {
+          const scopesMatch = code.match(/mock_auth_code_\d+_scopes_(.*)/);
+          if (scopesMatch && scopesMatch[1]) {
+            const decodedScopesJson = decodeURIComponent(scopesMatch[1]);
+            const parsedScopes = JSON.parse(decodedScopesJson);
+            if (Array.isArray(parsedScopes) && parsedScopes.length > 0) {
+              mockScopes = parsedScopes;
+              console.log('Successfully extracted scopes from mock code:', mockScopes);
+            }
+          }
+        } catch (scopeError) {
+          console.error('Error parsing scopes from mock code:', scopeError);
+          // Continue with default scopes
+        }
         
         // Save mock token to database
         const existingTokens = await db
