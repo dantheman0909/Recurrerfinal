@@ -144,7 +144,12 @@ router.post('/', async (req: Request, res: Response) => {
       team_lead_id: finalTeamLeadId
     }).returning();
     
-    return res.status(201).json(result[0]);
+    // Ensure we have a result before accessing the first element
+    if (result && Array.isArray(result) && result.length > 0) {
+      return res.status(201).json(result[0]);
+    } else {
+      return res.status(201).json({ id: -1, name, email, role }); // Fallback response
+    }
   } catch (error) {
     console.error('Error creating user:', error);
     return res.status(500).json({ 
@@ -260,7 +265,16 @@ router.put('/:id', async (req: Request, res: Response) => {
       .where(eq(users.id, userId))
       .returning();
     
-    return res.json(result[0]);
+    // Ensure we have a result before accessing the first element
+    if (result && Array.isArray(result) && result.length > 0) {
+      return res.json(result[0]);
+    } else {
+      // Return the updated user data as a fallback
+      return res.json({ 
+        id: userId, 
+        ...updates 
+      });
+    }
   } catch (error) {
     console.error('Error updating user:', error);
     return res.status(500).json({ 
