@@ -78,7 +78,7 @@ export default function Customers() {
   // Mutation for deleting a customer
   const deleteCustomerMutation = useMutation({
     mutationFn: (customerId: number) => {
-      return apiRequest(`/api/customers/${customerId}`, { method: 'DELETE' } as RequestInit);
+      return apiRequest('DELETE', `/api/customers/${customerId}`);
     },
     onSuccess: () => {
       toast({
