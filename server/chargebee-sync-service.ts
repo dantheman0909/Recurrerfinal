@@ -201,7 +201,7 @@ export class ChargebeeSyncService {
    */
   private async syncToLocalTable(
     localTableName: string,
-    mappings: { chargebee_field: string; local_field: string; is_key_field: boolean }[],
+    mappings: { chargebee_field: string; local_field: string; is_key_field: boolean | null }[],
     sourceData: any[]
   ): Promise<void> {
     try {
@@ -245,7 +245,7 @@ export class ChargebeeSyncService {
       });
   
       // Get key fields for this table
-      const keyFields = mappings.filter(m => m.is_key_field).map(m => m.local_field);
+      const keyFields = mappings.filter(m => m.is_key_field === true).map(m => m.local_field);
       
       console.log(`Processing ${transformedData.length} records for table ${localTableName}`);
       
@@ -333,7 +333,7 @@ export class ChargebeeSyncService {
             
             try {
               const checkQuery = `SELECT id FROM "${localTableName}" WHERE ${conditions} LIMIT 1`;
-              existingRecords = await db.execute(sql.raw(checkQuery, Object.values(keyConditions)));
+              existingRecords = await db.execute(sql.raw(checkQuery));
             } catch (queryError) {
               console.error(`Error querying ${localTableName}:`, queryError);
               console.error(`Key conditions:`, keyConditions);
@@ -354,13 +354,12 @@ export class ChargebeeSyncService {
               } else {
                 // Generate a simplified generic insert for other tables
                 const columns = Object.keys(record).join(', ');
-                const values = Object.values(record);
-                const placeholders = values.map((_, i) => `$${i+1}`).join(', ');
+                const valueParams = Object.values(record);
+                const placeholders = valueParams.map((_, i) => `$${i+1}`).join(', ');
+                const insertQuery = `INSERT INTO "${localTableName}" (${columns}) VALUES (${placeholders})`;
                 
-                await db.execute(
-                  sql.raw(`INSERT INTO "${localTableName}" (${columns}) VALUES (${placeholders})`, 
-                  values)
-                );
+                // Use a prepared statement
+                await db.execute(sql`${sql.raw(insertQuery)}`);
               }
               console.log(`Inserted new record into ${localTableName}`);
             } catch (insertError) {
@@ -429,10 +428,8 @@ export class ChargebeeSyncService {
                   WHERE ${whereClause}
                 `;
                 
-                await db.execute(
-                  sql.raw(updateQuery, 
-                  [...Object.values(updateData), ...Object.values(keyConditions)])
-                );
+                // Use the template literal version without parameters
+                await db.execute(sql`${sql.raw(updateQuery)}`);
               }
               console.log(`Updated existing record in ${localTableName}`);
             } catch (updateError) {
