@@ -1,7 +1,9 @@
 import { Router, Request, Response } from 'express';
 import { googleOAuthService } from '../google-oauth-service';
 import { z } from 'zod';
-import { oauthScopeEnum } from '@shared/schema';
+import { db } from '../db';
+import { eq } from 'drizzle-orm';
+import { oauthScopeEnum, userOAuthTokens, googleOAuthConfig } from '@shared/schema';
 import * as expressSession from 'express-session';
 import https from 'https';
 
@@ -34,6 +36,42 @@ const authRequestSchema = z.object({
 // Validate token exchange
 const exchangeCodeSchema = z.object({
   code: z.string().min(1, 'Authorization code is required')
+});
+
+/**
+ * Get Google OAuth configuration
+ * GET /api/oauth/google/config
+ */
+router.get('/config', async (req: Request, res: Response) => {
+  try {
+    // For simplicity, we'll fetch from the database directly
+    const configs = await db
+      .select()
+      .from(googleOAuthConfig);
+    
+    if (configs.length === 0) {
+      return res.status(404).json({
+        message: 'No Google OAuth configuration found',
+        success: false
+      });
+    }
+    
+    const config = configs[0];
+    
+    return res.status(200).json({
+      clientId: config.client_id,
+      clientSecret: config.client_secret,
+      redirectUri: config.redirect_uri,
+      success: true
+    });
+  } catch (error) {
+    console.error('Error fetching Google OAuth config:', error);
+    return res.status(500).json({
+      message: 'An error occurred while fetching OAuth configuration',
+      error: error instanceof Error ? error.message : String(error),
+      success: false
+    });
+  }
 });
 
 /**
@@ -85,8 +123,32 @@ router.get('/status', async (req: Request, res: Response) => {
   try {
     const initResult = await googleOAuthService.initialize();
     
+    // Get the user ID from the session (default to 1 for simplicity in this demo)
+    const userId = req.session.userId || 1;
+    
+    // Check if we have a token and get its scopes
+    let tokenScopes: string[] = [];
+    if (initResult.success) {
+      try {
+        const userTokens = await db
+          .select()
+          .from(userOAuthTokens)
+          .where(eq(userOAuthTokens.user_id, userId))
+          .where(eq(userOAuthTokens.provider, 'google'));
+        
+        if (userTokens.length > 0) {
+          tokenScopes = userTokens[0].scopes || [];
+        }
+      } catch (tokenError) {
+        console.warn('Error getting token scopes:', tokenError);
+        // Continue without scopes if there's an error
+      }
+    }
+    
     return res.status(200).json({
       configured: initResult.success,
+      connected: tokenScopes.length > 0,
+      scopes: tokenScopes,
       message: initResult.message || (initResult.success 
         ? 'Google OAuth is properly configured' 
         : 'Google OAuth is not configured or has invalid configuration')
@@ -208,8 +270,50 @@ router.post('/token', async (req: Request, res: Response) => {
     if (isMockCode) {
       console.log('Detected mock auth code, simulating successful token exchange');
       
-      // You could implement a mock token storage here if needed
-      // For now we'll just return success
+      try {
+        // Extract the selected scopes from the mock code (stored in auth request)
+        const mockScopes = ['email', 'profile', 'gmail', 'calendar']; // Default to all scopes
+        
+        // Save mock token to database
+        const existingTokens = await db
+          .select()
+          .from(userOAuthTokens)
+          .where(eq(userOAuthTokens.user_id, userId))
+          .where(eq(userOAuthTokens.provider, 'google'));
+        
+        if (existingTokens.length > 0) {
+          // Update existing token
+          await db
+            .update(userOAuthTokens)
+            .set({
+              access_token: 'mock_access_token_' + Date.now(),
+              refresh_token: 'mock_refresh_token_' + Date.now(),
+              token_type: 'Bearer',
+              scopes: mockScopes,
+              expires_at: new Date(Date.now() + 3600 * 1000), // 1 hour expiry
+              updated_at: new Date()
+            })
+            .where(eq(userOAuthTokens.id, existingTokens[0].id));
+        } else {
+          // Insert new token
+          await db
+            .insert(userOAuthTokens)
+            .values({
+              user_id: userId,
+              provider: 'google',
+              access_token: 'mock_access_token_' + Date.now(),
+              refresh_token: 'mock_refresh_token_' + Date.now(),
+              token_type: 'Bearer',
+              scopes: mockScopes,
+              expires_at: new Date(Date.now() + 3600 * 1000) // 1 hour expiry
+            });
+        }
+        
+        console.log('Saved mock token with scopes:', mockScopes);
+      } catch (mockError) {
+        console.error('Error saving mock token:', mockError);
+        // Continue even if token save fails
+      }
       
       return res.status(200).json({
         message: 'Mock authorization successful - tokens simulated',
@@ -333,7 +437,18 @@ router.post('/revoke', async (req: Request, res: Response) => {
       console.log('USING MOCK OAUTH FLOW - Google connectivity issues detected');
       console.log('Simulating successful revocation of Google access');
       
-      // You could implement mock token removal logic here if needed
+      try {
+        // Delete mock token from database
+        await db
+          .delete(userOAuthTokens)
+          .where(eq(userOAuthTokens.user_id, userId))
+          .where(eq(userOAuthTokens.provider, 'google'));
+          
+        console.log('Deleted mock Google OAuth tokens for user:', userId);
+      } catch (mockError) {
+        console.error('Error deleting mock token:', mockError);
+        // Continue even if token deletion fails
+      }
       
       return res.status(200).json({
         message: 'Mock Google access successfully revoked',

@@ -71,6 +71,24 @@ export default function GoogleOAuthPage() {
     return redirectUri;
   };
 
+  // Update form values when config data is fetched
+  useEffect(() => {
+    if (configData) {
+      form.reset({
+        clientId: configData.clientId || '',
+        clientSecret: configData.clientSecret || '',
+        redirectUri: configData.redirectUri || getRedirectUri()
+      });
+    }
+  }, [configData]);
+
+  // Load saved scopes from user token status
+  useEffect(() => {
+    if (statusData?.scopes?.length) {
+      setSelectedScopes(statusData.scopes as GoogleOAuthScope[]);
+    }
+  }, [statusData]);
+
   const form = useForm({
     resolver: zodResolver(configSchema),
     defaultValues: {
