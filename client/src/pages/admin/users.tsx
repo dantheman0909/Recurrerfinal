@@ -36,7 +36,17 @@ import {
   TableRow,
 } from '@/components/ui/table';
 import { useToast } from '@/hooks/use-toast';
-import { User } from '@/context/auth-context';
+import { User as AuthUser } from '@/context/auth-context';
+
+// Extended User type with team lead relation
+type User = AuthUser & {
+  teamLead?: {
+    id: number;
+    name: string;
+    email: string;
+    role: string;
+  };
+};
 
 type TeamLead = User & {
   team?: User[];
@@ -46,7 +56,9 @@ export default function AdminUsersPage() {
   const [isCreateDialogOpen, setIsCreateDialogOpen] = useState(false);
   const [isEditDialogOpen, setIsEditDialogOpen] = useState(false);
   const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false);
+  const [isResetPasswordDialogOpen, setIsResetPasswordDialogOpen] = useState(false);
   const [currentUser, setCurrentUser] = useState<User | null>(null);
+  const [resetPasswordForm, setResetPasswordForm] = useState({ password: '', confirmPassword: '' });
   const [formData, setFormData] = useState({
     name: '',
     email: '',
@@ -217,7 +229,7 @@ export default function AdminUsersPage() {
       email: user.email,
       password: '', // Don't populate password
       role: user.role,
-      teamLeadId: '', // Populate if available in API
+      teamLeadId: user.teamLead ? user.teamLead.id.toString() : '', // Populate team lead if available
     });
     setIsEditDialogOpen(true);
   };
@@ -243,6 +255,84 @@ export default function AdminUsersPage() {
   const handleDeleteUser = () => {
     if (currentUser) {
       deleteUserMutation.mutate(currentUser.id);
+    }
+  };
+
+  // Reset password mutation
+  const resetPasswordMutation = useMutation({
+    mutationFn: async ({ userId, password }: { userId: number; password: string }) => {
+      const response = await fetch(`/api/users/${userId}/reset-password`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({ password }),
+      });
+      
+      if (!response.ok) {
+        const error = await response.json();
+        throw new Error(error.message || 'Failed to reset password');
+      }
+      
+      return response.json();
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['/api/users'] });
+      toast({
+        title: 'Password reset',
+        description: 'The password has been reset successfully.',
+      });
+      setIsResetPasswordDialogOpen(false);
+      setResetPasswordForm({ password: '', confirmPassword: '' });
+    },
+    onError: (error: Error) => {
+      toast({
+        title: 'Error',
+        description: error.message || 'Failed to reset password',
+        variant: 'destructive',
+      });
+    },
+  });
+  
+  // Handle reset password dialog open
+  const handleResetPasswordClick = (user: User) => {
+    setCurrentUser(user);
+    setResetPasswordForm({ password: '', confirmPassword: '' });
+    setIsResetPasswordDialogOpen(true);
+  };
+  
+  // Handle reset password form changes
+  const handleResetPasswordChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const { name, value } = e.target;
+    setResetPasswordForm((prev) => ({ ...prev, [name]: value }));
+  };
+  
+  // Handle reset password form submission
+  const handleResetPassword = (e: React.FormEvent) => {
+    e.preventDefault();
+    if (currentUser) {
+      if (resetPasswordForm.password !== resetPasswordForm.confirmPassword) {
+        toast({
+          title: 'Error',
+          description: 'Passwords do not match',
+          variant: 'destructive',
+        });
+        return;
+      }
+      
+      if (resetPasswordForm.password.length < 6) {
+        toast({
+          title: 'Error',
+          description: 'Password must be at least 6 characters',
+          variant: 'destructive',
+        });
+        return;
+      }
+      
+      resetPasswordMutation.mutate({
+        userId: currentUser.id,
+        password: resetPasswordForm.password,
+      });
     }
   };
 
@@ -308,6 +398,13 @@ export default function AdminUsersPage() {
                       onClick={() => handleEditClick(user)}
                     >
                       Edit
+                    </Button>
+                    <Button 
+                      variant="secondary" 
+                      size="sm" 
+                      onClick={() => handleResetPasswordClick(user)}
+                    >
+                      Reset Password
                     </Button>
                     <Button 
                       variant="destructive" 
@@ -557,6 +654,60 @@ export default function AdminUsersPage() {
               {deleteUserMutation.isPending ? 'Deleting...' : 'Delete User'}
             </Button>
           </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* Reset Password Dialog */}
+      <Dialog open={isResetPasswordDialogOpen} onOpenChange={setIsResetPasswordDialogOpen}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Reset Password</DialogTitle>
+            <DialogDescription>
+              Set a new password for {currentUser?.name}.
+            </DialogDescription>
+          </DialogHeader>
+          <form onSubmit={handleResetPassword}>
+            <div className="grid gap-4 py-4">
+              <div className="grid grid-cols-4 items-center gap-4">
+                <Label htmlFor="reset-password" className="text-right">
+                  New Password
+                </Label>
+                <Input
+                  id="reset-password"
+                  name="password"
+                  type="password"
+                  value={resetPasswordForm.password}
+                  onChange={handleResetPasswordChange}
+                  className="col-span-3"
+                  required
+                  minLength={6}
+                />
+              </div>
+              <div className="grid grid-cols-4 items-center gap-4">
+                <Label htmlFor="confirm-password" className="text-right">
+                  Confirm Password
+                </Label>
+                <Input
+                  id="confirm-password"
+                  name="confirmPassword"
+                  type="password"
+                  value={resetPasswordForm.confirmPassword}
+                  onChange={handleResetPasswordChange}
+                  className="col-span-3"
+                  required
+                  minLength={6}
+                />
+              </div>
+            </div>
+            <DialogFooter>
+              <Button type="button" variant="outline" onClick={() => setIsResetPasswordDialogOpen(false)}>
+                Cancel
+              </Button>
+              <Button type="submit" disabled={resetPasswordMutation.isPending}>
+                {resetPasswordMutation.isPending ? 'Resetting...' : 'Reset Password'}
+              </Button>
+            </DialogFooter>
+          </form>
         </DialogContent>
       </Dialog>
     </div>
