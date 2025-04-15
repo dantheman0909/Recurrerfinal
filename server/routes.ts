@@ -1563,6 +1563,43 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
   
+  // Endpoint to get actual database record counts
+  app.get('/api/admin/entity-count/:entity', async (req, res) => {
+    const { entity } = req.params;
+    
+    try {
+      let count = 0;
+      let tableName: string;
+      
+      // Map entity name to actual table name
+      switch (entity) {
+        case 'customers':
+          tableName = 'chargebee_customers';
+          break;
+        case 'subscriptions':
+          tableName = 'chargebee_subscriptions';
+          break;
+        case 'invoices':
+          tableName = 'chargebee_invoices';
+          break;
+        default:
+          return res.status(400).json({ message: 'Invalid entity type' });
+      }
+      
+      // Query the database for the count
+      const result = await db.execute(sql`SELECT COUNT(*) as count FROM ${sql.identifier(tableName)}`);
+      
+      if (result && result.length > 0) {
+        count = parseInt(result[0].count, 10);
+      }
+      
+      res.json({ count });
+    } catch (error) {
+      console.error(`Error getting ${entity} count:`, error);
+      res.status(500).json({ message: `Failed to get ${entity} count` });
+    }
+  });
+  
   app.post('/api/admin/chargebee-config', async (req, res) => {
     try {
       const configSchema = z.object({
