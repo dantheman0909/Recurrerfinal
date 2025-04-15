@@ -42,6 +42,8 @@ export interface ChargebeeInvoice {
   due_date: number;
   paid_at?: number;
   total: number;
+  recurring?: boolean;
+  line_items?: any[];
 }
 
 // Chargebee Service Class
