@@ -81,19 +81,30 @@ export const googleAuthCallback = async (req: Request, res: Response) => {
     if (existingUsers.length === 0) {
       // User doesn't exist
       if (isSignup) {
-        // For signup, create the user
+        // For signup, validate the email domain for reelo.io restriction
         const isReeloEmail = email.endsWith('@reelo.io');
-        const userRole = isReeloEmail ? 'csm' : 'csm'; // Default to CSM, but this could be configurable
         
-        // Create new user
+        // If it's a Google signup flow and not a reelo.io email, redirect with error
+        if (!isReeloEmail) {
+          console.log(`Google signup rejected for non-reelo.io email: ${email}`);
+          return res.redirect('/auth/signup?error=domain_not_allowed&message=Only+reelo.io+email+addresses+are+allowed+for+Google+signup');
+        }
+        
+        // For reelo.io emails, automatically assign CSM role
+        const userRole = 'csm';
+        
+        // Create new user with verified reelo.io domain
         const newUser = {
           name: googleUser.name || `${googleUser.given_name} ${googleUser.family_name}`,
           email: email,
           role: userRole as 'admin' | 'team_lead' | 'csm',
           password: '', // no password for OAuth users
+          email_verified: true, // Email is verified through Google OAuth
           created_at: new Date(),
           updated_at: new Date()
         };
+        
+        console.log(`Creating new user with reelo.io email: ${email}, role: ${userRole}`);
         
         const result = await db.insert(users).values(newUser).returning();
         if (result && result.length > 0) {
@@ -106,7 +117,7 @@ export const googleAuthCallback = async (req: Request, res: Response) => {
           return res.redirect('/auth/signup?error=user_creation_failed');
         }
       } else {
-        // For login, redirect to signup with email prefilled
+        // For login flow, if user doesn't exist, redirect to signup with email prefilled
         return res.redirect(`/auth/signup?email=${encodeURIComponent(email)}`);
       }
     } else {
@@ -221,16 +232,27 @@ export const register = async (req: Request, res: Response) => {
     const saltRounds = 10;
     const hashedPassword = await bcrypt.hash(password, saltRounds);
     
-    // Determine role based on email domain
+    // Validate the email domain for standard registration
     const isReeloEmail = email.endsWith('@reelo.io');
-    const role = isReeloEmail ? 'csm' : 'csm'; // Default to CSM, but this could be configurable
     
-    // Create new user
+    // For standard registration, we also restrict to reelo.io domain
+    if (!isReeloEmail) {
+      return res.status(403).json({ 
+        error: 'Domain not allowed', 
+        message: 'Only reelo.io email addresses are allowed for registration' 
+      });
+    }
+    
+    // For reelo.io emails, automatically assign CSM role
+    const role = 'csm';
+    
+    // Create new user with reelo.io domain
     const newUser = {
       name,
       email,
       password: hashedPassword,
       role: role as 'admin' | 'team_lead' | 'csm',
+      email_verified: true, // Email is verified through domain restriction
       created_at: new Date(),
       updated_at: new Date()
     };
