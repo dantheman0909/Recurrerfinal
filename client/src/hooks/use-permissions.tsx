@@ -1,33 +1,5 @@
 import { useQuery } from '@tanstack/react-query';
-import { createContext, useContext } from 'react';
-import { User } from '@/context/auth-context';
-
-// Define the AuthContextType same as in App.tsx
-type AuthContextType = {
-  user: User | null;
-  loading: boolean;
-  authenticated: boolean;
-  isAuthenticated: boolean;
-  isLoading: boolean;
-  login: (email: string, password: string) => Promise<{ success: boolean; error?: string }>;
-  logout: () => Promise<void>;
-  register: (name: string, email: string, password: string) => Promise<{ success: boolean; error?: string }>;
-  googleLogin: () => void;
-  googleSignup: () => void;
-  refreshUser: () => Promise<void>;
-};
-
-// Create Auth Context - must match the one in App.tsx
-const AuthContext = createContext<AuthContextType | undefined>(undefined);
-
-// Custom hook to use the auth context
-const useAuth = () => {
-  const context = useContext(AuthContext);
-  if (context === undefined) {
-    throw new Error('useAuth must be used within an AuthProvider');
-  }
-  return context;
-};
+import { useAuth } from '@/context/auth-context-provider';
 
 /**
  * Hook to check if the current user has a specific permission

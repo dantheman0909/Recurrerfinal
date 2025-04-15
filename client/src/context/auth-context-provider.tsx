@@ -1,7 +1,16 @@
 import React, { createContext, useContext, useState, useEffect, ReactNode } from 'react';
-import { User } from './auth-context';
 
-// Define the AuthContextType
+// Define the User type
+export type User = {
+  id: number;
+  name: string;
+  email: string;
+  role: 'admin' | 'team_lead' | 'csm';
+  created_at: string;
+  updated_at: string;
+};
+
+// Define the AuthContextType 
 export type AuthContextType = {
   user: User | null;
   loading: boolean;
