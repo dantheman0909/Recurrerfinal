@@ -1278,7 +1278,8 @@ function ChargebeeConfigTab() {
     apiKey: "",
     sync_frequency: 24,
     status: 'inactive',
-    last_synced_at: null
+    last_synced_at: null,
+    last_sync_stats: null
   });
   
   const [isConnected, setIsConnected] = useState(false);
@@ -1354,7 +1355,8 @@ function ChargebeeConfigTab() {
           apiKey: config.apiKey || "",
           sync_frequency: config.sync_frequency || 24,
           status: config.status || 'inactive',
-          last_synced_at: config.last_synced_at || null
+          last_synced_at: config.last_synced_at || null,
+          last_sync_stats: config.last_sync_stats || null
         });
         
         // Only set as connected if we have actual values
