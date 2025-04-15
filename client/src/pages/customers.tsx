@@ -119,10 +119,10 @@ export default function Customers() {
   };
   
   // Filter CSMs (role === 'csm')
-  const csms = users?.filter(user => user.role === 'csm') || [];
+  const csms = users && Array.isArray(users) ? users.filter(user => user.role === 'csm') : [];
   
   // Filter Team Leads (role === 'team_lead')
-  const teamLeads = users?.filter(user => user.role === 'team_lead') || [];
+  const teamLeads = users && Array.isArray(users) ? users.filter(user => user.role === 'team_lead') : [];
   
   // Function to sort customers
   const sortCustomers = (a: Customer, b: Customer) => {
