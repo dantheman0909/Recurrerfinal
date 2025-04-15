@@ -1077,23 +1077,32 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
   
-  // Chargebee Data Sync
+  // Chargebee Manual Sync
   app.post('/api/admin/chargebee-sync', async (req, res) => {
     try {
       const { chargebeeSyncService } = await import('./chargebee-sync-service');
+      
+      // Perform manual sync
+      console.log('Starting manual Chargebee data synchronization...');
       const result = await chargebeeSyncService.synchronizeData();
+      console.log('Manual Chargebee sync result:', result);
       
       // Ensure correct content type and response
       res.setHeader('Content-Type', 'application/json');
-      res.json(result);
+      res.json({
+        success: result.success,
+        message: result.message,
+        records: result.records || 0,
+        timestamp: new Date().toISOString()
+      });
     } catch (error) {
-      console.error('Chargebee sync error:', error);
+      console.error('Manual Chargebee sync error:', error);
       
       // Ensure correct content type and response
       res.setHeader('Content-Type', 'application/json');
       res.status(500).json({ 
         success: false, 
-        message: `Error synchronizing Chargebee data: ${error instanceof Error ? error.message : String(error)}` 
+        message: `Error during manual Chargebee sync: ${error instanceof Error ? error.message : String(error)}`
       });
     }
   });

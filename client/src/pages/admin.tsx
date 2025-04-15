@@ -1554,6 +1554,81 @@ function ChargebeeConfigTab() {
                       </Button>
                     </div>
                   </div>
+                  
+                  <div className="border-t mt-6 pt-6">
+                    <h3 className="text-lg font-medium mb-4">Data Synchronization</h3>
+                    <div className="flex items-center justify-between">
+                      <div>
+                        <p className="text-sm text-gray-700">
+                          Last synchronized: {chargebeeConfig.last_synced_at ? 
+                            new Date(chargebeeConfig.last_synced_at).toLocaleString() : 
+                            'Never'}
+                        </p>
+                        <p className="text-xs text-gray-500 mt-1">
+                          {chargebeeConfig.status === 'active' ? 
+                            `Automatic sync every ${chargebeeConfig.sync_frequency} hours` : 
+                            'Automatic sync is disabled'}
+                        </p>
+                      </div>
+                      <Button
+                        onClick={() => {
+                          // Create a mutation to handle the manual sync
+                          const manualSyncMutation = useMutation({
+                            mutationFn: async () => {
+                              const response = await fetch('/api/admin/chargebee-sync', {
+                                method: 'POST',
+                                headers: {
+                                  'Content-Type': 'application/json'
+                                }
+                              });
+                              
+                              if (!response.ok) {
+                                const errorData = await response.json();
+                                throw new Error(errorData.message || 'Failed to sync Chargebee data');
+                              }
+                              
+                              return response.json();
+                            },
+                            onSuccess: (data) => {
+                              toast({
+                                title: 'Data Sync Complete',
+                                description: `Successfully synchronized ${data.records} records from Chargebee.`,
+                              });
+                              
+                              // Refresh the configuration to update the last_synced_at timestamp
+                              refetchConfig();
+                              
+                              // Invalidate customers data to reflect the changes
+                              queryClient.invalidateQueries({ queryKey: ['/api/customers'] });
+                            },
+                            onError: (error) => {
+                              toast({
+                                title: 'Sync Failed',
+                                description: error instanceof Error ? error.message : 'An error occurred during data synchronization.',
+                                variant: 'destructive',
+                              });
+                            }
+                          });
+                          
+                          // Trigger the mutation
+                          manualSyncMutation.mutate();
+                        }}
+                        disabled={manualSyncMutation?.isPending}
+                      >
+                        {manualSyncMutation?.isPending ? (
+                          <>
+                            <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                            Syncing...
+                          </>
+                        ) : (
+                          <>
+                            <RefreshCw className="mr-2 h-4 w-4" />
+                            Sync Now
+                          </>
+                        )}
+                      </Button>
+                    </div>
+                  </div>
                 </div>
               )}
             </CardContent>
