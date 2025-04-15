@@ -1,10 +1,12 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Separator } from '@/components/ui/separator';
 import { useToast } from '@/hooks/use-toast';
-import { Link } from 'wouter';
+import { Link, useLocation } from 'wouter';
+import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
+import { AlertCircle } from "lucide-react";
 
 export default function SignupPage() {
   const [name, setName] = useState('');
@@ -12,7 +14,26 @@ export default function SignupPage() {
   const [password, setPassword] = useState('');
   const [confirmPassword, setConfirmPassword] = useState('');
   const [isLoading, setIsLoading] = useState(false);
+  const [error, setError] = useState<string | null>(null);
   const { toast } = useToast();
+  const [location] = useLocation();
+  
+  // Check for error parameters in URL
+  useEffect(() => {
+    const params = new URLSearchParams(window.location.search);
+    const errorCode = params.get('error');
+    const errorMessage = params.get('message');
+    
+    if (errorCode === 'domain_not_allowed') {
+      setError(errorMessage || 'Only reelo.io email addresses are allowed for registration');
+    }
+    
+    // Check for email parameter (used when redirecting from Google OAuth)
+    const emailParam = params.get('email');
+    if (emailParam) {
+      setEmail(emailParam);
+    }
+  }, [location]);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -81,6 +102,14 @@ export default function SignupPage() {
 
   return (
     <div className="w-full space-y-4">
+      {error && (
+        <Alert variant="destructive">
+          <AlertCircle className="h-4 w-4" />
+          <AlertTitle>Error</AlertTitle>
+          <AlertDescription>{error}</AlertDescription>
+        </Alert>
+      )}
+      
       <form onSubmit={handleSubmit} className="space-y-4">
         <div className="space-y-2">
           <Label htmlFor="name">Full Name</Label>
@@ -162,7 +191,23 @@ export default function SignupPage() {
         Sign up with Google
       </Button>
 
-      <div className="text-center text-sm">
+      <div className="mt-4 rounded-md bg-blue-50 p-4">
+        <div className="flex">
+          <div className="flex-shrink-0">
+            <svg className="h-5 w-5 text-blue-400" viewBox="0 0 20 20" fill="currentColor">
+              <path fillRule="evenodd" d="M18 10a8 8 0 11-16 0 8 8 0 0116 0zm-7-4a1 1 0 11-2 0 1 1 0 012 0zM9 9a1 1 0 000 2v3a1 1 0 001 1h1a1 1 0 100-2v-3a1 1 0 00-1-1H9z" clipRule="evenodd" />
+            </svg>
+          </div>
+          <div className="ml-3">
+            <h3 className="text-sm font-medium text-blue-800">Domain Restriction</h3>
+            <div className="mt-2 text-sm text-blue-700">
+              <p>Registration is limited to <span className="font-medium">@reelo.io</span> email addresses only. Users with reelo.io email addresses will automatically be assigned the CSM role.</p>
+            </div>
+          </div>
+        </div>
+      </div>
+    
+      <div className="text-center text-sm mt-4">
         Already have an account?{' '}
         <Link href="/auth/login" className="text-primary hover:underline">
           Sign in
