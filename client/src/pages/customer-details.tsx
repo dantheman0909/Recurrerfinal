@@ -83,6 +83,18 @@ export default function CustomerDetails() {
     queryKey: [`/api/customers/${id}/external-data`],
   });
   
+  // Query for non-recurring invoices
+  const { data: nonRecurringInvoices } = useQuery({
+    queryKey: [`/api/chargebee/customers/${id}/non-recurring-invoices`],
+    enabled: !!customer?.chargebee_customer_id,
+  });
+  
+  // Query for current month non-recurring invoices
+  const { data: currentMonthNonRecurringInvoices } = useQuery({
+    queryKey: [`/api/chargebee/customers/${id}/current-month-non-recurring-invoices`],
+    enabled: !!customer?.chargebee_customer_id,
+  });
+  
   // Handle task creation
   const handleCreateTask = async () => {
     if (!newTaskTitle) {
@@ -289,6 +301,79 @@ export default function CustomerDetails() {
       label: `${growthPercentage.toFixed(1)}% growth`
     };
   };
+  
+  // Calculate non-recurring invoice metrics for current month
+  const calculateNonRecurringMetrics = () => {
+    if (!currentMonthNonRecurringInvoices?.length) {
+      return {
+        count: 0,
+        subtotal: 0,
+        totalSpent: 0
+      };
+    }
+    
+    const paidInvoices = currentMonthNonRecurringInvoices.filter(invoice => invoice.status === 'paid');
+    
+    return {
+      count: paidInvoices.length,
+      subtotal: paidInvoices.reduce((sum, inv) => sum + (inv.amount / 100), 0),
+      totalSpent: paidInvoices.reduce((sum, inv) => sum + (inv.total / 100), 0)
+    };
+  };
+  
+  // Prepare add-on revenue trend data
+  const prepareAddonRevenueChartData = () => {
+    if (!nonRecurringInvoices?.length) {
+      return [
+        { name: 'Jan', value: 0 },
+        { name: 'Feb', value: 0 },
+        { name: 'Mar', value: 0 },
+        { name: 'Apr', value: 0 },
+        { name: 'May', value: 0 },
+        { name: 'Jun', value: 0 },
+      ];
+    }
+    
+    // Get invoices and sort by date
+    const invoices = [...nonRecurringInvoices]
+      .filter(invoice => invoice.status === 'paid')
+      .sort((a, b) => a.date - b.date);
+      
+    // Group invoices by month
+    const invoicesByMonth = invoices.reduce((months, invoice) => {
+      const date = new Date(invoice.date * 1000);
+      const monthKey = `${date.getFullYear()}-${date.getMonth() + 1}`;
+      
+      if (!months[monthKey]) {
+        months[monthKey] = {
+          name: date.toLocaleString('default', { month: 'short' }),
+          value: 0,
+          rawDate: date
+        };
+      }
+      
+      months[monthKey].value += invoice.total / 100; // Convert from cents to dollars
+      return months;
+    }, {});
+    
+    // Convert to array and sort by date
+    let monthlyData = Object.values(invoicesByMonth)
+      .sort((a: any, b: any) => a.rawDate - b.rawDate)
+      .map((m: any) => ({ name: m.name, value: m.value }));
+      
+    // Get last 6 months or pad if less than 6
+    if (monthlyData.length > 6) {
+      monthlyData = monthlyData.slice(monthlyData.length - 6);
+    } else if (monthlyData.length < 6) {
+      const missingMonths = 6 - monthlyData.length;
+      
+      for (let i = 0; i < missingMonths; i++) {
+        monthlyData.push({ name: '—', value: 0 });
+      }
+    }
+    
+    return monthlyData;
+  };
 
   return (
     <>
@@ -349,62 +434,122 @@ export default function CustomerDetails() {
               <TabsContent value="overview" className="mt-4">
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-4">
                   <Card>
-                    <CardHeader className="pb-2">
+                    <CardHeader className="pb-1">
                       <CardTitle className="text-lg flex items-center">
                         <DollarSign className="h-5 w-5 mr-1 text-teal-600" />
                         Financial Overview
                       </CardTitle>
                     </CardHeader>
                     <CardContent>
-                      <div className="grid grid-cols-2 gap-4">
-                        <div className="text-center p-3 bg-gray-50 rounded-md">
-                          <p className="text-sm text-gray-500">MRR</p>
-                          <p className="text-xl font-semibold">{formatINR(customer.mrr)}</p>
-                        </div>
-                        <div className="text-center p-3 bg-gray-50 rounded-md">
-                          <p className="text-sm text-gray-500">ARR</p>
-                          <p className="text-xl font-semibold">{formatINR(customer.arr)}</p>
-                        </div>
-                      </div>
-                      
-                      <div className="mt-4">
-                        <p className="text-sm text-gray-500 mb-1">Revenue Trend</p>
-                        <GradientChart 
-                          data={prepareChartData()} 
-                          height={120} 
-                          showAxis={false} 
-                        />
-                      </div>
-                      
-                      <div className="mt-2 flex justify-between items-center">
-                        {(() => {
-                          const growth = calculateGrowth();
-                          const isPositiveGrowth = growth.percentage > 0;
-                          
-                          return (
-                            <div className="flex items-center">
-                              {isPositiveGrowth ? (
-                                <TrendingUp className="h-4 w-4 text-green-500 mr-1" />
-                              ) : (
-                                <TrendingDown className="h-4 w-4 text-red-500 mr-1" />
-                              )}
-                              <span className={`text-sm font-medium ${isPositiveGrowth ? 'text-green-600' : 'text-red-600'}`}>
-                                {growth.label}
-                              </span>
+                      <Tabs defaultValue="recurring" className="w-full">
+                        <TabsList className="w-full justify-start mb-3 bg-gray-100">
+                          <TabsTrigger value="recurring" className="text-xs">Recurring Revenue</TabsTrigger>
+                          <TabsTrigger value="non-recurring" className="text-xs">Non-Recurring Revenue</TabsTrigger>
+                        </TabsList>
+                        
+                        <TabsContent value="recurring" className="mt-0 pt-0">
+                          <div className="grid grid-cols-2 gap-4">
+                            <div className="text-center p-3 bg-gray-50 rounded-md">
+                              <p className="text-sm text-gray-500">MRR</p>
+                              <p className="text-xl font-semibold">{formatINR(customer.mrr)}</p>
                             </div>
-                          );
-                        })()}
-                        <a 
-                          href={customer.chargebee_customer_id ? 
-                            `https://app.chargebee.com/customers/${customer.chargebee_customer_id}` : 
-                            "https://app.chargebee.com"} 
-                          target="_blank" 
-                          rel="noopener noreferrer" 
-                          className="text-sm text-teal-600 hover:text-teal-800 flex items-center"
-                        >
-                          View in Chargebee <ExternalLink className="h-3 w-3 ml-1" />
-                        </a>
-                      </div>
+                            <div className="text-center p-3 bg-gray-50 rounded-md">
+                              <p className="text-sm text-gray-500">ARR</p>
+                              <p className="text-xl font-semibold">{formatINR(customer.arr)}</p>
+                            </div>
+                          </div>
+                          
+                          <div className="mt-4">
+                            <p className="text-sm text-gray-500 mb-1">Revenue Trend</p>
+                            <GradientChart 
+                              data={prepareChartData()} 
+                              height={120} 
+                              showAxis={false} 
+                            />
+                          </div>
+                          
+                          <div className="mt-2 flex justify-between items-center">
+                            {(() => {
+                              const growth = calculateGrowth();
+                              const isPositiveGrowth = growth.percentage > 0;
+                              
+                              return (
+                                <div className="flex items-center">
+                                  {isPositiveGrowth ? (
+                                    <TrendingUp className="h-4 w-4 text-green-500 mr-1" />
+                                  ) : (
+                                    <TrendingDown className="h-4 w-4 text-red-500 mr-1" />
+                                  )}
+                                  <span className={`text-sm font-medium ${isPositiveGrowth ? 'text-green-600' : 'text-red-600'}`}>
+                                    {growth.label}
+                                  </span>
+                                </div>
+                              );
+                            })()}
+                            <a 
+                              href={customer.chargebee_customer_id ? 
+                                `https://app.chargebee.com/customers/${customer.chargebee_customer_id}` : 
+                                "https://app.chargebee.com"} 
+                              target="_blank" 
+                              rel="noopener noreferrer" 
+                              className="text-sm text-teal-600 hover:text-teal-800 flex items-center"
+                            >
+                              View in Chargebee <ExternalLink className="h-3 w-3 ml-1" />
+                            </a>
+                          </div>
+                        </TabsContent>
+                        
+                        <TabsContent value="non-recurring" className="mt-0 pt-0">
+                          {(() => {
+                            const nonRecurringMetrics = calculateNonRecurringMetrics();
+                            
+                            return (
+                              <>
+                                <div className="grid grid-cols-2 gap-4 mb-4">
+                                  <div className="text-center p-3 bg-gray-50 rounded-md">
+                                    <p className="text-sm text-gray-500">Current Month Invoices</p>
+                                    <p className="text-xl font-semibold">{nonRecurringMetrics.count}</p>
+                                  </div>
+                                  <div className="text-center p-3 bg-gray-50 rounded-md">
+                                    <p className="text-sm text-gray-500">Total Spent</p>
+                                    <p className="text-xl font-semibold">{formatINR(nonRecurringMetrics.totalSpent)}</p>
+                                  </div>
+                                </div>
+                                
+                                <div className="mb-4">
+                                  <p className="text-sm text-gray-500 mb-1">Add-on Revenue Trend</p>
+                                  <GradientChart 
+                                    data={prepareAddonRevenueChartData()} 
+                                    height={120} 
+                                    showAxis={false}
+                                    color="#6366f1"
+                                  />
+                                </div>
+                                
+                                <div className="p-3 bg-gray-50 rounded-md">
+                                  <div className="flex justify-between items-center">
+                                    <span className="text-sm text-gray-500">Current Month Subtotal</span>
+                                    <span className="font-medium">{formatINR(nonRecurringMetrics.subtotal)}</span>
+                                  </div>
+                                </div>
+                                
+                                <div className="flex justify-end mt-2">
+                                  <a 
+                                    href={customer.chargebee_customer_id ? 
+                                      `https://app.chargebee.com/customers/${customer.chargebee_customer_id}#invoices` : 
+                                      "https://app.chargebee.com"} 
+                                    target="_blank" 
+                                    rel="noopener noreferrer" 
+                                    className="text-sm text-teal-600 hover:text-teal-800 flex items-center"
+                                  >
+                                    View All Invoices <ExternalLink className="h-3 w-3 ml-1" />
+                                  </a>
+                                </div>
+                              </>
+                            );
+                          })()}
+                        </TabsContent>
+                      </Tabs>
                     </CardContent>
                   </Card>
                   

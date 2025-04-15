@@ -19,6 +19,7 @@ interface GradientChartProps {
   gradientFrom?: string;
   gradientTo?: string;
   strokeColor?: string;
+  color?: string; // New prop for easy color customization
   valueFormatter?: (value: number) => string;
 }
 
@@ -28,11 +29,18 @@ export function GradientChart({
   height = 200,
   showGrid = false,
   showAxis = true,
-  gradientFrom = "#1E99A0", // Keeping the original color
-  gradientTo = "rgba(13, 146, 152, 0)", // Keeping the original color
-  strokeColor = "#0D9298", // Keeping the original color
+  gradientFrom = "#1E99A0", 
+  gradientTo = "rgba(13, 146, 152, 0)", 
+  strokeColor = "#0D9298", 
+  color, // New color prop
   valueFormatter
 }: GradientChartProps) {
+  // If color is provided, use it to derive gradientFrom, gradientTo, and strokeColor
+  if (color) {
+    gradientFrom = color;
+    gradientTo = color.replace(/[^,]+(?=\))/, '0'); // Convert to transparent version
+    strokeColor = color;
+  }
   // Generate unique ID for this gradient to avoid conflicts
   const gradientId = React.useMemo(() => `colorGradient_${Math.floor(Math.random() * 1000)}`, []);
   
