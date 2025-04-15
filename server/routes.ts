@@ -1580,8 +1580,11 @@ export async function registerRoutes(app: Express): Promise<Server> {
             WHERE chargebee_customer_id IS NOT NULL
           `);
           
-          if (customerResult && customerResult.length > 0) {
-            count = parseInt(customerResult[0].count, 10);
+          console.log('Raw customer result:', JSON.stringify(customerResult));
+          
+          // Using rows property which is standard in pg/node-postgres
+          if (customerResult.rows && customerResult.rows.length > 0) {
+            count = parseInt(customerResult.rows[0].count, 10);
           }
           break;
           
@@ -1593,8 +1596,10 @@ export async function registerRoutes(app: Express): Promise<Server> {
             WHERE chargebee_subscription_id IS NOT NULL
           `);
           
-          if (subscriptionResult && subscriptionResult.length > 0) {
-            count = parseInt(subscriptionResult[0].count, 10);
+          console.log('Raw subscription result:', JSON.stringify(subscriptionResult));
+          
+          if (subscriptionResult.rows && subscriptionResult.rows.length > 0) {
+            count = parseInt(subscriptionResult.rows[0].count, 10);
           }
           break;
           
@@ -1609,14 +1614,18 @@ export async function registerRoutes(app: Express): Promise<Server> {
             );
           `);
           
-          if (tableExists.length > 0 && tableExists[0].exists) {
+          console.log('Raw table exists result:', JSON.stringify(tableExists));
+          
+          if (tableExists.rows && tableExists.rows.length > 0 && tableExists.rows[0].exists) {
             const invoiceResult = await db.execute(sql`
               SELECT COUNT(*) as count 
               FROM chargebee_invoices
             `);
             
-            if (invoiceResult && invoiceResult.length > 0) {
-              count = parseInt(invoiceResult[0].count, 10);
+            console.log('Raw invoice result:', JSON.stringify(invoiceResult));
+            
+            if (invoiceResult.rows && invoiceResult.rows.length > 0) {
+              count = parseInt(invoiceResult.rows[0].count, 10);
             }
           }
           break;
@@ -1625,6 +1634,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
           return res.status(400).json({ message: 'Invalid entity type' });
       }
       
+      console.log(`${entity} count:`, count);
       res.json({ count });
     } catch (error) {
       console.error(`Error getting ${entity} count:`, error);
