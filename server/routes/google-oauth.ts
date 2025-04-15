@@ -130,11 +130,15 @@ router.get('/status', async (req: Request, res: Response) => {
     let tokenScopes: string[] = [];
     if (initResult.success) {
       try {
-        const userTokens = await db
+        // Query for user tokens
+        const userTokensQuery = db
           .select()
-          .from(userOAuthTokens)
-          .where(eq(userOAuthTokens.user_id, userId))
-          .where(eq(userOAuthTokens.provider, 'google'));
+          .from(userOAuthTokens);
+        
+        // Filter the results programmatically since Drizzle is giving type issues with 'where'
+        const userTokens = (await userTokensQuery).filter(
+          token => token.user_id === userId && token.provider === 'google'
+        );
         
         if (userTokens.length > 0) {
           tokenScopes = userTokens[0].scopes || [];

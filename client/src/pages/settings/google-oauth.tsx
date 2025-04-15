@@ -305,11 +305,18 @@ export default function GoogleOAuthPage() {
       <div className="space-y-6">
         <div className="flex justify-between items-center">
           <h2 className="text-2xl font-bold">Google OAuth Integration</h2>
-          {configuredStatus !== undefined && (
-            <Badge variant={configuredStatus ? "secondary" : "outline"}>
-              {configuredStatus ? "Configured" : "Not Configured"}
-            </Badge>
-          )}
+          <div className="flex gap-2">
+            {statusData?.connected && (
+              <Badge variant="secondary" className="bg-green-100 text-green-800 border-green-200">
+                <CheckCircle className="mr-1 h-3 w-3" /> Connected
+              </Badge>
+            )}
+            {configuredStatus !== undefined && (
+              <Badge variant={configuredStatus ? "secondary" : "outline"}>
+                {configuredStatus ? "Configured" : "Not Configured"}
+              </Badge>
+            )}
+          </div>
         </div>
         
         <p className="text-muted-foreground">
@@ -462,16 +469,26 @@ export default function GoogleOAuthPage() {
               <Button 
                 onClick={handleRevokeAccess} 
                 variant="outline" 
-                disabled={revokeAccessMutation.isPending || isAuthFlow}
+                disabled={revokeAccessMutation.isPending || isAuthFlow || !statusData?.connected}
               >
                 {revokeAccessMutation.isPending ? 'Revoking...' : 'Revoke Access'}
               </Button>
-              <Button 
-                onClick={startAuthFlow} 
-                disabled={getAuthUrlMutation.isPending || isAuthFlow}
-              >
-                {getAuthUrlMutation.isPending || isAuthFlow ? 'Connecting...' : 'Connect Google Account'}
-              </Button>
+              
+              {statusData?.connected ? (
+                <Button 
+                  variant="secondary"
+                  disabled
+                >
+                  <CheckCircle className="mr-2 h-4 w-4" /> Connected
+                </Button>
+              ) : (
+                <Button 
+                  onClick={startAuthFlow} 
+                  disabled={getAuthUrlMutation.isPending || isAuthFlow}
+                >
+                  {getAuthUrlMutation.isPending || isAuthFlow ? 'Connecting...' : 'Connect Google Account'}
+                </Button>
+              )}
             </div>
             
             <div className="w-full border-t pt-3">
