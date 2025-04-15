@@ -88,6 +88,7 @@ export default function GoogleOAuthPage() {
       }
     },
     onError: (error: any) => {
+      console.error('Authentication error:', error);
       toast({
         title: 'Error',
         description: error.message || 'Failed to start authorization flow',
