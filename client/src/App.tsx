@@ -11,6 +11,7 @@ import Reports from "@/pages/reports";
 import RedZone from "@/pages/red-zone";
 import RedZoneSettingsEnhanced from "@/pages/redzone-settings-enhanced";
 import Admin from "@/pages/admin";
+import AdminUsers from "@/pages/admin/users";
 import Achievements from "@/pages/achievements";
 import Profile from "@/pages/profile";
 import Settings from "@/pages/settings";
@@ -32,6 +33,7 @@ function App() {
         <Route path="/red-zone" component={RedZone} />
         <Route path="/red-zone/settings" component={RedZoneSettingsEnhanced} />
         <Route path="/admin" component={Admin} />
+        <Route path="/admin/users" component={AdminUsers} />
         <Route path="/achievements" component={Achievements} />
         <Route path="/profile" component={Profile} />
         <Route path="/settings" component={Settings} />
