@@ -82,17 +82,37 @@ function TotalRecordsCounter({ entity, chargebeeConfig }: { entity: string, char
         setLoading(true);
         // Get count from the actual database, not just the last sync stats
         const response = await fetch(`/api/admin/entity-count/${entity}`);
-        if (response.ok) {
-          const data = await response.json();
+        const data = await response.json();
+        
+        // Check if data has the count property and it's a number
+        if (data && typeof data.count === 'number') {
           setCount(data.count);
+          console.log(`Received ${entity} count:`, data.count);
         } else {
-          console.error(`Failed to fetch ${entity} count`);
+          console.error(`Invalid response format for ${entity} count:`, data);
           // Fallback to last sync stats if available
-          if (chargebeeConfig?.last_sync_stats?.[entity]) {
-            if (typeof chargebeeConfig.last_sync_stats[entity] === 'object') {
-              setCount(chargebeeConfig.last_sync_stats[entity].total || 0);
-            } else {
-              setCount(chargebeeConfig.last_sync_stats[entity] || 0);
+          if (chargebeeConfig?.last_sync_stats) {
+            let syncStats;
+            try {
+              // Handle the case where last_sync_stats might be a JSON string
+              if (typeof chargebeeConfig.last_sync_stats === 'string') {
+                syncStats = JSON.parse(chargebeeConfig.last_sync_stats);
+              } else {
+                syncStats = chargebeeConfig.last_sync_stats;
+              }
+              
+              if (syncStats && syncStats[entity]) {
+                if (typeof syncStats[entity] === 'object') {
+                  setCount(syncStats[entity].total || 0);
+                } else {
+                  setCount(syncStats[entity] || 0);
+                }
+              } else {
+                setCount(0);
+              }
+            } catch (e) {
+              console.error(`Error parsing last_sync_stats for ${entity}:`, e);
+              setCount(0);
             }
           } else {
             setCount(0);
