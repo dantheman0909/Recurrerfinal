@@ -1605,17 +1605,42 @@ function ChargebeeConfigTab() {
                   <div className="border-t mt-6 pt-6">
                     <h3 className="text-lg font-medium mb-4">Data Synchronization</h3>
                     <div className="flex items-center justify-between">
-                      <div>
+                      <div className="space-y-1">
                         <p className="text-sm text-gray-700">
                           Last synchronized: {chargebeeConfig.last_synced_at ? 
                             new Date(chargebeeConfig.last_synced_at).toLocaleString() : 
                             'Never'}
                         </p>
-                        <p className="text-xs text-gray-500 mt-1">
+                        <p className="text-xs text-gray-500">
                           {chargebeeConfig.status === 'active' ? 
                             `Automatic sync every ${chargebeeConfig.sync_frequency} hours` : 
                             'Automatic sync is disabled'}
                         </p>
+                        {chargebeeConfig.last_sync_stats && (
+                          <div className="text-xs text-gray-600 pt-1">
+                            <p className="font-medium">Last sync results:</p>
+                            <div className="flex space-x-4 mt-1">
+                              <span>
+                                <Badge variant="outline" className="bg-blue-50 text-blue-800 mr-1">
+                                  {chargebeeConfig.last_sync_stats.customers || 0}
+                                </Badge>
+                                customers
+                              </span>
+                              <span>
+                                <Badge variant="outline" className="bg-green-50 text-green-800 mr-1">
+                                  {chargebeeConfig.last_sync_stats.subscriptions || 0}
+                                </Badge>
+                                subscriptions
+                              </span>
+                              <span>
+                                <Badge variant="outline" className="bg-purple-50 text-purple-800 mr-1">
+                                  {chargebeeConfig.last_sync_stats.invoices || 0}
+                                </Badge>
+                                invoices
+                              </span>
+                            </div>
+                          </div>
+                        )}
                       </div>
                       <Button
                         onClick={() => manualSyncMutation.mutate()}

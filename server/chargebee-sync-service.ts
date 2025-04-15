@@ -12,18 +12,20 @@ export class ChargebeeSyncService {
    * Synchronizes data from Chargebee to local database
    * Uses update+add mode instead of append, so existing records are updated
    */
-  async synchronizeData(): Promise<{ success: boolean; message: string; records?: number }> {
+  async synchronizeData(): Promise<{ success: boolean; message: string; records?: number; syncStats?: any }> {
     try {
       // Get Chargebee config and field mappings
       const config = await storage.getChargebeeConfig();
       if (!config) {
         return { success: false, message: 'Chargebee configuration not found' };
       }
-
-      // Update last_synced_at timestamp
-      await db.update(chargebeeConfig)
-        .set({ last_synced_at: new Date() })
-        .where(eq(chargebeeConfig.id, config.id));
+      
+      // Initialize sync stats
+      const syncStats = {
+        customers: 0,
+        subscriptions: 0,
+        invoices: 0
+      };
 
       // Get field mappings
       const fieldMappings = await storage.getChargebeeFieldMappings();
