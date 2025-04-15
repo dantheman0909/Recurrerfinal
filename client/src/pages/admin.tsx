@@ -933,8 +933,12 @@ function DatabaseConfigTab() {
                         <tbody className="divide-y divide-gray-200">
                           {queryResults.map((row: any, i: number) => (
                             <tr key={i}>
-                              {Object.values(row).map((value: any, j: number) => (
-                                <td key={j} className="px-4 py-2">{value?.toString() || ''}</td>
+                              {Object.entries(row).map(([key, value]: [string, any], j: number) => (
+                                <td key={j} className="px-4 py-2">
+                                  {key === 'revenue_1_year' && value !== null && !isNaN(Number(value))
+                                    ? formatINR(value)
+                                    : value?.toString() || ''}
+                                </td>
                               ))}
                             </tr>
                           ))}
