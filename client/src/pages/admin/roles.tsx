@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import {
   Card,
   CardContent,
@@ -20,10 +20,14 @@ import { Switch } from '@/components/ui/switch';
 import { Label } from '@/components/ui/label';
 import { useToast } from '@/hooks/use-toast';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
+import { Spinner } from '@/components/ui/spinner';
+import { queryClient } from '@/lib/queryClient';
+import { useQuery, useMutation } from '@tanstack/react-query';
 
 const RolePermissionsPage = () => {
   const { toast } = useToast();
   const [activeTab, setActiveTab] = useState('overview');
+  const [isLoading, setIsLoading] = useState(false);
 
   // Define permission structure in a type-safe way
   type Permission = {
@@ -36,6 +40,76 @@ const RolePermissionsPage = () => {
       csm: boolean;
     };
   };
+
+  // Fetch permissions from the API
+  const { data: fetchedPermissions, status } = useQuery({
+    queryKey: ['/api/roles/permissions'],
+    queryFn: async () => {
+      const response = await fetch('/api/roles/permissions');
+      if (!response.ok) {
+        throw new Error('Failed to fetch permissions');
+      }
+      const data = await response.json();
+      
+      // Convert from server format to frontend format
+      return data.map((p: any) => ({
+        id: p.id,
+        name: p.name,
+        description: p.description,
+        roles: {
+          admin: p.admin_access,
+          team_lead: p.team_lead_access,
+          csm: p.csm_access
+        }
+      }));
+    },
+  });
+
+  // Update permissions mutation
+  const updatePermissions = useMutation({
+    mutationFn: async (updatedPermissions: Permission[]) => {
+      setIsLoading(true);
+      // Convert from frontend format to server format
+      const serverPermissions = updatedPermissions.map(p => ({
+        id: p.id,
+        name: p.name,
+        description: p.description,
+        admin_access: p.roles.admin,
+        team_lead_access: p.roles.team_lead,
+        csm_access: p.roles.csm
+      }));
+      
+      const response = await fetch('/api/roles/permissions', {
+        method: 'PUT',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({ permissions: serverPermissions }),
+      });
+      
+      if (!response.ok) {
+        throw new Error('Failed to update permissions');
+      }
+      
+      return await response.json();
+    },
+    onSuccess: () => {
+      toast({
+        title: 'Permissions updated',
+        description: 'Role permissions have been saved successfully.',
+      });
+      queryClient.invalidateQueries({ queryKey: ['/api/roles/permissions'] });
+      setIsLoading(false);
+    },
+    onError: (error: Error) => {
+      toast({
+        title: 'Error',
+        description: `Failed to update permissions: ${error.message}`,
+        variant: 'destructive',
+      });
+      setIsLoading(false);
+    },
+  });
 
   // List of all permissions for the application
   const [permissions, setPermissions] = useState<Permission[]>([

@@ -77,6 +77,10 @@ app.use('/api/oauth/google', googleOAuthRoutes);
 import userManagementRoutes from './routes/user-management';
 app.use('/api/users', userManagementRoutes);
 
+// Load and configure Role Management routes
+import rolesRoutes from './routes/roles';
+app.use('/api/roles', rolesRoutes);
+
 // Load and configure Authentication routes
 import authRoutes from './routes/auth';
 app.use('/api/auth', authRoutes);
@@ -340,6 +344,19 @@ app.get('/', (req, res, next) => {
         }
       } catch (error) {
         console.error('Error creating Google OAuth tables:', error);
+      }
+      
+      try {
+        // Create roles and permissions tables for role-based access control
+        const createPermissionsTable = (await import('./create-permissions-table')).default;
+        const permissionsResult = await createPermissionsTable();
+        if (permissionsResult.success) {
+          log('Permissions table created/updated successfully');
+        } else {
+          console.warn('Permissions table warning:', permissionsResult.error);
+        }
+      } catch (error) {
+        console.error('Error creating permissions table:', error);
       }
     }
   } catch (error) {
