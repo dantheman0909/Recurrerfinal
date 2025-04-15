@@ -1569,28 +1569,60 @@ export async function registerRoutes(app: Express): Promise<Server> {
     
     try {
       let count = 0;
-      let tableName: string;
       
-      // Map entity name to actual table name
+      // Different entities are stored in different ways in our system
       switch (entity) {
         case 'customers':
-          tableName = 'chargebee_customers';
+          // Customers with Chargebee data have chargebee_customer_id populated
+          const customerResult = await db.execute(sql`
+            SELECT COUNT(*) as count 
+            FROM customers 
+            WHERE chargebee_customer_id IS NOT NULL
+          `);
+          
+          if (customerResult && customerResult.length > 0) {
+            count = parseInt(customerResult[0].count, 10);
+          }
           break;
+          
         case 'subscriptions':
-          tableName = 'chargebee_subscriptions';
+          // Customers with subscription data have chargebee_subscription_id populated
+          const subscriptionResult = await db.execute(sql`
+            SELECT COUNT(*) as count 
+            FROM customers 
+            WHERE chargebee_subscription_id IS NOT NULL
+          `);
+          
+          if (subscriptionResult && subscriptionResult.length > 0) {
+            count = parseInt(subscriptionResult[0].count, 10);
+          }
           break;
+          
         case 'invoices':
-          tableName = 'chargebee_invoices';
+          // Invoices are stored in chargebee_invoices table
+          // First check if table exists
+          const tableExists = await db.execute(sql`
+            SELECT EXISTS (
+              SELECT FROM information_schema.tables 
+              WHERE table_schema = 'public'
+              AND table_name = 'chargebee_invoices'
+            );
+          `);
+          
+          if (tableExists.length > 0 && tableExists[0].exists) {
+            const invoiceResult = await db.execute(sql`
+              SELECT COUNT(*) as count 
+              FROM chargebee_invoices
+            `);
+            
+            if (invoiceResult && invoiceResult.length > 0) {
+              count = parseInt(invoiceResult[0].count, 10);
+            }
+          }
           break;
+          
         default:
           return res.status(400).json({ message: 'Invalid entity type' });
-      }
-      
-      // Query the database for the count
-      const result = await db.execute(sql`SELECT COUNT(*) as count FROM ${sql.identifier(tableName)}`);
-      
-      if (result && result.length > 0) {
-        count = parseInt(result[0].count, 10);
       }
       
       res.json({ count });
