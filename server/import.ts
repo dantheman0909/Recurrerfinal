@@ -376,6 +376,7 @@ export const importCSV = async (req: Request, res: Response) => {
         ) : false;
         
         if (hasErrors) {
+          console.log(`Skipping record with row ${record.row} due to validation errors`);
           continue; // Skip records with validation errors
         }
         
@@ -399,10 +400,12 @@ export const importCSV = async (req: Request, res: Response) => {
           
           // Add to error strings for response
           errorStrings.push(`Row ${record.row}: Missing required fields: ${missingFields.join(', ')}`);
+          console.log(`Skipping record with row ${record.row} due to missing required fields: ${missingFields.join(', ')}`);
           continue; // Skip records missing required fields
         }
         
         // Create a clean copy of the record with all fields from the export format
+        // Only include fields that are actually in the database schema
         const cleanRecord = {
           // Required fields (must be present in import)
           name: record.name, // Required field
@@ -412,55 +415,103 @@ export const importCSV = async (req: Request, res: Response) => {
           chargebee_customer_id: record.chargebee_customer_id, // Required field
           chargebee_subscription_id: record.chargebee_subscription_id, // Required field
           
-          // All fields from user-defined export format
-          reelo_id: record.reelo_id || null,
-          active_stores: typeof record.active_stores === 'number' ? record.active_stores : null,
+          // Customer profile fields
           contact_name: record.contact_name || null,
-          arr: typeof record.arr === 'number' ? record.arr : null,
-          mrr: typeof record.mrr === 'number' ? record.mrr : null,
-          assigned_csm: typeof record.assigned_csm === 'number' ? record.assigned_csm : null,
-          currency_code: record.currency_code || null,
-          growth_subscription_count: typeof record.growth_subscription_count === 'number' ? record.growth_subscription_count : null,
-          health_status: record.health_status || null,
           industry: record.industry || null,
-          bills_received_last_30_days: typeof record.bills_received_last_30_days === 'number' ? record.bills_received_last_30_days : null,
-          campaigns_sent_last_90_days: typeof record.campaigns_sent_last_90_days === 'number' ? record.campaigns_sent_last_90_days : null,
-          customers_acquired_last_30_days: typeof record.customers_acquired_last_30_days === 'number' ? record.customers_acquired_last_30_days : null,
-          customers_with_min_one_visit: typeof record.customers_with_min_one_visit === 'number' ? record.customers_with_min_one_visit : null,
-          customers_with_min_two_visit: typeof record.customers_with_min_two_visit === 'number' ? record.customers_with_min_two_visit : null,
-          customers_without_min_visits: typeof record.customers_without_min_visits === 'number' ? record.customers_without_min_visits : null,
-          enableRLS: record.enableRLS || null,
-          less_than_300_bills: typeof record.less_than_300_bills === 'number' ? record.less_than_300_bills : null,
           logo_url: record.logo_url || null,
+          health_status: record.health_status || 'healthy',
+          
+          // Financial fields
+          mrr: typeof record.mrr === 'number' ? record.mrr : null,
+          arr: typeof record.arr === 'number' ? record.arr : null, 
+          currency_code: record.currency_code || 'INR',
+          renewal_date: record.renewal_date instanceof Date ? record.renewal_date : null,
+          onboarded_at: record.onboarded_at instanceof Date ? record.onboarded_at : null,
+          
+          // External IDs
+          mysql_company_id: record.mysql_company_id || null,
+          reelo_id: record.reelo_id || null,
+          
+          // Store metrics
+          active_stores: typeof record.active_stores === 'number' ? record.active_stores : null,
+          growth_subscription_count: typeof record.growth_subscription_count === 'number' ? record.growth_subscription_count : null,
+          
+          // User assignments
+          assigned_csm: typeof record.assigned_csm === 'number' ? record.assigned_csm : null,
+          
+          // Loyalty program fields
           loyalty_active_channels: record.loyalty_active_channels || null,
           loyalty_active_store_count: typeof record.loyalty_active_store_count === 'number' ? record.loyalty_active_store_count : null,
           loyalty_channel_credits: typeof record.loyalty_channel_credits === 'number' ? record.loyalty_channel_credits : null,
           loyalty_inactive_store_count: typeof record.loyalty_inactive_store_count === 'number' ? record.loyalty_inactive_store_count : null,
           loyalty_reward: record.loyalty_reward || null,
           loyalty_type: record.loyalty_type || null,
-          mysql_company_id: record.mysql_company_id || null,
+          
+          // Customer engagement metrics
+          bills_received_last_30_days: typeof record.bills_received_last_30_days === 'number' ? record.bills_received_last_30_days : null,
+          campaigns_sent_last_90_days: typeof record.campaigns_sent_last_90_days === 'number' ? record.campaigns_sent_last_90_days : null,
+          customers_acquired_last_30_days: typeof record.customers_acquired_last_30_days === 'number' ? record.customers_acquired_last_30_days : null,
+          customers_with_min_one_visit: typeof record.customers_with_min_one_visit === 'number' ? record.customers_with_min_one_visit : null,
+          customers_with_min_two_visit: typeof record.customers_with_min_two_visit === 'number' ? record.customers_with_min_two_visit : null,
+          customers_without_min_visits: typeof record.customers_without_min_visits === 'number' ? record.customers_without_min_visits : null,
+          unique_customers_captured: typeof record.unique_customers_captured === 'number' ? record.unique_customers_captured : null,
+          
+          // Feedback metrics
           negative_feedback_alert_inactive: typeof record.negative_feedback_alert_inactive === 'number' ? record.negative_feedback_alert_inactive : null,
           negative_feedbacks_count: typeof record.negative_feedbacks_count === 'number' ? record.negative_feedbacks_count : null,
-          onboarded_at: record.onboarded_at instanceof Date ? record.onboarded_at : null,
           percentage_of_inactive_customers: typeof record.percentage_of_inactive_customers === 'number' ? record.percentage_of_inactive_customers : null,
-          renewal_date: record.renewal_date instanceof Date ? record.renewal_date : null,
-          revenue_1_year: typeof record.revenue_1_year === 'number' ? record.revenue_1_year : null,
-          unique_customers_captured: typeof record.unique_customers_captured === 'number' ? record.unique_customers_captured : null
+          
+          // Miscellaneous flags
+          less_than_300_bills: typeof record.less_than_300_bills === 'number' ? record.less_than_300_bills : null,
+          revenue_1_year: typeof record.revenue_1_year === 'number' ? record.revenue_1_year : null
         };
+        
+        // Remove any fields that aren't in the database schema
+        // This ensures we don't try to insert fields the database doesn't know about
+        const cleanedRecord: Record<string, any> = {};
+        
+        // Get the list of valid column names from database schema
+        const validColumns = Object.keys(customers);
+        
+        // Only include fields that exist in the schema
+        for (const key of Object.keys(cleanRecord)) {
+          if (validColumns.includes(key)) {
+            // @ts-ignore - We know these fields exist in the schema
+            cleanedRecord[key] = cleanRecord[key];
+          }
+        }
         
         const existingCustomer = customersByRecurrerId[record.recurrer_id];
         
         if (existingCustomer) {
           // Update existing customer
-          await storage.updateCustomer(existingCustomer.id, cleanRecord);
-          updatedRecords.push(record);
+          console.log(`Updating existing customer: ${existingCustomer.id} (${existingCustomer.name})`);
+          const updated = await storage.updateCustomer(existingCustomer.id, cleanedRecord);
+          if (updated) {
+            updatedRecords.push(updated);
+            console.log(`Successfully updated customer ID ${existingCustomer.id}`);
+          } else {
+            throw new Error(`Failed to update customer with ID ${existingCustomer.id}`);
+          }
         } else {
           // Create new customer
-          const newCustomer = await storage.createCustomer(cleanRecord);
-          importedRecords.push(newCustomer);
+          console.log(`Creating new customer: ${cleanedRecord.name}`);
+          try {
+            const newCustomer = await storage.createCustomer(cleanedRecord);
+            if (newCustomer && newCustomer.id) {
+              importedRecords.push(newCustomer);
+              console.log(`Successfully created customer with ID ${newCustomer.id}`);
+            } else {
+              throw new Error('Customer created but no ID returned');
+            }
+          } catch (createError: any) {
+            console.error(`Error creating customer: ${createError.message}`);
+            throw createError; // Re-throw to be caught by outer catch block
+          }
         }
       } catch (error: any) {
         // Create a validation error object for the caught error
+        console.error(`Error processing row ${record.row}: ${error.message}`);
         const processingError: ValidationError = {
           row: record.row || 0,
           field: 'processing',
@@ -468,7 +519,7 @@ export const importCSV = async (req: Request, res: Response) => {
           message: `Processing error: ${error.message}`
         };
         errorsList.push(processingError);
-        errorStrings.push(`Row error: ${error.message}`);
+        errorStrings.push(`Row ${record.row} error: ${error.message}`);
       }
     }
     
