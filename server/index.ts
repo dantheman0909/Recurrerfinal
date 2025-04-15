@@ -242,16 +242,32 @@ app.post('/api/admin/chargebee-scheduler/:action', async (req, res) => {
 // Customer-specific external data route
 app.get('/api/customers/:id/external-data', getCustomerExternalData);
 
-// Health check endpoint for deployment
+// Health check endpoints for deployment
+// Multiple health check routes to ensure Replit deployment can access at least one
 app.get('/health', (req, res) => {
-  res.status(200).json({ status: 'ok', message: 'Service is healthy' });
+  res.status(200).json({ status: 'ok', message: 'Service is healthy', timestamp: new Date().toISOString() });
+});
+
+app.get('/healthz', (req, res) => {
+  res.status(200).json({ status: 'ok', message: 'Service is healthy', timestamp: new Date().toISOString() });
+});
+
+app.get('/ready', (req, res) => {
+  res.status(200).json({ status: 'ok', message: 'Service is ready', timestamp: new Date().toISOString() });
 });
 
 // Root health check endpoint for deployment
 app.get('/', (req, res, next) => {
+  // Explicitly handle health checks at the root URL
   if (req.headers['user-agent']?.includes('health-check') || req.query.health === 'check') {
-    return res.status(200).json({ status: 'ok', message: 'Service is healthy' });
+    return res.status(200).json({ 
+      status: 'ok', 
+      message: 'Service is healthy', 
+      timestamp: new Date().toISOString() 
+    });
   }
+  
+  // For normal requests, continue to the next middleware
   next();
 });
 
@@ -365,12 +381,22 @@ app.get('/', (req, res, next) => {
   
   const server = await registerRoutes(app);
 
+  // Error handler middleware - provides consistent error responses
   app.use((err: any, _req: Request, res: Response, _next: NextFunction) => {
     const status = err.status || err.statusCode || 500;
     const message = err.message || "Internal Server Error";
-
-    res.status(status).json({ message });
-    throw err;
+    
+    // Log the error but don't throw (which would crash the server)
+    console.error('Server error:', err);
+    
+    // Only send the response if it hasn't been sent already
+    if (!res.headersSent) {
+      res.status(status).json({ 
+        status: 'error', 
+        message,
+        timestamp: new Date().toISOString()
+      });
+    }
   });
 
   // importantly only setup vite in development and after
