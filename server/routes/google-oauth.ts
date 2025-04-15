@@ -2,7 +2,7 @@ import { Router, Request, Response } from 'express';
 import { googleOAuthService } from '../google-oauth-service';
 import { z } from 'zod';
 import { db } from '../db';
-import { eq } from 'drizzle-orm';
+import { eq, sql } from 'drizzle-orm';
 import { oauthScopeEnum, userOAuthTokens, googleOAuthConfig } from '@shared/schema';
 import * as expressSession from 'express-session';
 import https from 'https';
@@ -296,38 +296,51 @@ router.post('/token', async (req: Request, res: Response) => {
         }
         
         // Save mock token to database
-        const existingTokens = await db
+        // Query all tokens first
+        const tokensQuery = db
           .select()
-          .from(userOAuthTokens)
-          .where(eq(userOAuthTokens.user_id, userId))
-          .where(eq(userOAuthTokens.provider, 'google'));
+          .from(userOAuthTokens);
+        
+        // Filter programmatically
+        const existingTokens = (await tokensQuery).filter(
+          token => token.user_id === userId && token.provider === 'google'
+        );
+        
+        const now = new Date();
+        const expiresAt = new Date(now.getTime() + 3600 * 1000); // 1 hour from now
+        
+        // Make sure we have a valid scope array that matches the enum
+        const validScopes = mockScopes.filter(scope => 
+          scope === 'email' || scope === 'profile' || scope === 'gmail' || scope === 'calendar'
+        ) as ("email" | "profile" | "gmail" | "calendar")[];
         
         if (existingTokens.length > 0) {
-          // Update existing token
-          await db
-            .update(userOAuthTokens)
-            .set({
-              access_token: 'mock_access_token_' + Date.now(),
-              refresh_token: 'mock_refresh_token_' + Date.now(),
-              token_type: 'Bearer',
-              scopes: mockScopes,
-              expires_at: new Date(Date.now() + 3600 * 1000), // 1 hour expiry
-              updated_at: new Date()
-            })
-            .where(eq(userOAuthTokens.id, existingTokens[0].id));
+          // Update existing token using SQL builder
+          await db.execute(
+            sql`UPDATE user_oauth_tokens 
+                SET access_token = ${`mock_access_token_${Date.now()}`}, 
+                    refresh_token = ${`mock_refresh_token_${Date.now()}`}, 
+                    token_type = ${'Bearer'}, 
+                    scopes = ${validScopes}, 
+                    expires_at = ${expiresAt}, 
+                    updated_at = ${now}
+                WHERE id = ${existingTokens[0].id}`
+          );
         } else {
-          // Insert new token
-          await db
-            .insert(userOAuthTokens)
-            .values({
-              user_id: userId,
-              provider: 'google',
-              access_token: 'mock_access_token_' + Date.now(),
-              refresh_token: 'mock_refresh_token_' + Date.now(),
-              token_type: 'Bearer',
-              scopes: mockScopes,
-              expires_at: new Date(Date.now() + 3600 * 1000) // 1 hour expiry
-            });
+          // Insert new token using SQL builder
+          await db.execute(
+            sql`INSERT INTO user_oauth_tokens 
+                (user_id, provider, access_token, refresh_token, token_type, scopes, expires_at) 
+                VALUES (
+                  ${userId}, 
+                  ${'google'}, 
+                  ${`mock_access_token_${Date.now()}`}, 
+                  ${`mock_refresh_token_${Date.now()}`}, 
+                  ${'Bearer'}, 
+                  ${validScopes}, 
+                  ${expiresAt}
+                )`
+          );
         }
         
         console.log('Saved mock token with scopes:', mockScopes);
@@ -459,11 +472,11 @@ router.post('/revoke', async (req: Request, res: Response) => {
       console.log('Simulating successful revocation of Google access');
       
       try {
-        // Delete mock token from database
-        await db
-          .delete(userOAuthTokens)
-          .where(eq(userOAuthTokens.user_id, userId))
-          .where(eq(userOAuthTokens.provider, 'google'));
+        // Delete mock token from database using SQL
+        await db.execute(
+          sql`DELETE FROM user_oauth_tokens 
+              WHERE user_id = ${userId} AND provider = 'google'`
+        );
           
         console.log('Deleted mock Google OAuth tokens for user:', userId);
       } catch (mockError) {
