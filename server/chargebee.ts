@@ -86,8 +86,62 @@ export class ChargebeeService {
       throw error;
     }
   }
+  
+  /**
+   * Helper method to fetch all pages of a particular entity type
+   * Handles pagination automatically by following the next_offset
+   */
+  private async fetchAllPages(endpoint: string, paramName: string = ''): Promise<any[]> {
+    let allResults: any[] = [];
+    let hasMore = true;
+    let nextOffset = '';
+    let page = 1;
+    
+    console.log(`Starting pagination for ${endpoint}`);
+    
+    while (hasMore) {
+      const queryParams = new URLSearchParams();
+      queryParams.append('limit', '100'); // Maximum allowed by Chargebee
+      if (nextOffset) {
+        queryParams.append('offset', nextOffset);
+      }
+      
+      const url = `${endpoint}?${queryParams.toString()}`;
+      console.log(`Fetching page ${page} from ${url}`);
+      
+      const response = await this.makeRequest(url);
+      
+      if (!response.list || !Array.isArray(response.list)) {
+        console.warn(`Unexpected response format from Chargebee API for ${url}`);
+        break;
+      }
+      
+      // Extract items based on param name (e.g., "subscription", "customer", "invoice")
+      const items = response.list.map((item: any) => 
+        paramName && item[paramName] ? item[paramName] : item
+      );
+      
+      allResults = allResults.concat(items);
+      
+      // Check if there's more data to fetch
+      hasMore = !!response.next_offset;
+      nextOffset = response.next_offset || '';
+      
+      console.log(`Fetched ${items.length} items, total so far: ${allResults.length}, hasMore: ${hasMore}`);
+      page++;
+      
+      // Safety check to prevent infinite loops
+      if (page > 50) {
+        console.warn('Reached maximum page limit (50) for pagination safety');
+        break;
+      }
+    }
+    
+    console.log(`Completed pagination for ${endpoint}, total items: ${allResults.length}`);
+    return allResults;
+  }
 
-  // Get all subscriptions
+  // Get all subscriptions (single page)
   async getSubscriptions(limit: number = 100, offset: string = ''): Promise<ChargebeeSubscription[]> {
     const queryParams = new URLSearchParams();
     queryParams.append('limit', limit.toString());
@@ -98,6 +152,14 @@ export class ChargebeeService {
     const response = await this.makeRequest(`/subscriptions?${queryParams.toString()}`);
     return response.list.map((item: any) => item.subscription);
   }
+  
+  // Get ALL subscriptions (with automatic pagination)
+  async getAllSubscriptions(): Promise<ChargebeeSubscription[]> {
+    console.log('Fetching all Chargebee subscriptions with pagination');
+    const subscriptions = await this.fetchAllPages('/subscriptions', 'subscription');
+    console.log(`Fetched a total of ${subscriptions.length} subscriptions from Chargebee`);
+    return subscriptions;
+  }
 
   // Get subscription by ID
   async getSubscription(id: string): Promise<ChargebeeSubscription> {
@@ -105,7 +167,7 @@ export class ChargebeeService {
     return response.subscription;
   }
 
-  // Get all customers
+  // Get all customers (single page)
   async getCustomers(limit: number = 100, offset: string = ''): Promise<ChargebeeCustomer[]> {
     const queryParams = new URLSearchParams();
     queryParams.append('limit', limit.toString());
@@ -116,6 +178,14 @@ export class ChargebeeService {
     const response = await this.makeRequest(`/customers?${queryParams.toString()}`);
     return response.list.map((item: any) => item.customer);
   }
+  
+  // Get ALL customers (with automatic pagination)
+  async getAllCustomers(): Promise<ChargebeeCustomer[]> {
+    console.log('Fetching all Chargebee customers with pagination');
+    const customers = await this.fetchAllPages('/customers', 'customer');
+    console.log(`Fetched a total of ${customers.length} customers from Chargebee`);
+    return customers;
+  }
 
   // Get customer by ID
   async getCustomer(id: string): Promise<ChargebeeCustomer> {
@@ -123,7 +193,7 @@ export class ChargebeeService {
     return response.customer;
   }
 
-  // Get all invoices
+  // Get all invoices (single page)
   async getInvoices(limit: number = 100, offset: string = ''): Promise<ChargebeeInvoice[]> {
     const queryParams = new URLSearchParams();
     queryParams.append('limit', limit.toString());
@@ -133,6 +203,14 @@ export class ChargebeeService {
 
     const response = await this.makeRequest(`/invoices?${queryParams.toString()}`);
     return response.list.map((item: any) => item.invoice);
+  }
+  
+  // Get ALL invoices (with automatic pagination)
+  async getAllInvoices(): Promise<ChargebeeInvoice[]> {
+    console.log('Fetching all Chargebee invoices with pagination');
+    const invoices = await this.fetchAllPages('/invoices', 'invoice');
+    console.log(`Fetched a total of ${invoices.length} invoices from Chargebee`);
+    return invoices;
   }
 
   // Get invoice by ID

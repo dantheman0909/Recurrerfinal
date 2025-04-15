@@ -68,15 +68,18 @@ export class ChargebeeSyncService {
         
         switch (entityType) {
           case 'customer':
-            entityData = await chargebeeService.getCustomers(100);
+            console.log('Fetching all customers from Chargebee...');
+            entityData = await chargebeeService.getAllCustomers();
             syncStats.customers = entityData.length;
             break;
           case 'subscription':
-            entityData = await chargebeeService.getSubscriptions(100);
+            console.log('Fetching all subscriptions from Chargebee...');
+            entityData = await chargebeeService.getAllSubscriptions();
             syncStats.subscriptions = entityData.length;
             break;
           case 'invoice':
-            entityData = await chargebeeService.getInvoices(100);
+            console.log('Fetching all invoices from Chargebee...');
+            entityData = await chargebeeService.getAllInvoices();
             syncStats.invoices = entityData.length;
             break;
           default:
