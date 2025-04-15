@@ -71,7 +71,15 @@ export default function Sidebar({ open, setOpen }: SidebarProps) {
         { name: "Settings", href: "/red-zone/settings", icon: Settings }
       ]
     },
-    { name: "Admin", href: "/admin", icon: Settings }
+    { name: "Admin", href: "/admin", icon: Settings },
+    { 
+      name: "Settings", 
+      href: "/settings", 
+      icon: Settings,
+      subItems: [
+        { name: "Google OAuth", href: "/settings/google-oauth", icon: Users }
+      ]
+    }
   ];
   
   const sidebarContent = (

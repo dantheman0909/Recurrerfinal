@@ -8,50 +8,61 @@ export type GoogleOAuthConfig = {
 
 export type GoogleOAuthScope = 'email' | 'profile' | 'gmail' | 'calendar';
 
+export type GoogleOAuthStatus = {
+  configured: boolean;
+  connected?: boolean;
+};
+
+export type GoogleOAuthUrlResponse = {
+  success: boolean;
+  authUrl?: string;
+  error?: string;
+};
+
+export type GoogleOAuthResponse = {
+  success: boolean;
+  message?: string;
+  error?: string;
+};
+
 export const GoogleOAuthService = {
   /**
    * Save Google OAuth configuration
    */
-  saveConfig: async (config: GoogleOAuthConfig) => {
-    return apiRequest('/api/oauth/google/config', {
-      method: 'POST',
-      body: JSON.stringify(config),
-    });
+  saveConfig: async (config: GoogleOAuthConfig): Promise<GoogleOAuthResponse> => {
+    const response = await apiRequest('POST', '/api/oauth/google/config', config);
+    return response.json();
   },
 
   /**
    * Check if Google OAuth is configured
    */
-  getStatus: async () => {
-    return apiRequest('/api/oauth/google/status');
+  getStatus: async (): Promise<GoogleOAuthStatus> => {
+    const response = await apiRequest('GET', '/api/oauth/google/status');
+    return response.json();
   },
 
   /**
    * Get authorization URL for Google OAuth
    */
-  getAuthUrl: async (scopes: GoogleOAuthScope[]) => {
-    return apiRequest('/api/oauth/google/auth', {
-      method: 'POST',
-      body: JSON.stringify({ scopes }),
-    });
+  getAuthUrl: async (scopes: GoogleOAuthScope[]): Promise<GoogleOAuthUrlResponse> => {
+    const response = await apiRequest('POST', '/api/oauth/google/auth', { scopes });
+    return response.json();
   },
 
   /**
    * Exchange authorization code for tokens
    */
-  exchangeCode: async (code: string) => {
-    return apiRequest('/api/oauth/google/token', {
-      method: 'POST',
-      body: JSON.stringify({ code }),
-    });
+  exchangeCode: async (code: string): Promise<GoogleOAuthResponse> => {
+    const response = await apiRequest('POST', '/api/oauth/google/token', { code });
+    return response.json();
   },
 
   /**
    * Revoke Google OAuth access
    */
-  revokeAccess: async () => {
-    return apiRequest('/api/oauth/google/revoke', {
-      method: 'POST',
-    });
+  revokeAccess: async (): Promise<GoogleOAuthResponse> => {
+    const response = await apiRequest('POST', '/api/oauth/google/revoke');
+    return response.json();
   },
 };

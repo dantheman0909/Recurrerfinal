@@ -76,13 +76,13 @@ export default function GoogleOAuthPage() {
   const getAuthUrlMutation = useMutation({
     mutationFn: GoogleOAuthService.getAuthUrl,
     onSuccess: (data) => {
-      if (data.authUrl) {
+      if (data.success && data.authUrl) {
         // Redirect to Google authorization URL
         window.location.href = data.authUrl;
       } else {
         toast({
           title: 'Error',
-          description: 'Failed to generate authorization URL',
+          description: data.error || 'Failed to generate authorization URL',
           variant: 'destructive',
         });
       }
