@@ -150,9 +150,9 @@ export class ChargebeeService {
         console.log(`Fetched ${items.length} items, total so far: ${allResults.length}, hasMore: ${hasMore}`);
         page++;
         
-        // Safety check to prevent infinite loops
-        if (page > 50) {
-          console.warn('Reached maximum page limit (50) for pagination safety');
+        // Safety check to prevent infinite loops but with higher limit for large data sets
+        if (page > 1000) { // Increased from 50 to 1000 to allow for up to 100,000 records
+          console.warn('Reached maximum page limit (1000) for pagination safety');
           break;
         }
         
