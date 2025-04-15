@@ -101,6 +101,26 @@ async function migrateChargebeeTables() {
           console.log('last_synced_at column may already exist in chargebee_config');
         }
       }
+      
+      // Check if last_sync_stats column exists
+      const checkLastSyncStatsColumn = await db.execute(sql.raw(`
+        SELECT EXISTS (
+          SELECT FROM information_schema.columns 
+          WHERE table_name = 'chargebee_config' AND column_name = 'last_sync_stats'
+        )
+      `));
+      
+      if (!checkLastSyncStatsColumn[0]?.exists) {
+        try {
+          console.log('Adding last_sync_stats column to chargebee_config table...');
+          await db.execute(sql.raw(`
+            ALTER TABLE chargebee_config
+            ADD COLUMN last_sync_stats JSONB
+          `));
+        } catch (error) {
+          console.log('last_sync_stats column may already exist in chargebee_config');
+        }
+      }
     }
     
     // Now check if chargebee_field_mappings table exists, if not create it
