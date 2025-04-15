@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { 
   Card, 
@@ -122,6 +122,7 @@ export default function Customers() {
   // Filter Team Leads (role === 'team_lead')
   const teamLeads = users?.filter(user => user.role === 'team_lead') || [];
   
+  // Filter customers based on search and filter criteria
   const filteredCustomers = customers?.filter((customer: Customer) => {
     const matchesSearch = customer.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
                           (customer.contact_name && customer.contact_name.toLowerCase().includes(searchTerm.toLowerCase()));
@@ -138,6 +139,30 @@ export default function Customers() {
     
     return matchesSearch && matchesHealth && matchesCSM && matchesTL;
   });
+  
+  // Calculate pagination
+  const totalCustomers = filteredCustomers?.length || 0;
+  const totalPages = Math.ceil(totalCustomers / ITEMS_PER_PAGE);
+  
+  // Ensure current page is valid
+  useEffect(() => {
+    if (currentPage > totalPages && totalPages > 0) {
+      setCurrentPage(totalPages);
+    }
+  }, [currentPage, totalPages]);
+  
+  // Get current page items
+  const currentCustomers = filteredCustomers?.slice(
+    (currentPage - 1) * ITEMS_PER_PAGE,
+    currentPage * ITEMS_PER_PAGE
+  );
+  
+  // Functions for pagination navigation
+  const goToPage = (page: number) => {
+    if (page >= 1 && page <= totalPages) {
+      setCurrentPage(page);
+    }
+  };
   
   const getHealthBadgeStyles = (health: string) => {
     switch (health) {
@@ -297,7 +322,7 @@ export default function Customers() {
           <div className="text-center py-10">Loading customers...</div>
         ) : viewMode === "card" ? (
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
-            {filteredCustomers?.map((customer: Customer) => (
+            {currentCustomers?.map((customer: Customer) => (
               <div key={customer.id} className="relative">
                 <Card className="h-full hover:shadow-md transition-shadow duration-200">
                   <CardContent className="p-6">
@@ -381,7 +406,7 @@ export default function Customers() {
                 </TableRow>
               </TableHeader>
               <TableBody>
-                {filteredCustomers?.map((customer: Customer) => (
+                {currentCustomers?.map((customer: Customer) => (
                   <TableRow key={customer.id}>
                     <TableCell className="font-medium">
                       <div className="flex items-center">
@@ -445,6 +470,81 @@ export default function Customers() {
         {filteredCustomers?.length === 0 && (
           <div className="text-center py-10">
             <p className="text-gray-500">No customers match your search criteria.</p>
+          </div>
+        )}
+        
+        {/* Pagination controls */}
+        {filteredCustomers && filteredCustomers.length > 0 && (
+          <div className="mt-6 flex flex-col items-center justify-between space-y-4 sm:flex-row sm:space-y-0">
+            <div className="text-sm text-gray-700">
+              Showing <span className="font-medium">{(currentPage - 1) * ITEMS_PER_PAGE + 1}</span> to{" "}
+              <span className="font-medium">
+                {Math.min(currentPage * ITEMS_PER_PAGE, totalCustomers)}
+              </span>{" "}
+              of <span className="font-medium">{totalCustomers}</span> customers
+            </div>
+            
+            <div className="flex space-x-2">
+              <Button 
+                variant="outline" 
+                size="sm"
+                onClick={() => goToPage(1)}
+                disabled={currentPage === 1}
+              >
+                First
+              </Button>
+              <Button 
+                variant="outline" 
+                size="sm"
+                onClick={() => goToPage(currentPage - 1)}
+                disabled={currentPage === 1}
+              >
+                Previous
+              </Button>
+              <div className="flex items-center space-x-1 px-2">
+                {Array.from({ length: Math.min(5, totalPages) }, (_, i) => {
+                  // Show a window of 5 pages around current page
+                  let pageNum;
+                  if (totalPages <= 5) {
+                    pageNum = i + 1;
+                  } else if (currentPage <= 3) {
+                    pageNum = i + 1;
+                  } else if (currentPage >= totalPages - 2) {
+                    pageNum = totalPages - 4 + i;
+                  } else {
+                    pageNum = currentPage - 2 + i;
+                  }
+                  
+                  return (
+                    <Button
+                      key={pageNum}
+                      variant={pageNum === currentPage ? "default" : "outline"}
+                      size="sm"
+                      className="w-9"
+                      onClick={() => goToPage(pageNum)}
+                    >
+                      {pageNum}
+                    </Button>
+                  );
+                })}
+              </div>
+              <Button 
+                variant="outline" 
+                size="sm"
+                onClick={() => goToPage(currentPage + 1)}
+                disabled={currentPage === totalPages}
+              >
+                Next
+              </Button>
+              <Button 
+                variant="outline" 
+                size="sm"
+                onClick={() => goToPage(totalPages)}
+                disabled={currentPage === totalPages}
+              >
+                Last
+              </Button>
+            </div>
           </div>
         )}
       </div>
