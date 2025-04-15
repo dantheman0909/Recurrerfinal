@@ -240,13 +240,29 @@ export class ChargebeeService {
     console.log('Fetching all Chargebee invoices with pagination');
     const invoices = await this.fetchAllPages('/invoices', 'invoice');
     console.log(`Fetched a total of ${invoices.length} invoices from Chargebee`);
-    return invoices;
+    
+    // Process invoices to add the recurring flag
+    const processedInvoices = invoices.map(invoice => {
+      return {
+        ...invoice,
+        // An invoice is recurring if it has a subscription_id attached
+        recurring: !!invoice.subscription_id
+      };
+    });
+    
+    return processedInvoices;
   }
 
   // Get invoice by ID
   async getInvoice(id: string): Promise<ChargebeeInvoice> {
     const response = await this.makeRequest(`/invoices/${id}`);
-    return response.invoice;
+    const invoice = response.invoice;
+    
+    // Add recurring flag
+    return {
+      ...invoice,
+      recurring: !!invoice.subscription_id
+    };
   }
 
   // Get invoices for a specific subscription
@@ -255,7 +271,15 @@ export class ChargebeeService {
     queryParams.append('subscription_id[is]', subscriptionId);
 
     const response = await this.makeRequest(`/invoices?${queryParams.toString()}`);
-    return response.list.map((item: any) => item.invoice);
+    
+    // Subscription invoices are always recurring
+    return response.list.map((item: any) => {
+      const invoice = item.invoice;
+      return {
+        ...invoice,
+        recurring: true // These are definitely recurring since they're tied to a subscription
+      };
+    });
   }
   
   // Get non-recurring invoices for a specific customer (add-ons, one-time charges)
