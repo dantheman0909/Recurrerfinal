@@ -276,24 +276,23 @@ app.get('/ready', (req, res) => {
 // Root health check endpoint for deployment
 // This is a critical route for Replit deployments
 app.get('/', (req, res, next) => {
-  // For API and health check requests, always return 200 status
-  if (req.headers['user-agent']?.includes('health-check') || 
-      req.query.health === 'check' ||
-      req.headers['accept']?.includes('application/json')) {
-    return res.status(200).json({ 
-      status: 'ok', 
-      message: 'Service is healthy', 
-      timestamp: new Date().toISOString(),
-      environment: process.env.NODE_ENV || 'development'
-    });
-  } else if (req.path === '/' && req.method === 'GET') {
-    // For deployment health checks accessing the root path directly
-    // First send a 200 response to confirm health
-    res.status(200);
-    // Then continue to next middleware for UI rendering
+  // Always return health check response for root path
+  if (req.path === '/' && (
+    req.headers['user-agent']?.includes('health-check') || 
+    req.query.health === 'check' ||
+    req.headers['accept']?.includes('application/json')
+  )) {
+    return res.status(200)
+      .header('Content-Type', 'application/json')
+      .json({ 
+        status: 'ok', 
+        message: 'Service is healthy', 
+        timestamp: new Date().toISOString(),
+        environment: process.env.NODE_ENV || 'development'
+      });
   }
   
-  // For normal browser requests, continue to the next middleware (which will serve the frontend app)
+  // For normal browser requests, continue to next middleware (which will serve the frontend app)
   next();
 });
 
