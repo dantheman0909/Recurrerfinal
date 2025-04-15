@@ -1,7 +1,6 @@
 import { db } from "./db";
 import { log } from "./vite";
-import { chargebeeFieldMappings } from "@shared/schema";
-import { eq } from "drizzle-orm";
+import { pool } from "./db";
 
 /**
  * Adds the recurring flag field mapping to the chargebee_field_mappings table
@@ -11,25 +10,24 @@ async function addChargebeeRecurringFlag() {
   try {
     log('Adding recurring flag to chargebee_field_mappings table...', 'migration');
     
-    // First check if the mapping already exists
-    const existingMapping = await db.select()
-      .from(chargebeeFieldMappings)
-      .where(eq(chargebeeFieldMappings.chargebee_field, 'recurring'))
-      .limit(1);
+    // First check if the mapping already exists using direct SQL
+    const checkResult = await pool.query(`
+      SELECT id FROM chargebee_field_mappings 
+      WHERE chargebee_field = 'recurring' 
+      LIMIT 1
+    `);
     
-    if (existingMapping && existingMapping.length > 0) {
+    if (checkResult && checkResult.rowCount && checkResult.rowCount > 0) {
       log('Recurring flag mapping already exists, skipping', 'migration');
       return { success: true, message: 'Recurring flag mapping already exists' };
     }
     
-    // Insert the new mapping
-    await db.insert(chargebeeFieldMappings).values({
-      chargebee_field: 'recurring',
-      local_field: 'recurring',
-      local_table: 'chargebee_invoices',
-      field_type: 'boolean',
-      is_key_field: false
-    });
+    // Insert the new mapping with direct SQL
+    await pool.query(`
+      INSERT INTO chargebee_field_mappings 
+      (chargebee_entity, chargebee_field, local_table, local_field, is_key_field) 
+      VALUES ('invoice', 'recurring', 'chargebee_invoices', 'recurring', false)
+    `);
     
     log('Successfully added recurring flag mapping to chargebee_field_mappings', 'migration');
     return { success: true, message: 'Successfully added recurring flag mapping' };
@@ -49,9 +47,10 @@ const isMainModule = () => {
 
 // Run if this file is executed directly
 if (isMainModule()) {
+  console.log('Starting to add Chargebee recurring flag mapping...');
   addChargebeeRecurringFlag()
     .then(result => {
-      console.log(result);
+      console.log('Result:', result);
       process.exit(result.success ? 0 : 1);
     })
     .catch(error => {
