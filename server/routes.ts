@@ -1093,6 +1093,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
         success: result.success,
         message: result.message,
         records: result.records || 0,
+        syncStats: result.syncStats || null,
         timestamp: new Date().toISOString()
       });
     } catch (error) {

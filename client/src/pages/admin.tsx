@@ -1309,9 +1309,19 @@ function ChargebeeConfigTab() {
       return response.json();
     },
     onSuccess: (data) => {
+      // Prepare detailed statistics message if available
+      let statsMessage = `Successfully synchronized ${data.records} records from Chargebee.`;
+      
+      if (data.syncStats) {
+        statsMessage = `Successfully synchronized ${data.records} records from Chargebee:\n` +
+                       `• ${data.syncStats.customers || 0} customers\n` +
+                       `• ${data.syncStats.subscriptions || 0} subscriptions\n` +
+                       `• ${data.syncStats.invoices || 0} invoices`;
+      }
+      
       toast({
         title: 'Data Sync Complete',
-        description: `Successfully synchronized ${data.records} records from Chargebee.`,
+        description: statsMessage,
       });
       
       // Refresh the configuration to update the last_synced_at timestamp
