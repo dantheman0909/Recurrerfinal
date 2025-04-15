@@ -45,6 +45,7 @@ export const customers = pgTable("customers", {
   health_status: accountHealthEnum("health_status").default('healthy'),
   created_at: timestamp("created_at").defaultNow(),
   assigned_csm: integer("assigned_csm").references(() => users.id),
+  csm_name: text("csm_name"),
   // External IDs
   chargebee_customer_id: text("chargebee_customer_id"),
   chargebee_subscription_id: text("chargebee_subscription_id"),

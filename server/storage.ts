@@ -15,7 +15,7 @@ import {
   type InsertNotification, type InsertUserAchievement
 } from "@shared/schema";
 import { db } from "./db";
-import { eq, and, isNull, desc, gte, lt, count } from "drizzle-orm";
+import { eq, and, isNull, desc, asc, gte, lt, count } from "drizzle-orm";
 import { AccountHealth, MetricTimeframe } from "@shared/types";
 import { generateTimeseriesData } from "./utils/chart-data";
 
@@ -66,6 +66,7 @@ export interface IStorage {
   saveXpConfiguration(config: XpConfiguration): Promise<XpConfiguration>;
   
   // Users
+  getUsers(): Promise<User[]>;
   getUser(id: number): Promise<User | undefined>;
   getUserByEmail(email: string): Promise<User | undefined>;
   createUser(user: InsertUser): Promise<User>;
@@ -371,6 +372,10 @@ export class MemStorage implements IStorage {
   }
 
   // User Methods
+  async getUsers(): Promise<User[]> {
+    return Array.from(this.users.values());
+  }
+  
   async getUser(id: number): Promise<User | undefined> {
     return this.users.get(id);
   }
@@ -1059,6 +1064,10 @@ export class MemStorage implements IStorage {
 
 export class DatabaseStorage implements IStorage {
   // User Methods
+  async getUsers(): Promise<User[]> {
+    return await db.select().from(users);
+  }
+  
   async getUser(id: number): Promise<User | undefined> {
     const [user] = await db.select().from(users).where(eq(users.id, id));
     return user;

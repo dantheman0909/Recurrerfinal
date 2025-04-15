@@ -1,6 +1,7 @@
 import type { Express } from "express";
 import { createServer, type Server } from "http";
 import { storage } from "./storage";
+import { db } from "./db";
 import { z } from "zod";
 import { MetricTimeframe } from "@shared/types";
 import { 
@@ -14,8 +15,13 @@ import {
   insertRedZoneResolutionCriteriaSchema,
   insertMySQLSavedQuerySchema,
   insertNotificationSchema,
-  insertUserAchievementSchema
+  insertUserAchievementSchema,
+  tasks,
+  customers,
+  customerMetrics,
+  redZoneAlerts
 } from "@shared/schema";
+import { eq } from "drizzle-orm";
 import {
   getChargebeeSubscriptions,
   getChargebeeSubscription,
@@ -49,6 +55,11 @@ export async function registerRoutes(app: Express): Promise<Server> {
   });
   
   // Users
+  app.get('/api/users', async (req, res) => {
+    const users = await storage.getUsers();
+    res.json(users);
+  });
+  
   app.get('/api/users/:id', async (req, res) => {
     const id = parseInt(req.params.id);
     const user = await storage.getUser(id);
@@ -127,6 +138,43 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
   
+  // Route to assign CSMs to customers
+  app.post('/api/customers/:id/assign-csm', async (req, res) => {
+    const id = parseInt(req.params.id);
+    const { csmId } = req.body;
+    
+    if (!csmId || isNaN(parseInt(csmId))) {
+      return res.status(400).json({ message: 'Valid CSM ID is required' });
+    }
+    
+    try {
+      // Get CSM details
+      const csm = await storage.getUser(parseInt(csmId));
+      if (!csm) {
+        return res.status(404).json({ message: 'CSM not found' });
+      }
+      
+      if (csm.role !== 'csm') {
+        return res.status(400).json({ message: 'Selected user is not a CSM' });
+      }
+      
+      // Update customer with assigned CSM
+      const updatedCustomer = await storage.updateCustomer(id, { 
+        assigned_csm: parseInt(csmId),
+        csm_name: csm.name // Store the name for easier display
+      });
+      
+      if (!updatedCustomer) {
+        return res.status(404).json({ message: 'Customer not found' });
+      }
+      
+      res.json(updatedCustomer);
+    } catch (error) {
+      console.error("Error assigning CSM:", error);
+      res.status(500).json({ message: 'Error assigning CSM', error: String(error) });
+    }
+  });
+
   // Customer CSV Import/Export
   app.post('/api/customers/import/csv', upload.single('file'), importCSV);
   app.post('/api/customers/import/preview', upload.single('file'), previewCSVImport);
