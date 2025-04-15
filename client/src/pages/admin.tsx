@@ -73,54 +73,60 @@ import { AvatarWithInitials } from "@/components/ui/avatar-with-initials";
 
 // Component to fetch total record counts from the database
 function TotalRecordsCounter({ entity, chargebeeConfig }: { entity: string, chargebeeConfig: any }) {
-  const [count, setCount] = useState<number | null>(null);
+  const [dbCount, setDbCount] = useState<number | null>(null); // Count from database
+  const [totalCount, setTotalCount] = useState<number | null>(null); // Total from Chargebee
   const [loading, setLoading] = useState(true);
   
   React.useEffect(() => {
     const fetchTotalCount = async () => {
       try {
         setLoading(true);
-        // Get count from the actual database, not just the last sync stats
+        
+        // Get count from the actual database for our local records
         const response = await fetch(`/api/admin/entity-count/${entity}`);
         const data = await response.json();
         
         // Check if data has the count property and it's a number
         if (data && typeof data.count === 'number') {
-          setCount(data.count);
-          console.log(`Received ${entity} count:`, data.count);
+          setDbCount(data.count);
+          console.log(`Received ${entity} count from database:`, data.count);
         } else {
           console.error(`Invalid response format for ${entity} count:`, data);
-          // Fallback to last sync stats if available
-          if (chargebeeConfig?.last_sync_stats) {
-            let syncStats;
-            try {
-              // Handle the case where last_sync_stats might be a JSON string
-              if (typeof chargebeeConfig.last_sync_stats === 'string') {
-                syncStats = JSON.parse(chargebeeConfig.last_sync_stats);
-              } else {
-                syncStats = chargebeeConfig.last_sync_stats;
-              }
-              
-              if (syncStats && syncStats[entity]) {
-                if (typeof syncStats[entity] === 'object') {
-                  setCount(syncStats[entity].total || 0);
-                } else {
-                  setCount(syncStats[entity] || 0);
-                }
-              } else {
-                setCount(0);
-              }
-            } catch (e) {
-              console.error(`Error parsing last_sync_stats for ${entity}:`, e);
-              setCount(0);
+          setDbCount(0);
+        }
+        
+        // Also get the total count from Chargebee's last sync stats
+        if (chargebeeConfig?.last_sync_stats) {
+          let syncStats;
+          try {
+            // Handle the case where last_sync_stats might be a JSON string
+            if (typeof chargebeeConfig.last_sync_stats === 'string') {
+              syncStats = JSON.parse(chargebeeConfig.last_sync_stats);
+            } else {
+              syncStats = chargebeeConfig.last_sync_stats;
             }
-          } else {
-            setCount(0);
+            
+            // Extract the total count from sync stats
+            if (syncStats && syncStats[entity]) {
+              if (typeof syncStats[entity] === 'object') {
+                setTotalCount(syncStats[entity].total || 0);
+              } else {
+                setTotalCount(syncStats[entity] || 0);
+              }
+            } else {
+              setTotalCount(0);
+            }
+          } catch (e) {
+            console.error(`Error parsing last_sync_stats for ${entity}:`, e);
+            setTotalCount(0);
           }
+        } else {
+          setTotalCount(0);
         }
       } catch (error) {
         console.error(`Error fetching ${entity} count:`, error);
-        setCount(0);
+        setDbCount(0);
+        setTotalCount(0);
       } finally {
         setLoading(false);
       }
@@ -133,7 +139,13 @@ function TotalRecordsCounter({ entity, chargebeeConfig }: { entity: string, char
     return <span className="animate-pulse">Loading...</span>;
   }
   
-  return <>{count?.toLocaleString() || 0}</>;
+  // Show DB count / Total count if we have both
+  if (totalCount !== null && totalCount > 0) {
+    return <>{dbCount?.toLocaleString() || 0} / {totalCount?.toLocaleString() || 0}</>;
+  }
+  
+  // Otherwise just show DB count
+  return <>{dbCount?.toLocaleString() || 0}</>;
 }
 
 export default function Admin() {
@@ -1758,7 +1770,8 @@ function ChargebeeConfigTab() {
                                   </TooltipTrigger>
                                   <TooltipContent>
                                     <p className="w-[240px] text-xs">
-                                      These are the actual counts in the database, not just from the last sync.
+                                      Format: Database Count / Total Synced Count<br/>
+                                      Database count shows records stored in our database. Total synced count shows all records processed from Chargebee.
                                     </p>
                                   </TooltipContent>
                                 </Tooltip>
