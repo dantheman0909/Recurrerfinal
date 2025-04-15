@@ -121,12 +121,35 @@ export class ChargebeeSyncService {
     // Map data from Chargebee format to local format
     const transformedData = sourceData.map(row => {
       const result: Record<string, any> = {};
+      
+      // Special handling for subscription data
+      const isSubscription = row.object === 'subscription';
+      const isCustomer = row.object === 'customer';
+      
       for (const mapping of mappings) {
         // Check if Chargebee field exists in the row
         if (row[mapping.chargebee_field] !== undefined) {
           result[mapping.local_field] = row[mapping.chargebee_field];
         }
       }
+      
+      // Special case: If this is subscription data and we're updating customers table,
+      // make sure to include subscription status and plan data
+      if (isSubscription && localTableName === 'customers') {
+        if (row.status !== undefined) {
+          result.subscription_status = row.status;
+        }
+        if (row.plan_id !== undefined) {
+          result.plan_id = row.plan_id;
+        }
+      }
+      
+      // If customer record has a subscription ID but we don't have subscription status,
+      // set a default for data consistency
+      if (isCustomer && localTableName === 'customers' && result.chargebee_subscription_id && !result.subscription_status) {
+        result.subscription_status = 'unknown';
+      }
+      
       return result;
     });
 
@@ -140,15 +163,34 @@ export class ChargebeeSyncService {
         const conditions: string[] = [];
         const params: any[] = [];
         
+        let hasKeyField = false;
+        
         for (const keyField of keyFields) {
           if (record[keyField] !== undefined) {
             conditions.push(`${keyField} = ?`);
             params.push(record[keyField]);
+            hasKeyField = true;
           }
         }
         
-        if (conditions.length === 0) {
-          console.warn('No valid key fields found in record, skipping');
+        // Special handling for subscription data going to customers table
+        if (conditions.length === 0 && localTableName === 'customers' && record['chargebee_subscription_id']) {
+          conditions.push(`chargebee_subscription_id = ?`);
+          params.push(record['chargebee_subscription_id']);
+          hasKeyField = true;
+        }
+        
+        if (!hasKeyField) {
+          // Instead of skipping, just log and continue
+          if (Object.keys(record).length > 0) {
+            console.log(`No key fields found, but record has data. Will try to sync via other means if possible.`);
+            
+            // If we have custom ID fields or can generate an ID, we could handle it here
+            // For now, just log that we're skipping
+            console.warn('No valid key fields found in record, skipping');
+          } else {
+            console.warn('Empty record, skipping');
+          }
           continue;
         }
         
@@ -243,6 +285,35 @@ export class ChargebeeSyncService {
         }
       } else {
         console.log(`Column updated_from_chargebee_at already exists in ${tableName}`);
+      }
+      
+      // If this is the customers table, make sure subscription_status and plan_id columns exist
+      if (tableName === 'customers') {
+        // Check for subscription_status
+        if (!existingColumns.includes('subscription_status'.toLowerCase())) {
+          try {
+            await db.execute(sql.raw(`
+              ALTER TABLE customers 
+              ADD COLUMN IF NOT EXISTS subscription_status TEXT NULL
+            `));
+            console.log(`Added subscription_status column to customers table`);
+          } catch (columnError) {
+            console.log(`Note: Could not add subscription_status column: ${columnError}`);
+          }
+        }
+        
+        // Check for plan_id
+        if (!existingColumns.includes('plan_id'.toLowerCase())) {
+          try {
+            await db.execute(sql.raw(`
+              ALTER TABLE customers 
+              ADD COLUMN IF NOT EXISTS plan_id TEXT NULL
+            `));
+            console.log(`Added plan_id column to customers table`);
+          } catch (columnError) {
+            console.log(`Note: Could not add plan_id column: ${columnError}`);
+          }
+        }
       }
       
       // Check each mapped field and create if missing
