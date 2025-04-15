@@ -133,6 +133,36 @@ export const getInvoicesForSubscription = async (req: Request, res: Response) =>
   }
 };
 
+export const getNonRecurringInvoicesForCustomer = async (req: Request, res: Response) => {
+  try {
+    if (!chargebeeService) {
+      return res.status(500).json({ error: "Chargebee service not initialized" });
+    }
+    
+    const id = req.params.id;
+    const invoices = await chargebeeService.getNonRecurringInvoicesForCustomer(id);
+    res.json(invoices);
+  } catch (error) {
+    log(`Error fetching non-recurring invoices: ${error}`, 'chargebee');
+    res.status(500).json({ error: "Failed to fetch non-recurring invoices", details: error });
+  }
+};
+
+export const getCurrentMonthNonRecurringInvoices = async (req: Request, res: Response) => {
+  try {
+    if (!chargebeeService) {
+      return res.status(500).json({ error: "Chargebee service not initialized" });
+    }
+    
+    const id = req.params.id;
+    const invoices = await chargebeeService.getCurrentMonthNonRecurringInvoices(id);
+    res.json(invoices);
+  } catch (error) {
+    log(`Error fetching current month non-recurring invoices: ${error}`, 'chargebee');
+    res.status(500).json({ error: "Failed to fetch current month non-recurring invoices", details: error });
+  }
+};
+
 // Customer-specific external data
 export const getCustomerExternalData = async (req: Request, res: Response) => {
   try {

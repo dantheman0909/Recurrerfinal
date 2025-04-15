@@ -10,6 +10,8 @@ import {
   getChargebeeInvoices,
   getChargebeeInvoice,
   getInvoicesForSubscription,
+  getNonRecurringInvoicesForCustomer,
+  getCurrentMonthNonRecurringInvoices,
   getMySQLCompanies,
   getMySQLCompany,
   getCustomerExternalData,
@@ -154,6 +156,8 @@ app.get('/api/chargebee/customers/:id', getChargebeeCustomer);
 app.get('/api/chargebee/invoices', getChargebeeInvoices);
 app.get('/api/chargebee/invoices/:id', getChargebeeInvoice);
 app.get('/api/chargebee/subscriptions/:id/invoices', getInvoicesForSubscription);
+app.get('/api/chargebee/customers/:id/non-recurring-invoices', getNonRecurringInvoicesForCustomer);
+app.get('/api/chargebee/customers/:id/current-month-non-recurring-invoices', getCurrentMonthNonRecurringInvoices);
 app.get('/api/mysql/companies', getMySQLCompanies);
 app.get('/api/mysql/companies/:id', getMySQLCompany);
 

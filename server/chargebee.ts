@@ -150,6 +150,47 @@ export class ChargebeeService {
     return response.list.map((item: any) => item.invoice);
   }
   
+  // Get non-recurring invoices for a specific customer (add-ons, one-time charges)
+  async getNonRecurringInvoicesForCustomer(customerId: string): Promise<ChargebeeInvoice[]> {
+    const queryParams = new URLSearchParams();
+    queryParams.append('customer_id[is]', customerId);
+
+    const response = await this.makeRequest(`/invoices?${queryParams.toString()}`);
+    
+    // Filter to include only non-recurring invoices (has line items without a subscription id)
+    const invoices = response.list.map((item: any) => item.invoice);
+    
+    return invoices.filter((invoice: any) => {
+      // Check if it's a non-recurring invoice (no subscription_id or has add-ons)
+      return !invoice.subscription_id || (invoice.line_items && invoice.line_items.some((item: any) => 
+        item.entity_type === 'addon' || !item.subscription_id
+      ));
+    });
+  }
+  
+  // Get current month's paid non-recurring invoices for a customer
+  async getCurrentMonthNonRecurringInvoices(customerId: string): Promise<ChargebeeInvoice[]> {
+    const now = new Date();
+    const startOfMonth = new Date(now.getFullYear(), now.getMonth(), 1);
+    const endOfMonth = new Date(now.getFullYear(), now.getMonth() + 1, 0);
+    
+    const queryParams = new URLSearchParams();
+    queryParams.append('customer_id[is]', customerId);
+    queryParams.append('date[between]', `[${Math.floor(startOfMonth.getTime() / 1000)},${Math.floor(endOfMonth.getTime() / 1000)}]`);
+    queryParams.append('status[is]', 'paid');
+
+    const response = await this.makeRequest(`/invoices?${queryParams.toString()}`);
+    
+    const invoices = response.list.map((item: any) => item.invoice);
+    
+    // Filter to include only non-recurring invoices
+    return invoices.filter((invoice: any) => {
+      return !invoice.subscription_id || (invoice.line_items && invoice.line_items.some((item: any) => 
+        item.entity_type === 'addon' || !item.subscription_id
+      ));
+    });
+  }
+  
   // Get available fields for mapping for each entity type
   getAvailableFields(): Record<string, Array<{ name: string, description: string }>> {
     return {
