@@ -112,108 +112,8 @@ const RolePermissionsPage = () => {
   });
 
   // List of all permissions for the application
-  const [permissions, setPermissions] = useState<Permission[]>([
-    {
-      id: 'view_customers',
-      name: 'View Customers',
-      description: 'View customer information and details',
-      roles: {
-        admin: true,
-        team_lead: true,
-        csm: true,
-      },
-    },
-    {
-      id: 'edit_customers',
-      name: 'Edit Customers',
-      description: 'Edit customer information and details',
-      roles: {
-        admin: true,
-        team_lead: true,
-        csm: false,
-      },
-    },
-    {
-      id: 'delete_customers',
-      name: 'Delete Customers',
-      description: 'Delete customers from the system',
-      roles: {
-        admin: true,
-        team_lead: false,
-        csm: false,
-      },
-    },
-    {
-      id: 'assign_customers',
-      name: 'Assign Customers',
-      description: 'Assign customers to CSMs',
-      roles: {
-        admin: true,
-        team_lead: true,
-        csm: false,
-      },
-    },
-    {
-      id: 'view_tasks',
-      name: 'View Tasks',
-      description: 'View all tasks in the system',
-      roles: {
-        admin: true,
-        team_lead: true,
-        csm: true,
-      },
-    },
-    {
-      id: 'manage_tasks',
-      name: 'Manage Tasks',
-      description: 'Create, edit, and delete tasks',
-      roles: {
-        admin: true,
-        team_lead: true,
-        csm: true,
-      },
-    },
-    {
-      id: 'view_reports',
-      name: 'View Reports',
-      description: 'Access reporting and analytics features',
-      roles: {
-        admin: true,
-        team_lead: true,
-        csm: false,
-      },
-    },
-    {
-      id: 'manage_users',
-      name: 'Manage Users',
-      description: 'Create, edit, and delete users',
-      roles: {
-        admin: true,
-        team_lead: false,
-        csm: false,
-      },
-    },
-    {
-      id: 'manage_settings',
-      name: 'Manage Settings',
-      description: 'Configure application settings',
-      roles: {
-        admin: true,
-        team_lead: false,
-        csm: false,
-      },
-    },
-    {
-      id: 'manage_integrations',
-      name: 'Manage Integrations',
-      description: 'Configure external integrations',
-      roles: {
-        admin: true,
-        team_lead: false,
-        csm: false,
-      },
-    },
-  ]);
+  // Use the fetched permissions or default to an empty array
+  const [permissions, setPermissions] = useState<Permission[]>([]);
 
   // Toggle a permission for a specific role
   const togglePermission = (permissionId: string, role: 'admin' | 'team_lead' | 'csm') => {
@@ -233,16 +133,17 @@ const RolePermissionsPage = () => {
     );
   };
 
-  // Save permission changes (would typically call an API endpoint)
+  // Save permission changes using the API
   const savePermissions = () => {
-    // In a real implementation, this would make an API call to update permissions
-    console.log('Saving permissions:', permissions);
-    
-    toast({
-      title: 'Permissions updated',
-      description: 'Role permissions have been saved successfully.',
-    });
+    updatePermissions.mutate(permissions);
   };
+  
+  // Update local permissions when API data changes
+  useEffect(() => {
+    if (fetchedPermissions && Array.isArray(fetchedPermissions)) {
+      setPermissions(fetchedPermissions);
+    }
+  }, [fetchedPermissions]);
 
   // Role descriptions for the overview tab
   const roleDescriptions = {
@@ -288,7 +189,14 @@ const RolePermissionsPage = () => {
     <div className="container mx-auto p-6">
       <div className="flex justify-between items-center mb-6">
         <h1 className="text-2xl font-bold">Role & Access Management</h1>
-        <Button onClick={savePermissions}>Save Changes</Button>
+        <Button 
+          onClick={savePermissions} 
+          disabled={isLoading || status === 'loading'} 
+          className="flex items-center gap-2"
+        >
+          {(isLoading || updatePermissions.isPending) && <Spinner size="small" />}
+          Save Changes
+        </Button>
       </div>
 
       <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
@@ -341,41 +249,60 @@ const RolePermissionsPage = () => {
                   </TableRow>
                 </TableHeader>
                 <TableBody>
-                  {permissions.map((permission) => (
-                    <TableRow key={permission.id}>
-                      <TableCell className="font-medium">{permission.name}</TableCell>
-                      <TableCell>{permission.description}</TableCell>
-                      <TableCell className="text-center">
-                        <div className="flex justify-center">
-                          <Switch
-                            id={`admin-${permission.id}`}
-                            checked={permission.roles.admin}
-                            onCheckedChange={() => togglePermission(permission.id, 'admin')}
-                            disabled={permission.id === 'manage_users'} 
-                            // Admin must always have user management
-                          />
-                        </div>
-                      </TableCell>
-                      <TableCell className="text-center">
-                        <div className="flex justify-center">
-                          <Switch
-                            id={`team_lead-${permission.id}`}
-                            checked={permission.roles.team_lead}
-                            onCheckedChange={() => togglePermission(permission.id, 'team_lead')}
-                          />
-                        </div>
-                      </TableCell>
-                      <TableCell className="text-center">
-                        <div className="flex justify-center">
-                          <Switch
-                            id={`csm-${permission.id}`}
-                            checked={permission.roles.csm}
-                            onCheckedChange={() => togglePermission(permission.id, 'csm')}
-                          />
+                  {status === 'loading' ? (
+                    <TableRow>
+                      <TableCell colSpan={5} className="h-24 text-center">
+                        <div className="flex flex-col items-center justify-center">
+                          <Spinner size="large" className="mb-2" />
+                          <p className="text-sm text-muted-foreground">Loading permissions...</p>
                         </div>
                       </TableCell>
                     </TableRow>
-                  ))}
+                  ) : permissions.length === 0 ? (
+                    <TableRow>
+                      <TableCell colSpan={5} className="h-24 text-center">
+                        <p className="text-sm text-muted-foreground">No permissions found.</p>
+                      </TableCell>
+                    </TableRow>
+                  ) : (
+                    permissions.map((permission) => (
+                      <TableRow key={permission.id}>
+                        <TableCell className="font-medium">{permission.name}</TableCell>
+                        <TableCell>{permission.description}</TableCell>
+                        <TableCell className="text-center">
+                          <div className="flex justify-center">
+                            <Switch
+                              id={`admin-${permission.id}`}
+                              checked={permission.roles.admin}
+                              onCheckedChange={() => togglePermission(permission.id, 'admin')}
+                              disabled={permission.id === 'manage_users' || isLoading || updatePermissions.isPending} 
+                              // Admin must always have user management
+                            />
+                          </div>
+                        </TableCell>
+                        <TableCell className="text-center">
+                          <div className="flex justify-center">
+                            <Switch
+                              id={`team_lead-${permission.id}`}
+                              checked={permission.roles.team_lead}
+                              onCheckedChange={() => togglePermission(permission.id, 'team_lead')}
+                              disabled={isLoading || updatePermissions.isPending}
+                            />
+                          </div>
+                        </TableCell>
+                        <TableCell className="text-center">
+                          <div className="flex justify-center">
+                            <Switch
+                              id={`csm-${permission.id}`}
+                              checked={permission.roles.csm}
+                              onCheckedChange={() => togglePermission(permission.id, 'csm')}
+                              disabled={isLoading || updatePermissions.isPending}
+                            />
+                          </div>
+                        </TableCell>
+                      </TableRow>
+                    ))
+                  )}
                 </TableBody>
               </Table>
             </CardContent>
