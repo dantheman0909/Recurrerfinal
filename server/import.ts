@@ -317,11 +317,15 @@ export const importCSV = async (req: Request, res: Response) => {
       return res.status(400).json({ success: false, error: 'No file uploaded' });
     }
     
+    console.log(`Starting CSV import of file size ${req.file.size} bytes`);
+    
     // Read CSV file
     const csvContent = req.file.buffer.toString('utf8');
     
     // Get existing customers for recurrer_id comparison
     const allCustomers = await storage.getCustomers();
+    console.log(`Found ${allCustomers.length} existing customers to compare with`);
+    
     const customersByRecurrerId: Record<string, any> = {};
     allCustomers.forEach((customer: any) => {
       if (customer.recurrer_id) {
@@ -331,6 +335,7 @@ export const importCSV = async (req: Request, res: Response) => {
     
     // Process CSV content
     const result = processCSV(csvContent, customersByRecurrerId);
+    console.log(`Processed CSV with ${result.records.length} records. New: ${result.new.length}, Updated: ${result.updated.length}`);
     
     if (!result.success) {
       return res.status(400).json({ 
@@ -343,6 +348,7 @@ export const importCSV = async (req: Request, res: Response) => {
     const validationErrors: ValidationError[] = [];
     if (result.validationErrors && result.validationErrors.length > 0) {
       validationErrors.push(...result.validationErrors);
+      console.log(`Found ${result.validationErrors.length} validation errors in CSV`);
     }
     
     // For response display only - conversion to strings
@@ -359,6 +365,8 @@ export const importCSV = async (req: Request, res: Response) => {
     
     // Process error tracking
     const errorsList: ValidationError[] = [];
+    
+    console.log(`Starting database import of ${result.records.length} records...`);
     
     for (const record of result.records) {
       try {
@@ -703,6 +711,7 @@ export const processCSV = (csvContent: string, existingCustomers: Record<string,
     'company_name': 'name',
     'recurrer_id': 'recurrer_id',
     'recurrerid': 'recurrer_id',
+    'id': 'recurrer_id', // Allow 'id' column to map to recurrer_id
     
     // Contact information - handle common field name variations
     'contact_name': 'contact_name',
