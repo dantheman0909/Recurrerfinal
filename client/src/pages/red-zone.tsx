@@ -18,7 +18,8 @@ import {
   Calendar,
   Building,
   BarChart2,
-  CheckCircle
+  CheckCircle,
+  Settings
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { Link } from "wouter";
@@ -123,10 +124,16 @@ export default function RedZone() {
                 <BarChart2 className="h-4 w-4 mr-2" />
                 View Report
               </Button>
-              <Button variant="default" asChild>
+              <Button variant="outline" className="mr-2" asChild>
                 <Link href="/red-zone/settings">
                   <Filter className="h-4 w-4 mr-2" />
                   Configure Rules
+                </Link>
+              </Button>
+              <Button variant="default" asChild>
+                <Link href="/red-zone/settings">
+                  <Settings className="h-4 w-4 mr-2" />
+                  Settings
                 </Link>
               </Button>
             </div>

@@ -1,3 +1,4 @@
+import { useState } from "react";
 import { Link, useLocation } from "wouter";
 import { cn } from "@/lib/utils";
 import { AvatarWithInitials } from "../ui/avatar-with-initials";
@@ -11,6 +12,8 @@ import {
   AlertTriangle,
   Settings,
   XCircle,
+  ChevronDown,
+  ChevronRight,
   LucideIcon
 } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
@@ -39,6 +42,7 @@ interface SidebarProps {
 
 export default function Sidebar({ open, setOpen }: SidebarProps) {
   const [location] = useLocation();
+  const [expandedMenus, setExpandedMenus] = useState<{[key: string]: boolean}>({});
 
   const currentUser = {
     name: "Sarah Johnson",
@@ -56,29 +60,35 @@ export default function Sidebar({ open, setOpen }: SidebarProps) {
     ? redZoneAlerts.filter((alert: any) => alert.status === 'open').length
     : 0;
 
+  // Toggle menu expansion
+  const toggleMenu = (menuName: string) => {
+    setExpandedMenus(prev => ({
+      ...prev,
+      [menuName]: !prev[menuName]
+    }));
+  };
+
+  // All available settings submenu items
+  const settingsSubItems: SubItem[] = [
+    { name: "Google OAuth", href: "/settings/google-oauth", icon: Users },
+    { name: "Integrations", href: "/settings/integrations", icon: Settings },
+    { name: "User Management", href: "/settings/users", icon: Users },
+    { name: "Chargebee", href: "/settings/chargebee", icon: Settings }
+  ];
+
   const navigationItems: NavigationItem[] = [
     { name: "Dashboard", href: "/", icon: Home },
     { name: "Customer 360", href: "/customers", icon: Users },
     { name: "Task Management", href: "/tasks", icon: CheckSquare },
     { name: "Playbooks", href: "/playbooks", icon: Layers },
     { name: "Reports", href: "/reports", icon: BarChart2 },
-    { 
-      name: "Red Zone", 
-      href: "/red-zone", 
-      icon: AlertTriangle, 
-      badgeCount: activeRedZoneCount > 0 ? activeRedZoneCount : undefined,
-      subItems: [
-        { name: "Settings", href: "/red-zone/settings", icon: Settings }
-      ]
-    },
+    { name: "Red Zone", href: "/red-zone", icon: AlertTriangle, badgeCount: activeRedZoneCount > 0 ? activeRedZoneCount : undefined },
     { name: "Admin", href: "/admin", icon: Settings },
     { 
       name: "Settings", 
       href: "/settings", 
       icon: Settings,
-      subItems: [
-        { name: "Google OAuth", href: "/settings/google-oauth", icon: Users }
-      ]
+      subItems: expandedMenus["Settings"] ? settingsSubItems : []
     }
   ];
   
@@ -98,8 +108,9 @@ export default function Sidebar({ open, setOpen }: SidebarProps) {
           
           return (
             <div key={item.name} className="space-y-1">
-              <Link href={item.href}>
+              {item.name === "Settings" ? (
                 <div
+                  onClick={() => toggleMenu("Settings")}
                   className={cn(
                     "group flex items-center px-3 py-2 text-sm font-medium rounded-md cursor-pointer",
                     isActive
@@ -107,23 +118,42 @@ export default function Sidebar({ open, setOpen }: SidebarProps) {
                       : "text-gray-600 hover:bg-gray-100"
                   )}
                 >
-                  <Icon 
-                    className={cn(
-                      "h-5 w-5 mr-3",
-                      item.name === "Red Zone" && !isActive ? "text-red-500" : ""
-                    )} 
-                  />
+                  <Icon className="h-5 w-5 mr-3" />
                   {item.name}
-                  {item.badgeCount && (
-                    <Badge variant="outline" className={cn(
-                      "ml-auto py-0.5 px-2 text-xs rounded-full",
-                      isActive ? "bg-red-500 text-white border-red-400" : "bg-red-100 text-red-500 border-red-200"
-                    )}>
-                      {item.badgeCount}
-                    </Badge>
+                  {expandedMenus["Settings"] ? (
+                    <ChevronDown className="h-4 w-4 ml-auto" />
+                  ) : (
+                    <ChevronRight className="h-4 w-4 ml-auto" />
                   )}
                 </div>
-              </Link>
+              ) : (
+                <Link href={item.href}>
+                  <div
+                    className={cn(
+                      "group flex items-center px-3 py-2 text-sm font-medium rounded-md cursor-pointer",
+                      isActive
+                        ? "bg-gradient-to-br from-[#1E99A0] via-[#0D9298] to-[#16797E] text-white"
+                        : "text-gray-600 hover:bg-gray-100"
+                    )}
+                  >
+                    <Icon 
+                      className={cn(
+                        "h-5 w-5 mr-3",
+                        item.name === "Red Zone" && !isActive ? "text-red-500" : ""
+                      )} 
+                    />
+                    {item.name}
+                    {item.badgeCount && (
+                      <Badge variant="outline" className={cn(
+                        "ml-auto py-0.5 px-2 text-xs rounded-full",
+                        isActive ? "bg-red-500 text-white border-red-400" : "bg-red-100 text-red-500 border-red-200"
+                      )}>
+                        {item.badgeCount}
+                      </Badge>
+                    )}
+                  </div>
+                </Link>
+              )}
               
               {/* Sub-items */}
               {hasSubItems && item.subItems && (
