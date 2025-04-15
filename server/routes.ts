@@ -22,7 +22,7 @@ import {
   redZoneAlerts,
   taskComments
 } from "@shared/schema";
-import { eq } from "drizzle-orm";
+import { eq, sql } from "drizzle-orm";
 import {
   getChargebeeSubscriptions,
   getChargebeeSubscription,
