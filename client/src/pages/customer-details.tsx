@@ -334,10 +334,12 @@ export default function CustomerDetails() {
       ];
     }
     
-    // Get invoices and sort by date
+    // Get only non-recurring (recurring=false), paid invoices and sort by date
     const invoices = [...nonRecurringInvoices]
-      .filter(invoice => invoice.status === 'paid')
+      .filter(invoice => invoice.status === 'paid' && invoice.recurring === false)
       .sort((a, b) => a.date - b.date);
+    
+    console.log("Non-recurring invoices for chart:", invoices);
       
     // Group invoices by month
     const invoicesByMonth = invoices.reduce((months, invoice) => {
@@ -360,6 +362,8 @@ export default function CustomerDetails() {
     let monthlyData = Object.values(invoicesByMonth)
       .sort((a: any, b: any) => a.rawDate - b.rawDate)
       .map((m: any) => ({ name: m.name, value: m.value }));
+    
+    console.log("Monthly data:", monthlyData);
       
     // Get last 6 months or pad if less than 6
     if (monthlyData.length > 6) {
@@ -367,6 +371,7 @@ export default function CustomerDetails() {
     } else if (monthlyData.length < 6) {
       const missingMonths = 6 - monthlyData.length;
       
+      // Create empty months with zeros
       for (let i = 0; i < missingMonths; i++) {
         monthlyData.push({ name: '—', value: 0 });
       }

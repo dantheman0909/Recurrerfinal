@@ -154,14 +154,31 @@ export class ChargebeeService {
   async getNonRecurringInvoicesForCustomer(customerId: string): Promise<ChargebeeInvoice[]> {
     const queryParams = new URLSearchParams();
     queryParams.append('customer_id[is]', customerId);
+    queryParams.append('status[is]', 'paid'); // Only get paid invoices
+    
+    // Sort by date ascending to get the correct chronological order
+    queryParams.append('sort_by[asc]', 'date');
+    
+    // Use a limit high enough to get all invoices
+    queryParams.append('limit', '100');
 
     const response = await this.makeRequest(`/invoices?${queryParams.toString()}`);
     
-    // Filter to include only non-recurring invoices (has line items without a subscription id)
-    const invoices = response.list.map((item: any) => item.invoice);
+    // Get invoices
+    const invoices = response.list.map((item: any) => {
+      // Make sure we include the full invoice with line items
+      return {
+        ...item.invoice, 
+        line_items: item.invoice.line_items || [],
+        recurring: !!item.invoice.subscription_id // Flag to easily identify recurring vs non-recurring
+      };
+    });
     
+    // Filter to include only non-recurring invoices
     return invoices.filter((invoice: any) => {
-      // Check if it's a non-recurring invoice (no subscription_id or has add-ons)
+      // Consider it non-recurring if:
+      // 1. No subscription_id (one-time charge)
+      // 2. Has add-on line items
       return !invoice.subscription_id || (invoice.line_items && invoice.line_items.some((item: any) => 
         item.entity_type === 'addon' || !item.subscription_id
       ));
@@ -178,10 +195,19 @@ export class ChargebeeService {
     queryParams.append('customer_id[is]', customerId);
     queryParams.append('date[between]', `[${Math.floor(startOfMonth.getTime() / 1000)},${Math.floor(endOfMonth.getTime() / 1000)}]`);
     queryParams.append('status[is]', 'paid');
+    queryParams.append('sort_by[asc]', 'date');
+    queryParams.append('limit', '100');
 
     const response = await this.makeRequest(`/invoices?${queryParams.toString()}`);
     
-    const invoices = response.list.map((item: any) => item.invoice);
+    // Get invoices with additional properties
+    const invoices = response.list.map((item: any) => {
+      return {
+        ...item.invoice, 
+        line_items: item.invoice.line_items || [],
+        recurring: !!item.invoice.subscription_id
+      };
+    });
     
     // Filter to include only non-recurring invoices
     return invoices.filter((invoice: any) => {
