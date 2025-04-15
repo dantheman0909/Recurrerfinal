@@ -60,6 +60,8 @@ export default function Customers() {
   const [customerToDelete, setCustomerToDelete] = useState<Customer | null>(null);
   const [showDeleteDialog, setShowDeleteDialog] = useState(false);
   const [currentPage, setCurrentPage] = useState(1);
+  const [sortField, setSortField] = useState<string>("name");
+  const [sortOrder, setSortOrder] = useState<"asc" | "desc">("asc");
   const ITEMS_PER_PAGE = 50;
   
   const { toast } = useToast();
@@ -122,6 +124,74 @@ export default function Customers() {
   // Filter Team Leads (role === 'team_lead')
   const teamLeads = users?.filter(user => user.role === 'team_lead') || [];
   
+  // Function to sort customers
+  const sortCustomers = (a: Customer, b: Customer) => {
+    // Handle null values by treating them as the lowest possible value when sorting ascending
+    // and highest possible value when sorting descending
+    const handleNullValues = (aVal: any, bVal: any) => {
+      if (aVal === null || aVal === undefined) {
+        return sortOrder === 'asc' ? -1 : 1;
+      }
+      if (bVal === null || bVal === undefined) {
+        return sortOrder === 'asc' ? 1 : -1;
+      }
+      return 0; // Both values are not null
+    };
+
+    let comparison = 0;
+    switch (sortField) {
+      case 'renewal_date':
+        const aRenewal = a.renewal_date ? new Date(a.renewal_date).getTime() : null;
+        const bRenewal = b.renewal_date ? new Date(b.renewal_date).getTime() : null;
+        
+        const nullCheck = handleNullValues(aRenewal, bRenewal);
+        if (nullCheck !== 0) return nullCheck;
+        
+        comparison = aRenewal! < bRenewal! ? -1 : 1;
+        break;
+        
+      case 'onboarded_at':
+        const aOnboarding = a.onboarded_at ? new Date(a.onboarded_at).getTime() : null;
+        const bOnboarding = b.onboarded_at ? new Date(b.onboarded_at).getTime() : null;
+        
+        const onboardingNullCheck = handleNullValues(aOnboarding, bOnboarding);
+        if (onboardingNullCheck !== 0) return onboardingNullCheck;
+        
+        comparison = aOnboarding! < bOnboarding! ? -1 : 1;
+        break;
+        
+      case 'active_stores_asc':
+        const aStores = a.active_stores ?? 0;
+        const bStores = b.active_stores ?? 0;
+        comparison = aStores < bStores ? -1 : 1;
+        return comparison; // Return directly as we don't need to reverse for desc
+        
+      case 'active_stores_desc':
+        const aStoresDesc = a.active_stores ?? 0;
+        const bStoresDesc = b.active_stores ?? 0;
+        comparison = aStoresDesc > bStoresDesc ? -1 : 1;
+        return comparison; // Return directly as we don't need to reverse for desc
+        
+      case 'arr_asc':
+        const aArr = a.arr ?? 0;
+        const bArr = b.arr ?? 0;
+        comparison = aArr < bArr ? -1 : 1;
+        return comparison; // Return directly as we don't need to reverse for desc
+        
+      case 'arr_desc':
+        const aArrDesc = a.arr ?? 0;
+        const bArrDesc = b.arr ?? 0;
+        comparison = aArrDesc > bArrDesc ? -1 : 1;
+        return comparison; // Return directly as we don't need to reverse for desc
+        
+      default: // name
+        comparison = a.name.localeCompare(b.name);
+        break;
+    }
+    
+    return sortOrder === 'asc' ? comparison : -comparison;
+  };
+
   // Filter customers based on search and filter criteria
   const filteredCustomers = customers?.filter((customer: Customer) => {
     const matchesSearch = customer.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
@@ -138,7 +208,7 @@ export default function Customers() {
                        csms.find(csm => csm.id === customer.assigned_csm)?.team_lead_id === tlFilter);
     
     return matchesSearch && matchesHealth && matchesCSM && matchesTL;
-  });
+  }).sort(sortCustomers);
   
   // Calculate pagination
   const totalCustomers = filteredCustomers?.length || 0;
@@ -261,7 +331,7 @@ export default function Customers() {
           
           {/* Second row: All filters */}
           <div className="flex flex-col md:flex-row gap-4">
-            <div className="w-full md:w-1/3">
+            <div className="w-full md:w-1/4">
               <Select 
                 value={healthFilter || "all"} 
                 onValueChange={(value) => setHealthFilter(value !== "all" ? value : null)}
@@ -278,7 +348,7 @@ export default function Customers() {
               </Select>
             </div>
             
-            <div className="w-full md:w-1/3">
+            <div className="w-full md:w-1/4">
               <Select 
                 value={csmFilter?.toString() || "all"} 
                 onValueChange={(value) => setCsmFilter(value !== "all" ? parseInt(value) : null)}
@@ -297,7 +367,7 @@ export default function Customers() {
               </Select>
             </div>
             
-            <div className="w-full md:w-1/3">
+            <div className="w-full md:w-1/4">
               <Select 
                 value={tlFilter?.toString() || "all"} 
                 onValueChange={(value) => setTlFilter(value !== "all" ? parseInt(value) : null)}
@@ -312,6 +382,39 @@ export default function Customers() {
                       {tl.name}
                     </SelectItem>
                   ))}
+                </SelectContent>
+              </Select>
+            </div>
+            
+            <div className="w-full md:w-1/4">
+              <Select 
+                value={sortField} 
+                onValueChange={(value) => {
+                  if (value.includes('_')) {
+                    // Handle special cases like arr_asc that combine field and order
+                    setSortField(value);
+                    if (value.endsWith('_asc')) {
+                      setSortOrder('asc');
+                    } else if (value.endsWith('_desc')) {
+                      setSortOrder('desc');
+                    }
+                  } else {
+                    // For regular field names, just update the sort field
+                    setSortField(value);
+                  }
+                }}
+              >
+                <SelectTrigger className="w-full">
+                  <SelectValue placeholder="Sort by" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="name">Name (A-Z)</SelectItem>
+                  <SelectItem value="renewal_date">Renewal Date (Asc)</SelectItem>
+                  <SelectItem value="onboarded_at">Onboarding Date (Asc)</SelectItem>
+                  <SelectItem value="active_stores_asc">Active Locations (Low to High)</SelectItem>
+                  <SelectItem value="active_stores_desc">Active Locations (High to Low)</SelectItem>
+                  <SelectItem value="arr_asc">ARR (Low to High)</SelectItem>
+                  <SelectItem value="arr_desc">ARR (High to Low)</SelectItem>
                 </SelectContent>
               </Select>
             </div>
