@@ -71,8 +71,6 @@ export default function Sidebar({ open, setOpen }: SidebarProps) {
   // All available settings submenu items
   const settingsSubItems: SubItem[] = [
     { name: "Google OAuth", href: "/settings/google-oauth", icon: Users },
-    { name: "Integrations", href: "/settings/integrations", icon: Settings },
-    { name: "User Management", href: "/settings/users", icon: Users },
     { name: "Chargebee", href: "/settings/chargebee", icon: Settings }
   ];
 

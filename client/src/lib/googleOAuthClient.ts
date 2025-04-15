@@ -11,6 +11,7 @@ export type GoogleOAuthScope = 'email' | 'profile' | 'gmail' | 'calendar';
 export type GoogleOAuthStatus = {
   configured: boolean;
   connected?: boolean;
+  scopes?: string[];
 };
 
 export type GoogleOAuthUrlResponse = {
@@ -39,6 +40,14 @@ export const GoogleOAuthService = {
    */
   getStatus: async (): Promise<GoogleOAuthStatus> => {
     const response = await apiRequest('GET', '/api/oauth/google/status');
+    return response.json();
+  },
+  
+  /**
+   * Get Google OAuth configuration details
+   */
+  getConfig: async (): Promise<GoogleOAuthConfig> => {
+    const response = await apiRequest('GET', '/api/oauth/google/config');
     return response.json();
   },
   

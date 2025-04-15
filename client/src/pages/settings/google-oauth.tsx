@@ -43,6 +43,12 @@ export default function GoogleOAuthPage() {
     queryKey: ['/api/oauth/google/status'],
     queryFn: async () => GoogleOAuthService.getStatus()
   });
+  
+  // Get OAuth configuration details 
+  const { data: configData } = useQuery({
+    queryKey: ['/api/oauth/google/config'],
+    queryFn: async () => GoogleOAuthService.getConfig()
+  });
 
   // Generate proper redirect URI for Replit environment
   const getRedirectUri = () => {
