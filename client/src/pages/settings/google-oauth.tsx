@@ -44,12 +44,20 @@ export default function GoogleOAuthPage() {
     queryFn: async () => GoogleOAuthService.getStatus()
   });
 
+  // Generate proper redirect URI for Replit environment
+  const getRedirectUri = () => {
+    // For Replit domains, we need to ensure we have the proper format
+    const origin = window.location.origin;
+    console.log('Current origin:', origin);
+    return `${origin}/settings/google-oauth/callback`;
+  };
+
   const form = useForm({
     resolver: zodResolver(configSchema),
     defaultValues: {
       clientId: '',
       clientSecret: '',
-      redirectUri: window.location.origin + '/settings/google-oauth/callback'
+      redirectUri: getRedirectUri()
     }
   });
 
@@ -76,10 +84,35 @@ export default function GoogleOAuthPage() {
   const getAuthUrlMutation = useMutation({
     mutationFn: GoogleOAuthService.getAuthUrl,
     onSuccess: (data) => {
+      console.log('Auth URL response:', data);
+      
       if (data.success && data.authUrl) {
-        // Redirect to Google authorization URL
-        window.location.href = data.authUrl;
+        // Log the URL we're redirecting to
+        console.log('Redirecting to auth URL:', data.authUrl);
+        
+        // Check if it's a valid URL
+        try {
+          new URL(data.authUrl); // Will throw if invalid
+          
+          // Add a small delay before redirecting to ensure logs are displayed
+          toast({
+            title: 'Redirecting',
+            description: 'Opening Google authorization page...',
+          });
+          
+          setTimeout(() => {
+            window.location.href = data.authUrl;
+          }, 500);
+        } catch (e) {
+          console.error('Invalid URL format:', e);
+          toast({
+            title: 'Error',
+            description: 'Invalid authorization URL format',
+            variant: 'destructive',
+          });
+        }
       } else {
+        console.error('Failed to get valid auth URL:', data);
         toast({
           title: 'Error',
           description: data.error || 'Failed to generate authorization URL',
