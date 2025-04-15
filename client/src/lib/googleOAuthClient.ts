@@ -43,27 +43,30 @@ export const GoogleOAuthService = {
   },
   
   /**
-   * Test the connection to Google by fetching public info (without authorization)
-   * Useful for testing if the Google Cloud project is properly set up
+   * Test the connection to Google servers
+   * Checks connectivity to multiple Google endpoints from the server-side
    */
   testConnection: async (): Promise<GoogleOAuthResponse> => {
     try {
-      // Try to load the Google sign-in page directly
-      const testUrl = 'https://accounts.google.com/o/oauth2/v2/auth?response_type=code&access_type=offline&prompt=consent&scope=https%3A%2F%2Fwww.googleapis.com%2Fauth%2Fuserinfo.email&client_id=DUMMY_ID&redirect_uri=https%3A%2F%2Fexample.com';
+      // Use our server-side test endpoint that does an actual connection test
+      // This is more reliable than client-side testing
+      console.log('Testing connection to Google servers via server endpoint...');
+      const response = await apiRequest('GET', '/api/oauth/google/test-connection');
+      const result = await response.json();
       
-      // Use fetch with no-cors to just test connectivity
-      await fetch(testUrl, { mode: 'no-cors' });
+      console.log('Connection test result:', result);
       
       return {
-        success: true,
-        message: 'Connection to accounts.google.com is working'
+        success: result.success,
+        message: result.message,
+        error: result.errors ? result.errors.join(', ') : undefined
       };
     } catch (error) {
       console.error('Test connection error:', error);
       return {
         success: false,
         error: error instanceof Error ? error.message : String(error),
-        message: 'Could not connect to accounts.google.com'
+        message: 'Could not perform connection test to Google servers'
       };
     }
   },

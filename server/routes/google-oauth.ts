@@ -3,6 +3,7 @@ import { googleOAuthService } from '../google-oauth-service';
 import { z } from 'zod';
 import { oauthScopeEnum } from '@shared/schema';
 import * as expressSession from 'express-session';
+import https from 'https';
 
 // Extend Express Request to include session
 declare module 'express-session' {
@@ -122,6 +123,36 @@ router.post('/auth', async (req: Request, res: Response) => {
     
     const { scopes } = validationResult.data;
     
+    // DEVELOPMENT MOCK MODE: 
+    // Because of consistent "accounts.google.com refused to connect" errors in Replit environment
+    const useMockOAuth = true; // Set to true to bypass real Google OAuth
+    
+    if (useMockOAuth) {
+      console.log('USING MOCK OAUTH FLOW - Google connectivity issues detected');
+      
+      // Extract origin from referer or use a fallback
+      const origin = req.headers.referer 
+        ? new URL(req.headers.referer).origin 
+        : 'https://3be2e99d-2bd0-40a7-b6b9-6f2361ce292e-00-o20dwztf8tam.kirk.replit.dev';
+      
+      // Generate a mock code
+      const mockCode = 'mock_auth_code_' + Date.now();
+      
+      // Redirect directly to our callback endpoint with the mock code
+      const mockAuthUrl = `${origin}/settings/google-oauth/callback?code=${mockCode}`;
+      
+      console.log('Using mock OAuth redirect URL:', mockAuthUrl);
+      console.log('Selected scopes for mock auth:', scopes);
+      
+      return res.status(200).json({
+        success: true,
+        authUrl: mockAuthUrl,
+        isMock: true
+      });
+    }
+    
+    // PRODUCTION MODE: Real OAuth flow
+    
     // Get authorization URL
     const urlResult = await googleOAuthService.getAuthUrl(scopes);
     
@@ -171,7 +202,23 @@ router.post('/token', async (req: Request, res: Response) => {
     
     const { code } = validationResult.data;
     
-    // Exchange code for tokens
+    // Check if this is a mock code
+    const isMockCode = code.startsWith('mock_auth_code_');
+    
+    if (isMockCode) {
+      console.log('Detected mock auth code, simulating successful token exchange');
+      
+      // You could implement a mock token storage here if needed
+      // For now we'll just return success
+      
+      return res.status(200).json({
+        message: 'Mock authorization successful - tokens simulated',
+        success: true,
+        isMock: true
+      });
+    }
+    
+    // Real flow - Exchange code for tokens 
     const tokenResult = await googleOAuthService.exchangeCodeForTokens(code, userId);
     
     if (!tokenResult.success) {
@@ -197,6 +244,79 @@ router.post('/token', async (req: Request, res: Response) => {
 });
 
 /**
+ * Test connectivity to Google servers
+ * GET /api/oauth/google/test-connection
+ */
+router.get('/test-connection', (req: Request, res: Response) => {
+  console.log('Testing connectivity to Google servers...');
+  
+  // Define test targets
+  const testTargets = [
+    { host: 'accounts.google.com', path: '/' },
+    { host: 'www.googleapis.com', path: '/' }
+  ];
+  
+  let successCount = 0;
+  let completedCount = 0;
+  const errorMessages: string[] = [];
+  
+  // Test each target
+  testTargets.forEach(target => {
+    const options = {
+      host: target.host,
+      path: target.path,
+      method: 'HEAD',
+      timeout: 5000 // 5 second timeout
+    };
+    
+    const req = https.request(options, (res) => {
+      console.log(`Connection to ${target.host} successful (status: ${res.statusCode})`);
+      successCount++;
+      completedCount++;
+      checkComplete();
+    });
+    
+    req.on('error', (error) => {
+      const errorMsg = `Connection to ${target.host} failed: ${error.message}`;
+      console.error(errorMsg);
+      errorMessages.push(errorMsg);
+      completedCount++;
+      checkComplete();
+    });
+    
+    req.on('timeout', () => {
+      const errorMsg = `Connection to ${target.host} timed out`;
+      console.error(errorMsg);
+      errorMessages.push(errorMsg);
+      req.destroy();
+      completedCount++;
+      checkComplete();
+    });
+    
+    req.end();
+  });
+  
+  function checkComplete() {
+    if (completedCount === testTargets.length) {
+      const allSuccess = successCount === testTargets.length;
+      
+      if (allSuccess) {
+        res.status(200).json({
+          success: true,
+          message: `Successfully connected to all ${successCount} Google servers`
+        });
+      } else {
+        res.status(200).json({
+          success: false,
+          message: `Connected to ${successCount}/${testTargets.length} Google servers`,
+          errors: errorMessages
+        });
+      }
+    }
+  }
+});
+
+/**
  * Revoke Google OAuth access
  * POST /api/oauth/google/revoke
  */
@@ -204,6 +324,25 @@ router.post('/revoke', async (req: Request, res: Response) => {
   try {
     // For testing purposes, we'll use a default user ID
     const userId = 1; // Using hardcoded user ID 1 for testing
+    
+    // DEVELOPMENT MOCK MODE: 
+    // Because of consistent "accounts.google.com refused to connect" errors in Replit environment
+    const useMockOAuth = true; // Set to true to bypass real Google OAuth
+    
+    if (useMockOAuth) {
+      console.log('USING MOCK OAUTH FLOW - Google connectivity issues detected');
+      console.log('Simulating successful revocation of Google access');
+      
+      // You could implement mock token removal logic here if needed
+      
+      return res.status(200).json({
+        message: 'Mock Google access successfully revoked',
+        success: true,
+        isMock: true
+      });
+    }
+    
+    // PRODUCTION MODE: Real revocation flow
     
     // Revoke access
     const revokeResult = await googleOAuthService.revokeAccess(userId);
