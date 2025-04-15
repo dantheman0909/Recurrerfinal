@@ -1,5 +1,18 @@
 import { Request, Response, NextFunction } from 'express';
 
+// Extend express session
+declare module 'express-session' {
+  interface SessionData {
+    user?: {
+      id: number;
+      name: string;
+      email: string;
+      role: 'admin' | 'team_lead' | 'csm';
+      [key: string]: any;
+    };
+  }
+}
+
 // Middleware to check if user is authenticated
 export const isAuthenticated = (req: Request, res: Response, next: NextFunction) => {
   if (req.session && req.session.user) {

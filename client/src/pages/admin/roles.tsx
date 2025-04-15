@@ -191,7 +191,7 @@ const RolePermissionsPage = () => {
         <h1 className="text-2xl font-bold">Role & Access Management</h1>
         <Button 
           onClick={savePermissions} 
-          disabled={isLoading || status === 'loading'} 
+          disabled={isLoading || status === 'pending'} 
           className="flex items-center gap-2"
         >
           {(isLoading || updatePermissions.isPending) && <Spinner size="small" />}
@@ -249,7 +249,7 @@ const RolePermissionsPage = () => {
                   </TableRow>
                 </TableHeader>
                 <TableBody>
-                  {status === 'loading' ? (
+                  {status === 'pending' ? (
                     <TableRow>
                       <TableCell colSpan={5} className="h-24 text-center">
                         <div className="flex flex-col items-center justify-center">
