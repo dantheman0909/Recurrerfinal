@@ -79,7 +79,15 @@ export class ChargebeeService {
       });
 
       if (!response.ok) {
-        throw new Error(`Chargebee API error: ${response.status} ${response.statusText}`);
+        // Try to get detailed error message
+        try {
+          const errorData = await response.json();
+          console.error(`Chargebee API error details:`, JSON.stringify(errorData, null, 2));
+          throw new Error(`Chargebee API error: ${response.status} ${response.statusText} - ${JSON.stringify(errorData)}`);
+        } catch (e) {
+          // If we can't parse the error JSON, just show the status
+          throw new Error(`Chargebee API error: ${response.status} ${response.statusText}`);
+        }
       }
 
       return await response.json();
@@ -289,8 +297,13 @@ export class ChargebeeService {
     // Setup pagination parameters for the first call
     const queryParams = new URLSearchParams();
     queryParams.append('customer_id[is]', customerId);
+    
+    // Use explicit format for Chargebee API to fix 400 error
     queryParams.append('status[is]', 'paid'); // Only get paid invoices
     queryParams.append('sort_by[asc]', 'date'); // Sort by date ascending
+    
+    // Log request details for debugging
+    console.log(`Query params: ${queryParams.toString()}`);
 
     // Create a specific endpoint for this customer's invoices
     const endpoint = `/invoices`;
@@ -334,7 +347,14 @@ export class ChargebeeService {
     // Setup pagination parameters
     const queryParams = new URLSearchParams();
     queryParams.append('customer_id[is]', customerId);
-    queryParams.append('date[between]', `[${Math.floor(startOfMonth.getTime() / 1000)},${Math.floor(endOfMonth.getTime() / 1000)}]`);
+    
+    // Format the date range without brackets to fix the 400 error
+    const startTimestamp = Math.floor(startOfMonth.getTime() / 1000);
+    const endTimestamp = Math.floor(endOfMonth.getTime() / 1000);
+    console.log(`Date range timestamps: ${startTimestamp} to ${endTimestamp}`);
+    
+    // Fix date query format for Chargebee API
+    queryParams.append('date[between]', `${startTimestamp},${endTimestamp}`);
     queryParams.append('status[is]', 'paid');
     queryParams.append('sort_by[asc]', 'date');
 
