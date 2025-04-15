@@ -701,7 +701,47 @@ export default function CustomerDetails() {
             
             <Card className="mt-4">
               <CardHeader className="pb-2">
-                <CardTitle className="text-lg">Account Manager</CardTitle>
+                <div className="flex justify-between items-center">
+                  <CardTitle className="text-lg">Account Manager</CardTitle>
+                  <Dialog>
+                    <DialogTrigger asChild>
+                      <Button variant="outline" size="sm">
+                        {customer.assigned_csm ? "Change" : "Assign"} CSM
+                      </Button>
+                    </DialogTrigger>
+                    <DialogContent>
+                      <DialogHeader>
+                        <DialogTitle>Assign CSM to {customer.name}</DialogTitle>
+                        <DialogDescription>
+                          Select a Customer Success Manager to be responsible for this account.
+                        </DialogDescription>
+                      </DialogHeader>
+                      
+                      <div className="py-4">
+                        <div className="grid w-full items-center gap-4">
+                          <div className="flex flex-col space-y-1.5">
+                            <Label htmlFor="csm">Select CSM</Label>
+                            <Select onValueChange={(value) => handleAssignCSM(parseInt(value))}>
+                              <SelectTrigger>
+                                <SelectValue placeholder="Select a CSM" />
+                              </SelectTrigger>
+                              <SelectContent>
+                                {users
+                                  .filter(user => user.role === 'csm')
+                                  .map(csm => (
+                                    <SelectItem key={csm.id} value={csm.id.toString()}>
+                                      {csm.name}
+                                    </SelectItem>
+                                  ))
+                                }
+                              </SelectContent>
+                            </Select>
+                          </div>
+                        </div>
+                      </div>
+                    </DialogContent>
+                  </Dialog>
+                </div>
               </CardHeader>
               <CardContent>
                 {customer.assigned_csm && userMap[customer.assigned_csm] ? (
