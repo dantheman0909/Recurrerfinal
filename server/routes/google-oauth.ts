@@ -103,17 +103,18 @@ router.get('/status', async (req: Request, res: Response) => {
  * Start Google OAuth authorization flow
  * POST /api/oauth/google/auth
  */
-router.post('/auth', async (req: RequestWithSession, res: Response) => {
+router.post('/auth', async (req: Request, res: Response) => {
   try {
-    // For testing purposes, we'll use a default user ID if not in session
+    // For testing purposes, we'll use a default user ID
     // In production, this should require proper authentication
-    const userId = req.session.userId || 1; // Default to user ID 1 for testing
+    const userId = 1; // Using hardcoded user ID 1 for testing
     
     // Validate request
     const validationResult = authRequestSchema.safeParse(req.body);
     
     if (!validationResult.success) {
       return res.status(400).json({
+        success: false,
         message: 'Invalid request',
         errors: validationResult.error.format()
       });
@@ -126,13 +127,13 @@ router.post('/auth', async (req: RequestWithSession, res: Response) => {
     
     if (!urlResult.success || !urlResult.url) {
       return res.status(500).json({
+        success: false,
         message: 'Failed to generate authorization URL',
         error: urlResult.error
       });
     }
     
-    // Store user ID in session for later use
-    req.session.userId = userId;
+    // We're not using session in test mode
     
     return res.status(200).json({
       success: true,
@@ -141,6 +142,7 @@ router.post('/auth', async (req: RequestWithSession, res: Response) => {
   } catch (error) {
     console.error('Error starting Google OAuth flow:', error);
     return res.status(500).json({
+      success: false,
       message: 'An error occurred while starting the OAuth flow',
       error: error instanceof Error ? error.message : String(error)
     });
@@ -151,16 +153,17 @@ router.post('/auth', async (req: RequestWithSession, res: Response) => {
  * Exchange authorization code for tokens
  * POST /api/oauth/google/token
  */
-router.post('/token', async (req: RequestWithSession, res: Response) => {
+router.post('/token', async (req: Request, res: Response) => {
   try {
-    // For testing purposes, we'll use a default user ID if not in session
-    const userId = req.session.userId || 1; // Default to user ID 1 for testing
+    // For testing purposes, we'll use a default user ID
+    const userId = 1; // Using hardcoded user ID 1 for testing
     
     // Validate request
     const validationResult = exchangeCodeSchema.safeParse(req.body);
     
     if (!validationResult.success) {
       return res.status(400).json({
+        success: false,
         message: 'Invalid request',
         errors: validationResult.error.format()
       });
@@ -173,6 +176,7 @@ router.post('/token', async (req: RequestWithSession, res: Response) => {
     
     if (!tokenResult.success) {
       return res.status(500).json({
+        success: false,
         message: tokenResult.message || 'Failed to exchange code for tokens',
         error: tokenResult.error
       });
@@ -185,6 +189,7 @@ router.post('/token', async (req: RequestWithSession, res: Response) => {
   } catch (error) {
     console.error('Error exchanging code for tokens:', error);
     return res.status(500).json({
+      success: false,
       message: 'An error occurred while exchanging the code for tokens',
       error: error instanceof Error ? error.message : String(error)
     });
@@ -195,16 +200,17 @@ router.post('/token', async (req: RequestWithSession, res: Response) => {
  * Revoke Google OAuth access
  * POST /api/oauth/google/revoke
  */
-router.post('/revoke', async (req: RequestWithSession, res: Response) => {
+router.post('/revoke', async (req: Request, res: Response) => {
   try {
-    // For testing purposes, we'll use a default user ID if not in session
-    const userId = req.session.userId || 1; // Default to user ID 1 for testing
+    // For testing purposes, we'll use a default user ID
+    const userId = 1; // Using hardcoded user ID 1 for testing
     
     // Revoke access
     const revokeResult = await googleOAuthService.revokeAccess(userId);
     
     if (!revokeResult.success) {
       return res.status(500).json({
+        success: false,
         message: revokeResult.message || 'Failed to revoke access',
         error: revokeResult.error
       });
@@ -217,6 +223,7 @@ router.post('/revoke', async (req: RequestWithSession, res: Response) => {
   } catch (error) {
     console.error('Error revoking Google access:', error);
     return res.status(500).json({
+      success: false,
       message: 'An error occurred while revoking Google access',
       error: error instanceof Error ? error.message : String(error)
     });

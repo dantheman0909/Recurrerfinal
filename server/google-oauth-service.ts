@@ -70,14 +70,13 @@ export class GoogleOAuthService {
    */
   async getAuthUrl(scopes: GoogleOAuthScope[]): Promise<{ success: boolean; url?: string; error?: string }> {
     try {
-      if (!this.isInitialized()) {
-        const result = await this.initialize();
-        if (!result.success) {
-          return { 
-            success: false, 
-            error: result.error || 'Failed to initialize Google OAuth service'
-          };
-        }
+      // Always reinitialize to make sure we have the latest config
+      const result = await this.initialize();
+      if (!result.success) {
+        return { 
+          success: false, 
+          error: result.error || 'Failed to initialize Google OAuth service'
+        };
       }
       
       if (!this.oAuth2Client) {
@@ -102,6 +101,15 @@ export class GoogleOAuthService {
             return '';
         }
       }).filter(scope => scope !== '');
+      
+      if (googleScopes.length === 0) {
+        return {
+          success: false,
+          error: 'No valid scopes provided'
+        };
+      }
+      
+      console.log('Using scopes:', googleScopes);
       
       // Generate auth URL with specified scopes
       const authUrl = this.oAuth2Client.generateAuthUrl({
