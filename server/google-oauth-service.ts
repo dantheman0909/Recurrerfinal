@@ -344,6 +344,40 @@ export class GoogleOAuthService {
   }
   
   /**
+   * Get user info from Google
+   */
+  async getUserInfo(userId: number): Promise<{ success: boolean; userInfo?: any; error?: string }> {
+    try {
+      const clientResult = await this.getAuthenticatedClient(userId);
+      
+      if (!clientResult.success || !clientResult.client) {
+        return { success: false, error: clientResult.error || 'Failed to get authenticated client' };
+      }
+      
+      const client = clientResult.client;
+      const userInfoResponse = await fetch('https://www.googleapis.com/oauth2/v3/userinfo', {
+        headers: {
+          Authorization: `Bearer ${(await client.getAccessToken()).token}`
+        }
+      });
+      
+      if (!userInfoResponse.ok) {
+        const errorText = await userInfoResponse.text();
+        return { success: false, error: `Failed to get user info: ${errorText}` };
+      }
+      
+      const userInfo = await userInfoResponse.json();
+      return { success: true, userInfo };
+    } catch (error) {
+      console.error('Error getting user info:', error);
+      return { 
+        success: false, 
+        error: `Error getting user info: ${error instanceof Error ? error.message : String(error)}` 
+      };
+    }
+  }
+  
+  /**
    * Revoke access for a user
    */
   async revokeAccess(userId: number): Promise<{ success: boolean; message?: string; error?: string }> {

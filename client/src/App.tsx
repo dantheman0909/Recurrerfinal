@@ -17,6 +17,8 @@ import Profile from "@/pages/profile";
 import Settings from "@/pages/settings";
 import GoogleOAuth from "@/pages/settings/google-oauth";
 import AppLayout from "@/components/layouts/app-layout";
+import LoginPage from "@/pages/auth/login";
+import SignupPage from "@/pages/auth/signup";
 
 function App() {
   return (
@@ -39,6 +41,8 @@ function App() {
         <Route path="/settings" component={Settings} />
         <Route path="/settings/google-oauth" component={GoogleOAuth} />
         <Route path="/settings/google-oauth/callback" component={GoogleOAuth} />
+        <Route path="/auth/login" component={LoginPage} />
+        <Route path="/auth/signup" component={SignupPage} />
         <Route component={NotFound} />
       </Switch>
     </AppLayout>
