@@ -138,13 +138,20 @@ export async function registerRoutes(app: Express): Promise<Server> {
   app.delete('/api/customers/:id', async (req, res) => {
     const id = parseInt(req.params.id);
     try {
+      // First delete related records in dependent tables
+      await db.delete(customerMetrics).where(eq(customerMetrics.customer_id, id));
+      await db.delete(redZoneAlerts).where(eq(redZoneAlerts.customer_id, id));
+      await db.delete(tasks).where(eq(tasks.customer_id, id));
+      
+      // Now delete the customer
       const success = await storage.deleteCustomer(id);
       if (!success) {
         return res.status(404).json({ message: 'Customer not found' });
       }
       res.json({ success: true });
     } catch (error) {
-      res.status(500).json({ message: 'Error deleting customer', error });
+      console.error("Error deleting customer:", error);
+      res.status(500).json({ message: 'Error deleting customer', error: String(error) });
     }
   });
   
