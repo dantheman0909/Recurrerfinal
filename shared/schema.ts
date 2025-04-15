@@ -13,8 +13,10 @@ export const dueDateTypeEnum = pgEnum('due_date_type', ['fixed', 'relative']);
 export const recurrenceTypeEnum = pgEnum('recurrence_type', ['none', 'daily', 'weekly', 'monthly', 'bi-weekly']);
 export const accountTypeEnum = pgEnum('account_type', ['starter', 'growth', 'key']);
 export const integrationStatusEnum = pgEnum('integration_status', ['active', 'pending', 'error']);
-export const notificationTypeEnum = pgEnum('notification_type', ['task_assigned', 'task_due_soon', 'task_overdue', 'red_zone_alert', 'customer_renewal', 'system_notification', 'achievement_earned']);
+export const notificationTypeEnum = pgEnum('notification_type', ['task_assigned', 'task_due_soon', 'task_overdue', 'red_zone_alert', 'customer_renewal', 'system_notification', 'achievement_earned', 'email_received', 'calendar_event']);
 export const achievementTypeEnum = pgEnum('achievement_type', ['tasks_completed', 'customer_health_improved', 'feedback_collected', 'playbooks_executed', 'red_zone_resolved', 'login_streak']);
+export const oauthProviderEnum = pgEnum('oauth_provider', ['google']);
+export const oauthScopeEnum = pgEnum('oauth_scope', ['email', 'profile', 'gmail', 'calendar']);
 
 // Users & Profiles
 export const users = pgTable("users", {
@@ -302,6 +304,76 @@ export const userAchievements = pgTable("user_achievements", {
   is_viewed: boolean("is_viewed").default(false),
 });
 
+// Google OAuth Configuration
+export const googleOAuthConfig = pgTable("google_oauth_config", {
+  id: serial("id").primaryKey(),
+  client_id: text("client_id").notNull(),
+  client_secret: text("client_secret").notNull(),
+  redirect_uri: text("redirect_uri").notNull(),
+  scopes: oauthScopeEnum("scopes").array(),
+  enabled: boolean("enabled").default(true),
+  created_at: timestamp("created_at").defaultNow(),
+  updated_at: timestamp("updated_at"),
+});
+
+// User OAuth Tokens
+export const userOAuthTokens = pgTable("user_oauth_tokens", {
+  id: serial("id").primaryKey(),
+  user_id: integer("user_id").notNull().references(() => users.id),
+  provider: oauthProviderEnum("provider").notNull(),
+  access_token: text("access_token").notNull(),
+  refresh_token: text("refresh_token"),
+  token_type: text("token_type").default("Bearer"),
+  scopes: oauthScopeEnum("scopes").array(),
+  expires_at: timestamp("expires_at"),
+  created_at: timestamp("created_at").defaultNow(),
+  updated_at: timestamp("updated_at"),
+});
+
+// Email Messages
+export const emailMessages = pgTable("email_messages", {
+  id: serial("id").primaryKey(),
+  gmail_id: text("gmail_id").unique(), // Gmail's unique message ID
+  user_id: integer("user_id").notNull().references(() => users.id), // User who received/sent the email
+  customer_id: integer("customer_id").references(() => customers.id), // Related customer, if any
+  thread_id: text("thread_id"), // Gmail thread ID for conversation grouping
+  from_email: text("from_email").notNull(),
+  from_name: text("from_name"),
+  to_emails: text("to_emails").array(),
+  cc_emails: text("cc_emails").array(),
+  subject: text("subject"),
+  body_text: text("body_text"),
+  body_html: text("body_html"),
+  received_at: timestamp("received_at"),
+  is_read: boolean("is_read").default(false),
+  is_sent: boolean("is_sent").default(false),
+  is_archived: boolean("is_archived").default(false),
+  labels: text("labels").array(),
+  attachments_count: integer("attachments_count").default(0),
+  created_at: timestamp("created_at").defaultNow(),
+});
+
+// Calendar Events
+export const calendarEvents = pgTable("calendar_events", {
+  id: serial("id").primaryKey(),
+  google_event_id: text("google_event_id").unique(), // Google Calendar's event ID
+  user_id: integer("user_id").notNull().references(() => users.id), // User who owns the calendar
+  customer_id: integer("customer_id").references(() => customers.id), // Related customer, if any
+  title: text("title").notNull(),
+  description: text("description"),
+  location: text("location"),
+  start_time: timestamp("start_time").notNull(),
+  end_time: timestamp("end_time").notNull(),
+  is_all_day: boolean("is_all_day").default(false),
+  attendees: jsonb("attendees"), // Array of {email, name, response_status}
+  google_calendar_id: text("google_calendar_id"), // ID of the Google Calendar
+  google_meet_link: text("google_meet_link"),
+  is_recurring: boolean("is_recurring").default(false),
+  recurrence_rule: text("recurrence_rule"),
+  created_at: timestamp("created_at").defaultNow(),
+  updated_at: timestamp("updated_at"),
+});
+
 // Relations
 export const usersRelations = relations(users, ({ one, many }) => ({
   teamLead: one(users, { fields: [users.team_lead_id], references: [users.id], relationName: "csm_team_lead" }),
@@ -312,6 +384,9 @@ export const usersRelations = relations(users, ({ one, many }) => ({
   assignedCustomers: many(customers, { relationName: "assigned_customers" }),
   notifications: many(notifications),
   achievements: many(userAchievements),
+  oauthTokens: many(userOAuthTokens),
+  emails: many(emailMessages),
+  calendarEvents: many(calendarEvents),
 }));
 
 export const customersRelations = relations(customers, ({ one, many }) => ({
@@ -319,6 +394,8 @@ export const customersRelations = relations(customers, ({ one, many }) => ({
   tasks: many(tasks),
   redZoneAlerts: many(redZoneAlerts),
   metrics: many(customerMetrics),
+  emails: many(emailMessages),
+  calendarEvents: many(calendarEvents),
 }));
 
 export const tasksRelations = relations(tasks, ({ one }) => ({
@@ -380,6 +457,20 @@ export const userAchievementsRelations = relations(userAchievements, ({ one }) =
   user: one(users, { fields: [userAchievements.user_id], references: [users.id] }),
 }));
 
+export const userOAuthTokensRelations = relations(userOAuthTokens, ({ one }) => ({
+  user: one(users, { fields: [userOAuthTokens.user_id], references: [users.id] }),
+}));
+
+export const emailMessagesRelations = relations(emailMessages, ({ one }) => ({
+  user: one(users, { fields: [emailMessages.user_id], references: [users.id] }),
+  customer: one(customers, { fields: [emailMessages.customer_id], references: [customers.id] }),
+}));
+
+export const calendarEventsRelations = relations(calendarEvents, ({ one }) => ({
+  user: one(users, { fields: [calendarEvents.user_id], references: [users.id] }),
+  customer: one(customers, { fields: [calendarEvents.customer_id], references: [customers.id] }),
+}));
+
 // Schemas
 export const insertUserSchema = createInsertSchema(users).omit({ id: true, created_at: true });
 export const insertCustomerSchema = createInsertSchema(customers).omit({ id: true, created_at: true });
@@ -398,6 +489,10 @@ export const insertChargebeeConfigSchema = createInsertSchema(chargebeeConfig).o
 export const insertChargebeeFieldMappingSchema = createInsertSchema(chargebeeFieldMappings).omit({ id: true, created_at: true });
 export const insertNotificationSchema = createInsertSchema(notifications).omit({ id: true, created_at: true });
 export const insertUserAchievementSchema = createInsertSchema(userAchievements).omit({ id: true, earned_at: true });
+export const insertGoogleOAuthConfigSchema = createInsertSchema(googleOAuthConfig).omit({ id: true, created_at: true, updated_at: true });
+export const insertUserOAuthTokenSchema = createInsertSchema(userOAuthTokens).omit({ id: true, created_at: true, updated_at: true });
+export const insertEmailMessageSchema = createInsertSchema(emailMessages).omit({ id: true, created_at: true });
+export const insertCalendarEventSchema = createInsertSchema(calendarEvents).omit({ id: true, created_at: true, updated_at: true });
 
 // Types
 export type User = typeof users.$inferSelect;
@@ -448,3 +543,15 @@ export type InsertNotification = z.infer<typeof insertNotificationSchema>;
 
 export type UserAchievement = typeof userAchievements.$inferSelect;
 export type InsertUserAchievement = z.infer<typeof insertUserAchievementSchema>;
+
+export type GoogleOAuthConfig = typeof googleOAuthConfig.$inferSelect;
+export type InsertGoogleOAuthConfig = z.infer<typeof insertGoogleOAuthConfigSchema>;
+
+export type UserOAuthToken = typeof userOAuthTokens.$inferSelect;
+export type InsertUserOAuthToken = z.infer<typeof insertUserOAuthTokenSchema>;
+
+export type EmailMessage = typeof emailMessages.$inferSelect;
+export type InsertEmailMessage = z.infer<typeof insertEmailMessageSchema>;
+
+export type CalendarEvent = typeof calendarEvents.$inferSelect;
+export type InsertCalendarEvent = z.infer<typeof insertCalendarEventSchema>;
