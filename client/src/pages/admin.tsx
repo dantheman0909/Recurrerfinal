@@ -33,6 +33,7 @@ import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/component
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { useToast } from "@/hooks/use-toast";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger, DialogDescription, DialogFooter } from "@/components/ui/dialog";
+import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
 import { queryClient, apiRequest } from "@/lib/queryClient";
 import {
   AlertCircle,
@@ -48,6 +49,7 @@ import {
   FileText,
   Save,
   Link as LinkIcon,
+  Info as InfoIcon,
   Key,
   BadgeDollarSign,
   Calendar,
@@ -68,6 +70,51 @@ import {
 } from "lucide-react";
 import { UserRole } from "@shared/types";
 import { AvatarWithInitials } from "@/components/ui/avatar-with-initials";
+
+// Component to fetch total record counts from the database
+function TotalRecordsCounter({ entity, chargebeeConfig }: { entity: string, chargebeeConfig: any }) {
+  const [count, setCount] = useState<number | null>(null);
+  const [loading, setLoading] = useState(true);
+  
+  React.useEffect(() => {
+    const fetchTotalCount = async () => {
+      try {
+        setLoading(true);
+        // Get count from the actual database, not just the last sync stats
+        const response = await fetch(`/api/admin/entity-count/${entity}`);
+        if (response.ok) {
+          const data = await response.json();
+          setCount(data.count);
+        } else {
+          console.error(`Failed to fetch ${entity} count`);
+          // Fallback to last sync stats if available
+          if (chargebeeConfig?.last_sync_stats?.[entity]) {
+            if (typeof chargebeeConfig.last_sync_stats[entity] === 'object') {
+              setCount(chargebeeConfig.last_sync_stats[entity].total || 0);
+            } else {
+              setCount(chargebeeConfig.last_sync_stats[entity] || 0);
+            }
+          } else {
+            setCount(0);
+          }
+        }
+      } catch (error) {
+        console.error(`Error fetching ${entity} count:`, error);
+        setCount(0);
+      } finally {
+        setLoading(false);
+      }
+    };
+    
+    fetchTotalCount();
+  }, [entity, chargebeeConfig?.last_synced_at]);
+  
+  if (loading) {
+    return <span className="animate-pulse">Loading...</span>;
+  }
+  
+  return <>{count?.toLocaleString() || 0}</>;
+}
 
 export default function Admin() {
   const [activeTab, setActiveTab] = useState("mysql-config");
@@ -1684,16 +1731,18 @@ function ChargebeeConfigTab() {
                           <div className="text-xs text-gray-600 pt-1">
                             <div className="flex items-center mb-1">
                               <p className="font-medium">Current database totals:</p>
-                              <Tooltip>
-                                <TooltipTrigger asChild>
-                                  <InfoIcon className="h-3 w-3 ml-1 text-gray-400" />
-                                </TooltipTrigger>
-                                <TooltipContent>
-                                  <p className="w-[240px] text-xs">
-                                    These are the actual counts in the database, not just from the last sync.
-                                  </p>
-                                </TooltipContent>
-                              </Tooltip>
+                              <TooltipProvider>
+                                <Tooltip>
+                                  <TooltipTrigger asChild>
+                                    <InfoIcon className="h-3 w-3 ml-1 text-gray-400" />
+                                  </TooltipTrigger>
+                                  <TooltipContent>
+                                    <p className="w-[240px] text-xs">
+                                      These are the actual counts in the database, not just from the last sync.
+                                    </p>
+                                  </TooltipContent>
+                                </Tooltip>
+                              </TooltipProvider>
                             </div>
                             <div className="flex space-x-4 mt-1">
                               <span>
