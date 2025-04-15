@@ -68,6 +68,10 @@ app.use('/api/users', userManagementRoutes);
 import authRoutes from './routes/auth';
 app.use('/api/auth', authRoutes);
 
+// Load and configure current user routes
+import meRoutes from './routes/me';
+app.use('/api/me', meRoutes);
+
 // Data synchronization endpoints (direct route to avoid Vite middleware interference)
 app.post('/api/admin/mysql-sync', async (req, res) => {
   try {

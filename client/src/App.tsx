@@ -17,11 +17,46 @@ import Profile from "@/pages/profile";
 import Settings from "@/pages/settings";
 import GoogleOAuth from "@/pages/settings/google-oauth";
 import AppLayout from "@/components/layouts/app-layout";
+import AuthLayout from "@/components/layouts/auth-layout";
 import LoginPage from "@/pages/auth/login";
 import SignupPage from "@/pages/auth/signup";
+import { useEffect, useState } from "react";
+import { useLocation } from "wouter";
 
 function App() {
-  return (
+  const [location] = useLocation();
+  const isAuthRoute = location.startsWith('/auth');
+  
+  // Auth state management (simulated for now)
+  const [isAuthenticated, setIsAuthenticated] = useState(true); // Default to true for development
+  
+  // Simulate checking auth status on app load
+  useEffect(() => {
+    // This would typically verify a token, session cookie, etc.
+    const checkAuthStatus = async () => {
+      // For implementation later, currently just assuming logged in
+      const loggedIn = sessionStorage.getItem('isLoggedIn') === 'true';
+      setIsAuthenticated(loggedIn || true); // Default to true for development
+    };
+    
+    checkAuthStatus();
+  }, []);
+  
+  // Separate content based on authentication routes
+  const authRoutes = (
+    <AuthLayout>
+      <Switch>
+        <Route path="/auth/login" component={LoginPage} />
+        <Route path="/auth/signup" component={SignupPage} />
+        <Route component={() => {
+          window.location.href = '/auth/login';
+          return null;
+        }} />
+      </Switch>
+    </AuthLayout>
+  );
+  
+  const appRoutes = (
     <AppLayout>
       <Switch>
         <Route path="/" component={Dashboard} />
@@ -41,12 +76,12 @@ function App() {
         <Route path="/settings" component={Settings} />
         <Route path="/settings/google-oauth" component={GoogleOAuth} />
         <Route path="/settings/google-oauth/callback" component={GoogleOAuth} />
-        <Route path="/auth/login" component={LoginPage} />
-        <Route path="/auth/signup" component={SignupPage} />
         <Route component={NotFound} />
       </Switch>
     </AppLayout>
   );
+  
+  return isAuthRoute ? authRoutes : appRoutes;
 }
 
 export default App;
