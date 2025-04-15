@@ -792,10 +792,17 @@ export class MemStorage implements IStorage {
     return configs.length > 0 ? configs[0] : undefined;
   }
 
-  async createChargebeeConfig(config: Omit<ChargebeeConfig, 'id' | 'created_at' | 'last_synced_at'>): Promise<ChargebeeConfig> {
+  async createChargebeeConfig(config: Omit<ChargebeeConfig, 'id' | 'created_at' | 'last_synced_at' | 'last_sync_stats'>): Promise<ChargebeeConfig> {
     const id = this.chargebeeConfigId++;
     const timestamp = new Date();
-    const newConfig = { ...config, id, created_at: timestamp, last_synced_at: null, status: 'active' };
+    const newConfig = { 
+      ...config, 
+      id, 
+      created_at: timestamp, 
+      last_synced_at: null, 
+      last_sync_stats: null,
+      status: 'active' 
+    };
     this.chargebeeConfigs.set(id, newConfig);
     return newConfig;
   }
@@ -1598,7 +1605,7 @@ export class DatabaseStorage implements IStorage {
     return config;
   }
 
-  async createChargebeeConfig(config: Omit<ChargebeeConfig, 'id' | 'created_at' | 'last_synced_at'>): Promise<ChargebeeConfig> {
+  async createChargebeeConfig(config: Omit<ChargebeeConfig, 'id' | 'created_at' | 'last_synced_at' | 'last_sync_stats'>): Promise<ChargebeeConfig> {
     const [newConfig] = await db.insert(chargebeeConfig).values(config).returning();
     return newConfig;
   }

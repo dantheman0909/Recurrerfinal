@@ -1574,10 +1574,11 @@ export async function registerRoutes(app: Express): Promise<Server> {
       
       const configData = configSchema.parse(req.body);
       
-      // Add last_synced_at field with null value for new configs
+      // Add last_synced_at and last_sync_stats fields with null values for new configs
       const configWithLastSynced = {
         ...configData,
-        last_synced_at: null
+        last_synced_at: null,
+        last_sync_stats: null
       };
       
       // Create a new config

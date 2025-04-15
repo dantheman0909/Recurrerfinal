@@ -1350,13 +1350,27 @@ function ChargebeeConfigTab() {
       // Check if the data is not null and has the expected properties
       if (typeof existingConfig === 'object' && existingConfig !== null) {
         const config = existingConfig as Record<string, any>;
+        
+        // Parse last_sync_stats JSON if it exists
+        let parsedStats = null;
+        if (config.last_sync_stats) {
+          try {
+            // If it's already an object, use it directly, otherwise parse the JSON string
+            parsedStats = typeof config.last_sync_stats === 'string' 
+              ? JSON.parse(config.last_sync_stats) 
+              : config.last_sync_stats;
+          } catch (e) {
+            console.error('Error parsing last_sync_stats:', e);
+          }
+        }
+        
         setChargebeeConfig({
           site: config.site || "",
           apiKey: config.apiKey || "",
           sync_frequency: config.sync_frequency || 24,
           status: config.status || 'inactive',
           last_synced_at: config.last_synced_at || null,
-          last_sync_stats: config.last_sync_stats || null
+          last_sync_stats: parsedStats
         });
         
         // Only set as connected if we have actual values
