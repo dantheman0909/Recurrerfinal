@@ -82,8 +82,25 @@ export class ChargebeeSchedulerService {
       // If never synced before, or enough time has passed since the last sync
       if (!lastSyncTime || this.hoursSince(lastSyncTime) >= syncFrequencyHours) {
         console.log('Running scheduled Chargebee data synchronization...');
+        console.log(`Last sync time: ${lastSyncTime ? lastSyncTime.toISOString() : 'Never'}`);
+        console.log(`Sync mode: ${lastSyncTime ? 'Incremental' : 'Full'}`);
+        
+        const startTime = Date.now();
         const result = await chargebeeSyncService.synchronizeData();
-        console.log('Scheduled Chargebee sync result:', result);
+        const syncTimeMs = Date.now() - startTime;
+        
+        console.log(`Scheduled Chargebee sync completed in ${(syncTimeMs / 1000).toFixed(2)} seconds`);
+        if (result.success) {
+          if (result.syncStats) {
+            console.log('Sync statistics:');
+            console.log(`- Customers: ${result.syncStats.customers.total} total, ${result.syncStats.customers.skipped} skipped`);
+            console.log(`- Subscriptions: ${result.syncStats.subscriptions.total} total, ${result.syncStats.subscriptions.skipped} skipped`);
+            console.log(`- Invoices: ${result.syncStats.invoices.total} total, ${result.syncStats.invoices.skipped} skipped`);
+          }
+          console.log(`Records processed: ${result.records}`);
+        } else {
+          console.error('Sync failed:', result.message);
+        }
       }
     } catch (error) {
       console.error('Error checking Chargebee sync status:', error);

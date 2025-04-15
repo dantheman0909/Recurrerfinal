@@ -2,6 +2,7 @@ import { db } from './db';
 import { storage } from './storage';
 import { sql } from 'drizzle-orm';
 import { eq } from 'drizzle-orm';
+import * as schema from '@shared/schema';
 import { chargebeeConfig, chargebeeFieldMappings } from '@shared/schema';
 
 /**
@@ -11,21 +12,37 @@ export class ChargebeeSyncService {
   /**
    * Synchronizes data from Chargebee to local database
    * Uses update+add mode instead of append, so existing records are updated
+   * Now with support for incremental synchronization based on timestamps
    */
   async synchronizeData(): Promise<{ success: boolean; message: string; records?: number; syncStats?: any }> {
     try {
+      console.log('Starting Chargebee data synchronization...');
+      
+      const startTime = Date.now();
+      
+      // Track number of records synced per entity type with detailed metrics
+      const syncStats = {
+        customers: { total: 0, new: 0, updated: 0, skipped: 0 },
+        subscriptions: { total: 0, new: 0, updated: 0, skipped: 0 },
+        invoices: { total: 0, new: 0, updated: 0, skipped: 0 },
+        startTime: new Date().toISOString(),
+        endTime: '',
+        durationSeconds: 0
+      };
+
       // Get Chargebee config and field mappings
       const config = await storage.getChargebeeConfig();
       if (!config) {
         return { success: false, message: 'Chargebee configuration not found' };
       }
       
-      // Initialize sync stats
-      const syncStats = {
-        customers: 0,
-        subscriptions: 0,
-        invoices: 0
-      };
+      // Check if this is initial sync or incremental
+      const isIncrementalSync = !!config.last_synced_at;
+      const lastSyncedAt = config.last_synced_at 
+        ? new Date(config.last_synced_at) 
+        : new Date(0); // Use epoch if first sync
+      
+      console.log(`${isIncrementalSync ? 'Incremental' : 'Full'} sync mode. ${isIncrementalSync ? `Last sync: ${lastSyncedAt.toISOString()}` : 'First sync'}`);
 
       // Get field mappings
       const fieldMappings = await storage.getChargebeeFieldMappings();
@@ -51,7 +68,7 @@ export class ChargebeeSyncService {
       let totalRecords = 0;
 
       // Process each entity type
-      for (const [entityType, mappings] of entityGroups.entries()) {
+      for (const [entityType, mappings] of Array.from(entityGroups.entries())) {
         console.log(`Processing Chargebee entity type: ${entityType}`);
 
         // Group mappings by local table
@@ -65,23 +82,78 @@ export class ChargebeeSyncService {
 
         // Get data from Chargebee based on entity type
         let entityData: any[] = [];
+        let filteredData: any[] = [];
         
         switch (entityType) {
           case 'customer':
-            console.log('Fetching all customers from Chargebee...');
+            console.log('Fetching customers from Chargebee...');
             entityData = await chargebeeService.getAllCustomers();
-            syncStats.customers = entityData.length;
+            
+            // Filter records by updated_at for incremental sync
+            if (isIncrementalSync) {
+              const lastSyncTimestamp = Math.floor(lastSyncedAt.getTime() / 1000); // Convert to seconds for Chargebee
+              filteredData = entityData.filter(customer => 
+                customer.updated_at > lastSyncTimestamp || !customer.updated_at
+              );
+              console.log(`Filtered ${entityData.length} customers to ${filteredData.length} based on last sync time`);
+            } else {
+              filteredData = entityData; // Use all for initial sync
+            }
+            
+            syncStats.customers.total = entityData.length;
+            syncStats.customers.skipped = entityData.length - filteredData.length;
+            entityData = filteredData; // Replace with filtered data for processing
             break;
+            
           case 'subscription':
-            console.log('Fetching all subscriptions from Chargebee...');
+            console.log('Fetching subscriptions from Chargebee...');
             entityData = await chargebeeService.getAllSubscriptions();
-            syncStats.subscriptions = entityData.length;
+            
+            // Filter records by updated_at for incremental sync
+            if (isIncrementalSync) {
+              const lastSyncTimestamp = Math.floor(lastSyncedAt.getTime() / 1000); // Convert to seconds for Chargebee
+              filteredData = entityData.filter(subscription => 
+                subscription.updated_at > lastSyncTimestamp || !subscription.updated_at
+              );
+              console.log(`Filtered ${entityData.length} subscriptions to ${filteredData.length} based on last sync time`);
+            } else {
+              filteredData = entityData; // Use all for initial sync
+            }
+            
+            syncStats.subscriptions.total = entityData.length;
+            syncStats.subscriptions.skipped = entityData.length - filteredData.length;
+            entityData = filteredData; // Replace with filtered data for processing
             break;
+            
           case 'invoice':
-            console.log('Fetching all invoices from Chargebee...');
+            console.log('Fetching invoices from Chargebee...');
             entityData = await chargebeeService.getAllInvoices();
-            syncStats.invoices = entityData.length;
+            
+            // For invoices, we typically don't have updated_at field, so we use date field
+            // But we should always sync new invoices
+            if (isIncrementalSync) {
+              const lastSyncTimestamp = Math.floor(lastSyncedAt.getTime() / 1000); // Convert to seconds for Chargebee
+              filteredData = entityData.filter(invoice => {
+                // Include if invoice was updated since last sync
+                // For invoices, "updated_at" might not exist, so we check multiple date fields
+                return (
+                  (invoice.updated_at && invoice.updated_at > lastSyncTimestamp) || 
+                  (invoice.date && invoice.date > lastSyncTimestamp) ||
+                  (invoice.due_date && invoice.due_date > lastSyncTimestamp) ||
+                  (invoice.paid_at && invoice.paid_at > lastSyncTimestamp) ||
+                  !invoice.updated_at // Always include if no updated_at (can't determine age)
+                );
+              });
+              console.log(`Filtered ${entityData.length} invoices to ${filteredData.length} based on last sync time and updates`);
+            } else {
+              filteredData = entityData; // Use all for initial sync
+            }
+            
+            syncStats.invoices.total = entityData.length;
+            syncStats.invoices.skipped = entityData.length - filteredData.length;
+            entityData = filteredData; // Replace with filtered data for processing
             break;
+            
           default:
             console.warn(`Unknown Chargebee entity type: ${entityType}`);
             continue;
@@ -96,7 +168,7 @@ export class ChargebeeSyncService {
         totalRecords += entityData.length;
 
         // Process each local table
-        for (const [localTable, localMappings] of localTableGroups.entries()) {
+        for (const [localTable, localMappings] of Array.from(localTableGroups.entries())) {
           await this.syncToLocalTable(localTable, localMappings, entityData);
         }
       }
