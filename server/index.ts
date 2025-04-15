@@ -326,6 +326,15 @@ app.get('/', (req, res, next) => {
         const googleOAuthResult = await createGoogleOAuthTables();
         if (googleOAuthResult.success) {
           log('Google OAuth tables created successfully');
+          
+          // Initialize Google OAuth configuration from environment variables
+          try {
+            const initializeGoogleOAuthConfig = (await import('./google-oauth-env-config')).default;
+            await initializeGoogleOAuthConfig();
+            log('Google OAuth configured with environment credentials');
+          } catch (configError) {
+            console.error('Error initializing Google OAuth config:', configError);
+          }
         } else {
           console.warn('Google OAuth tables warning:', googleOAuthResult.error);
         }
