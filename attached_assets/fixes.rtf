@@ -1,0 +1,299 @@
+{\rtf1\ansi\ansicpg1252\cocoartf2822
+\cocoatextscaling0\cocoaplatform0{\fonttbl\f0\fswiss\fcharset0 Helvetica;}
+{\colortbl;\red255\green255\blue255;}
+{\*\expandedcolortbl;;}
+\margl1440\margr1440\vieww11520\viewh8400\viewkind0
+\pard\tx566\tx1133\tx1700\tx2267\tx2834\tx3401\tx3968\tx4535\tx5102\tx5669\tx6236\tx6803\pardirnatural\partightenfactor0
+
+\f0\fs24 \cf0 Error ensuring columns for customers: error: there is no parameter $1\
+    at file:///home/runner/workspace/node_modules/@neondatabase/serverless/index.mjs:1345:74\
+    at process.processTicksAndRejections (node:internal/process/task_queues:95:5)\
+    at async ChargebeeSyncService.ensureColumnsExist (/home/runner/workspace/server/chargebee-sync-service.ts:479:23)\
+    at async ChargebeeSyncService.syncToLocalTable (/home/runner/workspace/server/chargebee-sync-service.ts:209:7)\
+    at async ChargebeeSyncService.synchronizeData (/home/runner/workspace/server/chargebee-sync-service.ts:172:11)\
+    at async <anonymous> (/home/runner/workspace/server/index.ts:131:20) \{\
+  length: 94,\
+  severity: 'ERROR',\
+  code: '42P02',\
+  detail: undefined,\
+  hint: undefined,\
+  position: '98',\
+  internalPosition: undefined,\
+  internalQuery: undefined,\
+  where: undefined,\
+  schema: undefined,\
+  table: undefined,\
+  column: undefined,\
+  dataType: undefined,\
+  constraint: undefined,\
+  file: 'parse_expr.c',\
+  line: '864',\
+  routine: 'transformParamRef'\
+\}\
+\
+Processing 2 records for table customers\
+Error processing record for customers: TypeError: eb.eq is not a function\
+    at <anonymous> (/home/runner/workspace/server/chargebee-sync-service.ts:315:29)\
+    at PgSelectBase.where (/home/runner/workspace/node_modules/src/pg-core/query-builders/select.ts:676:12)\
+    at ChargebeeSyncService.syncToLocalTable (/home/runner/workspace/server/chargebee-sync-service.ts:292:16)\
+    at process.processTicksAndRejections (node:internal/process/task_queues:95:5)\
+    at async ChargebeeSyncService.synchronizeData (/home/runner/workspace/server/chargebee-sync-service.ts:172:11)\
+    at async <anonymous> (/home/runner/workspace/server/index.ts:131:20)\
+Error processing record for customers: TypeError: eb.eq is not a function\
+    at <anonymous> (/home/runner/workspace/server/chargebee-sync-service.ts:315:29)\
+    at PgSelectBase.where (/home/runner/workspace/node_modules/src/pg-core/query-builders/select.ts:676:12)\
+    at ChargebeeSyncService.syncToLocalTable (/home/runner/workspace/server/chargebee-sync-service.ts:292:16)\
+    at process.processTicksAndRejections (node:internal/process/task_queues:95:5)\
+    at async ChargebeeSyncService.synchronizeData (/home/runner/workspace/server/chargebee-sync-service.ts:172:11)\
+    at async <anonymous> (/home/runner/workspace/server/index.ts:131:20)\
+\
+    MySQL synchronization error: Error: Unknown column 'company_id' in 'field list'\
+    at PromisePool.query (/home/runner/workspace/node_modules/mysql2/lib/promise/pool.js:36:22)\
+    at MySQLSyncService.synchronizeData (/home/runner/workspace/server/mysql-sync-service.ts:81:35)\
+    at async MySQLSchedulerService.checkAndSync (/home/runner/workspace/server/mysql-scheduler.ts:85:24) \{\
+  code: 'ER_BAD_FIELD_ERROR',\
+  errno: 1054,\
+  sql: 'SELECT company_id, company_name, active_stores, hubspot_id, hubspot_id, loyalty_channel_credits, campaigns_sent_last_90_days, campaigns_sent_last_30_days FROM contacts',\
+  sqlState: '42S22',\
+  sqlMessage: "Unknown column 'company_id' in 'field list'"\
+\}\
+Scheduled MySQL sync result: \{\
+  success: false,\
+  message: "Error synchronizing MySQL data: Unknown column 'company_id' in 'field list'"\
+\
+  MySQL synchronization error: Error: Unknown column 'company_id' in 'field list'\
+    at PromisePool.query (/home/runner/workspace/node_modules/mysql2/lib/promise/pool.js:36:22)\
+    at MySQLSyncService.synchronizeData (/home/runner/workspace/server/mysql-sync-service.ts:81:35)\
+    at async MySQLSchedulerService.checkAndSync (/home/runner/workspace/server/mysql-scheduler.ts:85:24) \{\
+  code: 'ER_BAD_FIELD_ERROR',\
+  errno: 1054,\
+  sql: 'SELECT company_id, company_name, active_stores, hubspot_id, hubspot_id, loyalty_channel_credits, campaigns_sent_last_90_days, campaigns_sent_last_30_days FROM contacts',\
+  sqlState: '42S22',\
+  sqlMessage: "Unknown column 'company_id' in 'field list'"\
+\}\
+Scheduled MySQL sync result: \{\
+  success: false,\
+  message: "Error synchronizing MySQL data: Unknown column 'company_id' in 'field list'"\
+\}\
+\
+Running scheduled MySQL data synchronization...\
+MySQL synchronization error: Error: Unknown column 'company_id' in 'field list'\
+    at PromisePool.query (/home/runner/workspace/node_modules/mysql2/lib/promise/pool.js:36:22)\
+    at MySQLSyncService.synchronizeData (/home/runner/workspace/server/mysql-sync-service.ts:81:35)\
+    at async MySQLSchedulerService.checkAndSync (/home/runner/workspace/server/mysql-scheduler.ts:85:24) \{\
+  code: 'ER_BAD_FIELD_ERROR',\
+  errno: 1054,\
+  sql: 'SELECT company_id, company_name, active_stores, hubspot_id, hubspot_id, loyalty_channel_credits, campaigns_sent_last_90_days, campaigns_sent_last_30_days FROM contacts',\
+  sqlState: '42S22',\
+  sqlMessage: "Unknown column 'company_id' in 'field list'"\
+\}\
+Scheduled MySQL sync result: \{\
+  success: false,\
+  message: "Error synchronizing MySQL data: Unknown column 'company_id' in 'field list'"\
+\}\
+\
+Error calling Chargebee API: Error: Chargebee API error: 400 Bad Request\
+    at ChargebeeService.makeRequest (/home/runner/workspace/server/chargebee.ts:80:15)\
+    at process.processTicksAndRejections (node:internal/process/task_queues:95:5)\
+    at async ChargebeeService.fetchAllPages (/home/runner/workspace/server/chargebee.ts:115:22)\
+    at async ChargebeeService.getCurrentMonthNonRecurringInvoices (/home/runner/workspace/server/chargebee.ts:319:25)\
+    at async getCurrentMonthNonRecurringInvoices (/home/runner/workspace/server/external-data.ts:225:22)\
+Error fetching page 1 from /invoices?customer_id%5Bis%5D=1067&date%5Bbetween%5D=%5B1743465600%2C1745971200%5D&status%5Bis%5D=paid&sort_by%5Basc%5D=date?limit=100: Error: Chargebee API error: 400 Bad Request\
+    at ChargebeeService.makeRequest (/home/runner/workspace/server/chargebee.ts:80:15)\
+    at process.processTicksAndRejections (node:internal/process/task_queues:95:5)\
+    at async ChargebeeService.fetchAllPages (/home/runner/workspace/server/chargebee.ts:115:22)\
+    at async ChargebeeService.getCurrentMonthNonRecurringInvoices (/home/runner/workspace/server/chargebee.ts:319:25)\
+    at async getCurrentMonthNonRecurringInvoices (/home/runner/workspace/server/external-data.ts:225:22)\
+Completed pagination for /invoices?customer_id%5Bis%5D=1067&date%5Bbetween%5D=%5B1743465600%2C1745971200%5D&status%5Bis%5D=paid&sort_by%5Basc%5D=date, total items: 0\
+Fetched 0 total invoices for customer 1067 in current month\
+Found 0 non-recurring invoices for customer 1067 in current month\
+5:24:10 PM [express] GET /api/chargebee/customers/1067/current-month-non-recurring-invoices 304 in 2\'85\
+Error calling Chargebee API: Error: Chargebee API error: 400 Bad Request\
+    at ChargebeeService.makeRequest (/home/runner/workspace/server/chargebee.ts:80:15)\
+    at process.processTicksAndRejections (node:internal/process/task_queues:95:5)\
+    at async ChargebeeService.fetchAllPages (/home/runner/workspace/server/chargebee.ts:115:22)\
+    at async ChargebeeService.getNonRecurringInvoicesForCustomer (/home/runner/workspace/server/chargebee.ts:273:25)\
+    at async getNonRecurringInvoicesForCustomer (/home/runner/workspace/server/external-data.ts:171:22)\
+Error fetching page 1 from /invoices?customer_id%5Bis%5D=1067&status%5Bis%5D=paid&sort_by%5Basc%5D=date?limit=100: Error: Chargebee API error: 400 Bad Request\
+    at ChargebeeService.makeRequest (/home/runner/workspace/server/chargebee.ts:80:15)\
+    at process.processTicksAndRejections (node:internal/process/task_queues:95:5)\
+    at async ChargebeeService.fetchAllPages (/home/runner/workspace/server/chargebee.ts:115:22)\
+    at async ChargebeeService.getNonRecurringInvoicesForCustomer (/home/runner/workspace/server/chargebee.ts:273:25)\
+    at async getNonRecurringInvoicesForCustomer (/home/runner/workspace/server/external-data.ts:171:22)\
+Completed pagination for /invoices?customer_id%5Bis%5D=1067&status%5Bis%5D=paid&sort_by%5Basc%5D=date, total items: 0\
+MySQL synchronization error: Error: Unknown column 'company_id' in 'field list'\
+    at PromisePool.query (/home/runner/workspace/node_modules/mysql2/lib/promise/pool.js:36:22)\
+    at MySQLSyncService.synchronizeData (/home/runner/workspace/server/mysql-sync-service.ts:81:35)\
+    at async MySQLSchedulerService.checkAndSync (/home/runner/workspace/server/mysql-scheduler.ts:85:24) \{\
+  code: 'ER_BAD_FIELD_ERROR',\
+  errno: 1054,\
+  sql: 'SELECT company_id, company_name, active_stores, hubspot_id, hubspot_id, loyalty_channel_credits, campaigns_sent_last_90_days, campaigns_sent_last_30_days FROM contacts',\
+  sqlState: '42S22',\
+  sqlMessage: "Unknown column 'company_id' in 'field list'"\
+\}\
+Scheduled MySQL sync result: \{\
+  success: false,\
+  message: "Error synchronizing MySQL data: Unknown column 'company_id' in 'field list'"\
+\
+  MySQL synchronization error: Error: Unknown column 'company_id' in 'field list'\
+    at PromisePool.query (/home/runner/workspace/node_modules/mysql2/lib/promise/pool.js:36:22)\
+    at MySQLSyncService.synchronizeData (/home/runner/workspace/server/mysql-sync-service.ts:81:35)\
+    at async MySQLSchedulerService.checkAndSync (/home/runner/workspace/server/mysql-scheduler.ts:85:24) \{\
+  code: 'ER_BAD_FIELD_ERROR',\
+  errno: 1054,\
+  sql: 'SELECT company_id, company_name, active_stores, hubspot_id, hubspot_id, loyalty_channel_credits, campaigns_sent_last_90_days, campaigns_sent_last_30_days FROM contacts',\
+  sqlState: '42S22',\
+  sqlMessage: "Unknown column 'company_id' in 'field list'"\
+\}\
+Scheduled MySQL sync result: \{\
+  success: false,\
+  message: "Error synchronizing MySQL data: Unknown column 'company_id' in 'field list'"\
+\}\
+\
+Running scheduled MySQL data synchronization...\
+MySQL synchronization error: Error: getaddrinfo ENOTFOUND demo-mysql.example.com\
+    at PromisePool.query (/home/runner/workspace/node_modules/mysql2/lib/promise/pool.js:36:22)\
+    at MySQLSyncService.synchronizeData (/home/runner/workspace/server/mysql-sync-service.ts:81:35)\
+    at async MySQLSchedulerService.checkAndSync (/home/runner/workspace/server/mysql-scheduler.ts:85:24) \{\
+  code: 'ENOTFOUND',\
+  errno: -3008,\
+  sql: undefined,\
+  sqlState: undefined,\
+  sqlMessage: undefined\
+\}\
+Scheduled MySQL sync result: \{\
+  success: false,\
+  message: 'Error synchronizing MySQL data: getaddrinfo ENOTFOUND demo-mysql.example.com'\
+\}\
+\
+MySQL synchronization error: Error: Unknown column 'company_id' in 'field list'\
+    at PromisePool.query (/home/runner/workspace/node_modules/mysql2/lib/promise/pool.js:36:22)\
+    at MySQLSyncService.synchronizeData (/home/runner/workspace/server/mysql-sync-service.ts:81:35)\
+    at async MySQLSchedulerService.checkAndSync (/home/runner/workspace/server/mysql-scheduler.ts:85:24) \{\
+  code: 'ER_BAD_FIELD_ERROR',\
+  errno: 1054,\
+  sql: 'SELECT company_id, company_name, active_stores, hubspot_id, hubspot_id, loyalty_channel_credits, campaigns_sent_last_90_days, campaigns_sent_last_30_days FROM contacts',\
+  sqlState: '42S22',\
+  sqlMessage: "Unknown column 'company_id' in 'field list'"\
+\}\
+Scheduled MySQL sync result: \{\
+  success: false,\
+  message: "Error synchronizing MySQL data: Unknown column 'company_id' in 'field list'"\
+\}\
+Error ensuring columns for invoices: error: there is no parameter $1\
+    at file:///home/runner/workspace/node_modules/@neondatabase/serverless/index.mjs:1345:74\
+    at process.processTicksAndRejections (node:internal/process/task_queues:95:5)\
+    at async ChargebeeSyncService.ensureColumnsExist (/home/runner/workspace/server/chargebee-sync-service.ts:479:23)\
+    at async ChargebeeSyncService.syncToLocalTable (/home/runner/workspace/server/chargebee-sync-service.ts:209:7)\
+    at async ChargebeeSyncService.synchronizeData (/home/runner/workspace/server/chargebee-sync-service.ts:172:11)\
+    at async <anonymous> (/home/runner/workspace/server/index.ts:131:20) \{\
+  length: 94,\
+  severity: 'ERROR',\
+  code: '42P02',\
+  detail: undefined,\
+  hint: undefined,\
+  position: '98',\
+  internalPosition: undefined,\
+  internalQuery: undefined,\
+  where: undefined,\
+  schema: undefined,\
+  table: undefined,\
+  column: undefined,\
+  dataType: undefined,\
+  constraint: undefined,\
+  file: 'parse_expr.c',\
+  line: '864',\
+  routine: 'transformParamRef'\
+\}\
+Processing 2 records for table invoices\
+Error querying invoices: error: syntax error at or near "$"\
+    at file:///home/runner/workspace/node_modules/@neondatabase/serverless/index.mjs:1345:74\
+    at process.processTicksAndRejections (node:internal/process/task_queues:95:5)\
+    at async ChargebeeSyncService.syncToLocalTable (/home/runner/workspace/server/chargebee-sync-service.ts:338:33)\
+    at async ChargebeeSyncService.synchronizeData (/home/runner/workspace/server/chargebee-sync-service.ts:172:11)\
+    at async <anonymous> (/home/runner/workspace/server/index.ts:131:20) \{\
+  length: 90,\
+  severity: 'ERROR',\
+  code: '42601',\
+  detail: undefined,\
+  hint: undefined,\
+  position: '48',\
+  internalPosition: undefined,\
+  internalQuery: undefined,\
+  where: undefined,\
+  schema: undefined,\
+  table: undefined,\
+  column: undefined,\
+  dataType: undefined,\
+  constraint: undefined,\
+  file: 'scan.l',\
+  line: '1244',\
+  routine: 'scanner_yyerror'\
+\}\
+Key conditions: \{ invoice_id: '15042025-643', customer_id: 'AzywuMUf2MNXCGdZe' \}\
+Error querying invoices: error: syntax error at or near "$"\
+    at file:///home/runner/workspace/node_modules/@neondatabase/serverless/index.mjs:1345:74\
+    at process.processTicksAndRejections (node:internal/process/task_queues:95:5)\
+    at async ChargebeeSyncService.syncToLocalTable (/home/runner/workspace/server/chargebee-sync-service.ts:338:33)\
+    at async ChargebeeSyncService.synchronizeData (/home/runner/workspace/server/chargebee-sync-service.ts:172:11)\
+    at async <anonymous> (/home/runner/workspace/server/index.ts:131:20) \{\
+  length: 90,\
+  severity: 'ERROR',\
+  code: '42601',\
+  detail: undefined,\
+  hint: undefined,\
+  position: '48',\
+  internalPosition: undefined,\
+  internalQuery: undefined,\
+  where: undefined,\
+  schema: undefined,\
+  table: undefined,\
+  column: undefined,\
+  dataType: undefined,\
+  constraint: undefined,\
+  file: 'scan.l',\
+  line: '1244',\
+  routine: 'scanner_yyerror'\
+\}\
+Key conditions: \{ invoice_id: '15042025-642', customer_id: 'AzqbrzUJ0GxxY54nM' \}\
+Completed processing for table invoices\
+Error ensuring columns for customers: error: there is no parameter $1\
+    at file:///home/runner/workspace/node_modules/@neondatabase/serverless/index.mjs:1345:74\
+    at process.processTicksAndRejections (node:internal/process/task_queues:95:5)\
+    at async ChargebeeSyncService.ensureColumnsExist (/home/runner/workspace/server/chargebee-sync-service.ts:479:23)\
+    at async ChargebeeSyncService.syncToLocalTable (/home/runner/workspace/server/chargebee-sync-service.ts:209:7)\
+    at async ChargebeeSyncService.synchronizeData (/home/runner/workspace/server/chargebee-sync-service.ts:172:11)\
+    at async <anonymous> (/home/runner/workspace/server/index.ts:131:20) \{\
+  length: 94,\
+  severity: 'ERROR',\
+  code: '42P02',\
+  detail: undefined,\
+  hint: undefined,\
+  position: '98',\
+  internalPosition: undefined,\
+  internalQuery: undefined,\
+  where: undefined,\
+  schema: undefined,\
+  table: undefined,\
+  column: undefined,\
+  dataType: undefined,\
+  constraint: undefined,\
+  file: 'parse_expr.c',\
+  line: '864',\
+  routine: 'transformParamRef'\
+\}\
+Processing 2 records for table customers\
+Error processing record for customers: TypeError: eb.eq is not a function\
+    at <anonymous> (/home/runner/workspace/server/chargebee-sync-service.ts:315:29)\
+    at PgSelectBase.where (/home/runner/workspace/node_modules/src/pg-core/query-builders/select.ts:676:12)\
+    at ChargebeeSyncService.syncToLocalTable (/home/runner/workspace/server/chargebee-sync-service.ts:292:16)\
+    at process.processTicksAndRejections (node:internal/process/task_queues:95:5)\
+    at async ChargebeeSyncService.synchronizeData (/home/runner/workspace/server/chargebee-sync-service.ts:172:11)\
+    at async <anonymous> (/home/runner/workspace/server/index.ts:131:20)\
+Error processing record for customers: TypeError: eb.eq is not a function\
+    at <anonymous> (/home/runner/workspace/server/chargebee-sync-service.ts:315:29)\
+    at PgSelectBase.where (/home/runner/workspace/node_modules/src/pg-core/query-builders/select.ts:676:12)\
+    at ChargebeeSyncService.syncToLocalTable (/home/runner/workspace/server/chargebee-sync-service.ts:292:16)\
+    at process.processTicksAndRejections (node:internal/process/task_queues:95:5)\
+    at async ChargebeeSyncService.synchronizeData (/home/runner/workspace/server/chargebee-sync-service.ts:172:11)\
+    at async <anonymous> (/home/runner/workspace/server/index.ts:131:20)}

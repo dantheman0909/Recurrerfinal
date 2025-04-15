@@ -1,7 +1,7 @@
 import { db } from './db';
 import { storage } from './storage';
 import { sql } from 'drizzle-orm';
-import { eq } from 'drizzle-orm';
+import { eq, or, and } from 'drizzle-orm';
 import * as schema from '@shared/schema';
 import { chargebeeConfig, chargebeeFieldMappings } from '@shared/schema';
 
@@ -287,37 +287,35 @@ export class ChargebeeSyncService {
           let existingRecords;
           
           if (localTableName === 'customers') {
+            // Build dynamic where conditions
+            const whereConditions = [];
+            
+            if (keyConditions['recurrer_id']) {
+              whereConditions.push(eq(schema.customers.recurrer_id, keyConditions['recurrer_id']));
+            }
+            
+            if (keyConditions['chargebee_customer_id']) {
+              whereConditions.push(eq(schema.customers.chargebee_customer_id, keyConditions['chargebee_customer_id']));
+            }
+            
+            if (keyConditions['chargebee_subscription_id']) {
+              whereConditions.push(eq(schema.customers.chargebee_subscription_id, keyConditions['chargebee_subscription_id']));
+            }
+            
+            // Use a fallback if no conditions were generated
+            if (whereConditions.length === 0) {
+              if (keyConditions['id']) {
+                whereConditions.push(eq(schema.customers.id, Number(keyConditions['id'])));
+              } else {
+                // Use a condition that will return no results
+                whereConditions.push(eq(schema.customers.id, -1));
+              }
+            }
+            
+            // Execute the query with combined OR conditions
             const query = db.select()
               .from(schema.customers)
-              .where((eb) => {
-                // Build a dynamic WHERE clause based on key conditions
-                // Need to handle each field specially
-                const conditions = [];
-                
-                if (keyConditions['recurrer_id']) {
-                  conditions.push(eb.eq(schema.customers.recurrer_id, keyConditions['recurrer_id']));
-                }
-                
-                if (keyConditions['chargebee_customer_id']) {
-                  conditions.push(eb.eq(schema.customers.chargebee_customer_id, keyConditions['chargebee_customer_id']));
-                }
-                
-                if (keyConditions['chargebee_subscription_id']) {
-                  conditions.push(eb.eq(schema.customers.chargebee_subscription_id, keyConditions['chargebee_subscription_id']));
-                }
-                
-                if (conditions.length === 0) {
-                  // Fallback - use ID if available
-                  if (keyConditions['id']) {
-                    return eb.eq(schema.customers.id, keyConditions['id']);
-                  }
-                  // Return a condition that's always false if no key fields
-                  return eb.eq(schema.customers.id, -1);
-                }
-                
-                // Combine conditions with OR
-                return eb.or(...conditions);
-              })
+              .where(or(...whereConditions))
               .limit(1);
               
             existingRecords = await query;
@@ -385,36 +383,34 @@ export class ChargebeeSyncService {
             
             try {
               if (localTableName === 'customers') {
+                // Build dynamic where conditions again for update
+                const whereConditions = [];
+                
+                if (keyConditions['recurrer_id']) {
+                  whereConditions.push(eq(schema.customers.recurrer_id, keyConditions['recurrer_id']));
+                }
+                
+                if (keyConditions['chargebee_customer_id']) {
+                  whereConditions.push(eq(schema.customers.chargebee_customer_id, keyConditions['chargebee_customer_id']));
+                }
+                
+                if (keyConditions['chargebee_subscription_id']) {
+                  whereConditions.push(eq(schema.customers.chargebee_subscription_id, keyConditions['chargebee_subscription_id']));
+                }
+                
+                // Use a fallback if no conditions were generated
+                if (whereConditions.length === 0) {
+                  if (keyConditions['id']) {
+                    whereConditions.push(eq(schema.customers.id, Number(keyConditions['id'])));
+                  } else {
+                    // Use a condition that will return no results
+                    whereConditions.push(eq(schema.customers.id, -1));
+                  }
+                }
+                
                 await db.update(schema.customers)
                   .set(updateData as any)
-                  .where((eb) => {
-                    // Build a dynamic WHERE clause based on key conditions
-                    const conditions = [];
-                    
-                    if (keyConditions['recurrer_id']) {
-                      conditions.push(eb.eq(schema.customers.recurrer_id, keyConditions['recurrer_id']));
-                    }
-                    
-                    if (keyConditions['chargebee_customer_id']) {
-                      conditions.push(eb.eq(schema.customers.chargebee_customer_id, keyConditions['chargebee_customer_id']));
-                    }
-                    
-                    if (keyConditions['chargebee_subscription_id']) {
-                      conditions.push(eb.eq(schema.customers.chargebee_subscription_id, keyConditions['chargebee_subscription_id']));
-                    }
-                    
-                    if (conditions.length === 0) {
-                      // Fallback - use ID if available
-                      if (keyConditions['id']) {
-                        return eb.eq(schema.customers.id, keyConditions['id']);
-                      }
-                      // Return a condition that's always false if no key fields
-                      return eb.eq(schema.customers.id, -1);
-                    }
-                    
-                    // Combine conditions with OR
-                    return eb.or(...conditions);
-                  });
+                  .where(or(...whereConditions));
               } else {
                 // For tables other than customers, use a more generic approach
                 // Build set clause
@@ -472,11 +468,11 @@ export class ChargebeeSyncService {
       const columnsQuery = `
         SELECT column_name 
         FROM information_schema.columns 
-        WHERE table_name = $1
+        WHERE table_name = '${tableName}'
         AND table_schema = 'public'
       `;
       
-      const columns = await db.execute(sql.raw(columnsQuery, [tableName]));
+      const columns = await db.execute(sql.raw(columnsQuery));
       const existingColumns = Array.isArray(columns) 
         ? columns.map((col: any) => col.column_name?.toLowerCase())
         : [];
