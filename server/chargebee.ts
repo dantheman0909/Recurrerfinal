@@ -117,7 +117,10 @@ export class ChargebeeService {
           queryParams.append('offset', nextOffset);
         }
         
-        const url = `${endpoint}?${queryParams.toString()}`;
+        // Check if endpoint already has query parameters
+        const hasQueryParams = endpoint.includes('?');
+        const separator = hasQueryParams ? '&' : '?';
+        const url = `${endpoint}${separator}${queryParams.toString()}`;
         console.log(`Fetching page ${page} from ${url}`);
         
         let response;
@@ -309,7 +312,8 @@ export class ChargebeeService {
     const endpoint = `/invoices`;
     
     // Use our pagination helper to fetch all pages
-    const allInvoices = await this.fetchAllPages(`${endpoint}?${queryParams.toString()}`, 'invoice');
+    // Don't attach query params here, let fetchAllPages handle it correctly
+    const allInvoices = await this.fetchAllPages(endpoint, 'invoice');
     
     console.log(`Fetched ${allInvoices.length} total invoices for customer ${customerId}`);
     
@@ -362,7 +366,8 @@ export class ChargebeeService {
     const endpoint = `/invoices`;
     
     // Use our pagination helper to fetch all pages
-    const allInvoices = await this.fetchAllPages(`${endpoint}?${queryParams.toString()}`, 'invoice');
+    // Don't attach query params here, let fetchAllPages handle it correctly
+    const allInvoices = await this.fetchAllPages(endpoint, 'invoice');
     
     console.log(`Fetched ${allInvoices.length} total invoices for customer ${customerId} in current month`);
     
