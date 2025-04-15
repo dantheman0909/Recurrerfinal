@@ -22,9 +22,9 @@ export class ChargebeeSyncService {
       
       // Track number of records synced per entity type with detailed metrics
       const syncStats = {
-        customers: { total: 0, new: 0, updated: 0, skipped: 0 },
-        subscriptions: { total: 0, new: 0, updated: 0, skipped: 0 },
-        invoices: { total: 0, new: 0, updated: 0, skipped: 0 },
+        customers: { total: 0, new: 0, updated: 0, skipped: 0, errors: 0 },
+        subscriptions: { total: 0, new: 0, updated: 0, skipped: 0, errors: 0 },
+        invoices: { total: 0, new: 0, updated: 0, skipped: 0, errors: 0, processed: 0, error: null },
         startTime: new Date().toISOString(),
         endTime: '',
         durationSeconds: 0
@@ -152,6 +152,38 @@ export class ChargebeeSyncService {
             syncStats.invoices.total = entityData.length;
             syncStats.invoices.skipped = entityData.length - filteredData.length;
             entityData = filteredData; // Replace with filtered data for processing
+            
+            // Process invoices separately from the normal sync flow
+            console.log(`Preparing to save ${entityData.length} invoices to chargebee_invoices table`);
+            try {
+              // First ensure the invoices table exists with proper structure
+              const { ensureInvoicesTableExists, storeInvoice } = await import('./sync-non-recurring-invoices');
+              await ensureInvoicesTableExists();
+              
+              // Save each invoice
+              let savedCount = 0;
+              for (const invoice of entityData) {
+                try {
+                  await storeInvoice(invoice);
+                  savedCount++;
+                  
+                  // Log progress every 100 invoices
+                  if (savedCount % 100 === 0) {
+                    console.log(`Saved ${savedCount}/${entityData.length} invoices`);
+                  }
+                } catch (invoiceError) {
+                  console.error(`Error saving invoice ${invoice.id}:`, invoiceError);
+                  syncStats.invoices.errors = (syncStats.invoices.errors || 0) + 1;
+                }
+              }
+              
+              // Update stats for successful invoice processing
+              syncStats.invoices.processed = savedCount;
+              console.log(`Successfully saved ${savedCount} out of ${entityData.length} invoices`);
+            } catch (error) {
+              console.error('Error during invoice processing:', error);
+              syncStats.invoices.error = String(error);
+            }
             break;
             
           default:
@@ -239,6 +271,21 @@ export class ChargebeeSyncService {
         if (isCustomer && localTableName === 'customers' && 
             result.chargebee_subscription_id && !result.subscription_status) {
           result.subscription_status = 'unknown';
+        }
+        
+        // Special case: If this is invoice data, handle additional fields
+        const isInvoice = row.object === 'invoice' || (row.date !== undefined && row.customer_id !== undefined);
+        if (isInvoice) {
+          // Add recurring flag (if it's not already set)
+          if (result.recurring === undefined) {
+            // An invoice is recurring if it has a subscription_id attached
+            result.recurring = !!row.subscription_id;
+          }
+          
+          // Ensure line_items is properly formatted for database storage
+          if (row.line_items && typeof row.line_items === 'object') {
+            result.line_items = JSON.stringify(row.line_items);
+          }
         }
         
         return result;
@@ -461,6 +508,43 @@ export class ChargebeeSyncService {
     mappings: { local_field: string }[]
   ): Promise<void> {
     try {
+      // Ensure the table exists, especially for chargebee_invoices
+      if (tableName === 'chargebee_invoices') {
+        // First check if table exists
+        const tableExists = await db.execute(sql`
+          SELECT EXISTS (
+            SELECT FROM information_schema.tables 
+            WHERE table_schema = 'public'
+            AND table_name = 'chargebee_invoices'
+          );
+        `);
+        
+        if (!tableExists.rows?.[0]?.exists) {
+          // Create the invoices table if it doesn't exist
+          console.log('Creating chargebee_invoices table...');
+          await db.execute(sql`
+            CREATE TABLE chargebee_invoices (
+              id VARCHAR(255) PRIMARY KEY,
+              subscription_id VARCHAR(255),
+              customer_id VARCHAR(255),
+              amount DECIMAL(10, 2),
+              amount_paid DECIMAL(10, 2),
+              amount_due DECIMAL(10, 2),
+              status VARCHAR(50),
+              date BIGINT,
+              due_date BIGINT,
+              paid_at BIGINT,
+              total DECIMAL(10, 2),
+              recurring BOOLEAN DEFAULT FALSE,
+              line_items JSONB,
+              created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+              updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+            );
+          `);
+          console.log('Created chargebee_invoices table');
+        }
+      }
+      
       // Get existing columns in the table with a more reliable method
       const columnsQuery = `
         SELECT column_name 

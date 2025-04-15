@@ -124,7 +124,7 @@ export const syncNonRecurringInvoices = async (req: Request, res: Response) => {
 /**
  * Ensures that the chargebee_invoices table exists with all required columns
  */
-async function ensureInvoicesTableExists(): Promise<void> {
+export async function ensureInvoicesTableExists(): Promise<void> {
   try {
     // Check if table exists
     const tableExists = await db.execute(sql`
@@ -185,7 +185,7 @@ async function ensureInvoicesTableExists(): Promise<void> {
 /**
  * Stores or updates an invoice in the database
  */
-async function storeInvoice(invoice: any): Promise<void> {
+export async function storeInvoice(invoice: any): Promise<void> {
   try {
     // Format the invoice data
     const invoiceData = {
