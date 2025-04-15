@@ -18,18 +18,16 @@ interface SettingsNavItemProps {
 function SettingsNavItem({ href, title, icon, current }: SettingsNavItemProps) {
   return (
     <Link href={href}>
-      <a className="block">
-        <Button 
-          variant={current ? "secondary" : "ghost"} 
-          className={cn(
-            "w-full justify-start gap-2",
-            current ? "bg-secondary" : "hover:bg-secondary/50"
-          )}
-        >
-          {icon}
-          {title}
-        </Button>
-      </a>
+      <Button 
+        variant={current ? "secondary" : "ghost"} 
+        className={cn(
+          "w-full justify-start gap-2",
+          current ? "bg-secondary" : "hover:bg-secondary/50"
+        )}
+      >
+        {icon}
+        {title}
+      </Button>
     </Link>
   );
 }

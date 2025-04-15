@@ -12,9 +12,10 @@ import { Form, FormField, FormItem, FormLabel, FormControl, FormDescription, For
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
-import { GoogleOAuthService, GoogleOAuthScope } from '@lib/googleOAuthClient';
+import { GoogleOAuthService, GoogleOAuthScope } from '@/lib/googleOAuthClient';
 import { Checkbox } from '@/components/ui/checkbox';
 import { Separator } from '@/components/ui/separator';
+import { SettingsLayout } from '@/components/settings/settings-layout';
 
 const configSchema = z.object({
   clientId: z.string().min(1, 'Client ID is required'),
@@ -188,7 +189,7 @@ export default function GoogleOAuthPage() {
         <div className="flex justify-between items-center">
           <h2 className="text-2xl font-bold">Google OAuth Integration</h2>
           {configuredStatus !== undefined && (
-            <Badge variant={configuredStatus ? "success" : "outline"}>
+            <Badge variant={configuredStatus ? "secondary" : "outline"}>
               {configuredStatus ? "Configured" : "Not Configured"}
             </Badge>
           )}
@@ -342,5 +343,6 @@ export default function GoogleOAuthPage() {
         </Card>
       )}
     </div>
+    </SettingsLayout>
   );
 }

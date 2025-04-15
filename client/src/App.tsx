@@ -13,6 +13,8 @@ import RedZoneSettingsEnhanced from "@/pages/redzone-settings-enhanced";
 import Admin from "@/pages/admin";
 import Achievements from "@/pages/achievements";
 import Profile from "@/pages/profile";
+import Settings from "@/pages/settings";
+import GoogleOAuth from "@/pages/settings/google-oauth";
 import AppLayout from "@/components/layouts/app-layout";
 
 function App() {
@@ -32,6 +34,8 @@ function App() {
         <Route path="/admin" component={Admin} />
         <Route path="/achievements" component={Achievements} />
         <Route path="/profile" component={Profile} />
+        <Route path="/settings" component={Settings} />
+        <Route path="/settings/google-oauth" component={GoogleOAuth} />
         <Route component={NotFound} />
       </Switch>
     </AppLayout>

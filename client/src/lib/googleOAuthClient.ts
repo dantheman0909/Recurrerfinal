@@ -1,4 +1,4 @@
-import { apiRequest } from '@lib/queryClient';
+import { apiRequest } from '@/lib/queryClient';
 
 export type GoogleOAuthConfig = {
   clientId: string;
