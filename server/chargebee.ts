@@ -99,42 +99,70 @@ export class ChargebeeService {
     
     console.log(`Starting pagination for ${endpoint}`);
     
-    while (hasMore) {
-      const queryParams = new URLSearchParams();
-      queryParams.append('limit', '100'); // Maximum allowed by Chargebee
-      if (nextOffset) {
-        queryParams.append('offset', nextOffset);
+    try {
+      while (hasMore) {
+        const queryParams = new URLSearchParams();
+        queryParams.append('limit', '100'); // Maximum allowed by Chargebee
+        if (nextOffset) {
+          queryParams.append('offset', nextOffset);
+        }
+        
+        const url = `${endpoint}?${queryParams.toString()}`;
+        console.log(`Fetching page ${page} from ${url}`);
+        
+        let response;
+        try {
+          response = await this.makeRequest(url);
+        } catch (error) {
+          console.error(`Error fetching page ${page} from ${url}:`, error);
+          // Wait a bit and try again (simple retry mechanism)
+          if (page > 1) {
+            console.log('Retrying after error...');
+            await new Promise(resolve => setTimeout(resolve, 2000));
+            try {
+              response = await this.makeRequest(url);
+              console.log('Retry successful');
+            } catch (retryError) {
+              console.error('Retry failed:', retryError);
+              break;
+            }
+          } else {
+            break;
+          }
+        }
+        
+        if (!response || !response.list || !Array.isArray(response.list)) {
+          console.warn(`Unexpected response format from Chargebee API for ${url}`);
+          break;
+        }
+        
+        // Extract items based on param name (e.g., "subscription", "customer", "invoice")
+        const items = response.list.map((item: any) => 
+          paramName && item[paramName] ? item[paramName] : item
+        );
+        
+        allResults = allResults.concat(items);
+        
+        // Check if there's more data to fetch
+        hasMore = !!response.next_offset;
+        nextOffset = response.next_offset || '';
+        
+        console.log(`Fetched ${items.length} items, total so far: ${allResults.length}, hasMore: ${hasMore}`);
+        page++;
+        
+        // Safety check to prevent infinite loops
+        if (page > 50) {
+          console.warn('Reached maximum page limit (50) for pagination safety');
+          break;
+        }
+        
+        // Add a small delay between requests to avoid rate limiting
+        if (hasMore) {
+          await new Promise(resolve => setTimeout(resolve, 300));
+        }
       }
-      
-      const url = `${endpoint}?${queryParams.toString()}`;
-      console.log(`Fetching page ${page} from ${url}`);
-      
-      const response = await this.makeRequest(url);
-      
-      if (!response.list || !Array.isArray(response.list)) {
-        console.warn(`Unexpected response format from Chargebee API for ${url}`);
-        break;
-      }
-      
-      // Extract items based on param name (e.g., "subscription", "customer", "invoice")
-      const items = response.list.map((item: any) => 
-        paramName && item[paramName] ? item[paramName] : item
-      );
-      
-      allResults = allResults.concat(items);
-      
-      // Check if there's more data to fetch
-      hasMore = !!response.next_offset;
-      nextOffset = response.next_offset || '';
-      
-      console.log(`Fetched ${items.length} items, total so far: ${allResults.length}, hasMore: ${hasMore}`);
-      page++;
-      
-      // Safety check to prevent infinite loops
-      if (page > 50) {
-        console.warn('Reached maximum page limit (50) for pagination safety');
-        break;
-      }
+    } catch (error) {
+      console.error('Error during pagination:', error);
     }
     
     console.log(`Completed pagination for ${endpoint}, total items: ${allResults.length}`);
