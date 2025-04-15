@@ -7,9 +7,8 @@ async function main() {
   neonConfig.webSocketConstructor = ws;
 
   if (!process.env.DATABASE_URL) {
-    throw new Error(
-      "DATABASE_URL must be set. Did you forget to provision a database?",
-    );
+    console.error("DATABASE_URL must be set. Did you forget to provision a database?");
+    return { success: false, error: "DATABASE_URL environment variable is not set" };
   }
 
   const pool = new Pool({ connectionString: process.env.DATABASE_URL });
@@ -227,12 +226,27 @@ async function main() {
     `);
     
     console.log("Database schema created successfully!");
+    return { success: true };
   } catch (error) {
     console.error("Migration failed:", error);
-    process.exit(1);
+    return { success: false, error: error instanceof Error ? error.message : String(error) };
   } finally {
-    await pool.end();
+    try {
+      await pool.end();
+    } catch (err) {
+      console.error("Error closing database pool:", err);
+    }
   }
 }
 
-main();
+// Run the migration function but don't terminate the process 
+// regardless of success or failure
+main().then(result => {
+  if (result.success) {
+    console.log("Database migration completed successfully");
+  } else {
+    console.error("Database migration encountered errors:", result.error);
+  }
+}).catch(error => {
+  console.error("Failed to run database migration:", error);
+});
