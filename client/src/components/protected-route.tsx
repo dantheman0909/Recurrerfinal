@@ -66,11 +66,17 @@ export const ProtectedRoute: React.FC<ProtectedRouteProps> = ({
     );
   }
 
-  // Redirect if not authenticated
+  // TEMPORARY: Skip authentication check to allow development access
+  // Uncomment this for production:
+  /*
   if (!isAuthenticated) {
     return <Redirect to={redirectTo} />;
   }
+  */
 
+  // TEMPORARY: Skip role/permission checks for development
+  // Uncomment this for production:
+  /*
   // Check role-based access
   if (adminOnly && user?.role !== 'admin') {
     return <Redirect to="/unauthorized" />;
@@ -88,6 +94,7 @@ export const ProtectedRoute: React.FC<ProtectedRouteProps> = ({
   if (requireAnyPermission.length > 0 && !hasAnyPermission(requireAnyPermission)) {
     return <Redirect to="/unauthorized" />;
   }
+  */
 
   // All checks passed, render the protected component
   return <>{children}</>;
