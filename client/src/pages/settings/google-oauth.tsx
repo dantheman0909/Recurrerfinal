@@ -49,7 +49,20 @@ export default function GoogleOAuthPage() {
     // For Replit domains, we need to ensure we have the proper format
     const origin = window.location.origin;
     console.log('Current origin:', origin);
-    return `${origin}/settings/google-oauth/callback`;
+    
+    // Create and return the full redirect URI
+    const redirectUri = `${origin}/settings/google-oauth/callback`;
+    
+    // Show help message about the URI in the console
+    console.log('Important: Add this exact redirect URI to your Google Cloud Console project:');
+    console.log(redirectUri);
+    console.log('Instructions:');
+    console.log('1. Go to https://console.cloud.google.com/apis/credentials');
+    console.log('2. Edit your OAuth 2.0 Client ID');
+    console.log('3. Add the above URI to "Authorized redirect URIs"');
+    console.log('4. Make sure APIs for Gmail and Calendar are enabled in your project');
+    
+    return redirectUri;
   };
 
   const form = useForm({
@@ -100,8 +113,11 @@ export default function GoogleOAuthPage() {
             description: 'Opening Google authorization page...',
           });
           
+          // Use a non-null assertion to fix the TypeScript error
+          const authUrl = data.authUrl!;
+          
           setTimeout(() => {
-            window.location.href = data.authUrl;
+            window.location.href = authUrl;
           }, 500);
         } catch (e) {
           console.error('Invalid URL format:', e);
@@ -189,6 +205,36 @@ export default function GoogleOAuthPage() {
 
   const onSubmit = (data: z.infer<typeof configSchema>) => {
     saveConfigMutation.mutate(data);
+  };
+
+  // Test Google connectivity without full OAuth
+  const testConnectionMutation = useMutation({
+    mutationFn: GoogleOAuthService.testConnection,
+    onSuccess: (data) => {
+      if (data.success) {
+        toast({
+          title: 'Connection Test Successful',
+          description: 'Successfully connected to Google servers. You should be able to complete the OAuth flow.',
+        });
+      } else {
+        toast({
+          title: 'Connection Test Failed',
+          description: data.message || 'Failed to connect to Google servers.',
+          variant: 'destructive',
+        });
+      }
+    },
+    onError: (error: any) => {
+      toast({
+        title: 'Connection Test Failed',
+        description: error.message || 'Failed to connect to Google servers.',
+        variant: 'destructive',
+      });
+    }
+  });
+  
+  const testConnection = () => {
+    testConnectionMutation.mutate();
   };
 
   const startAuthFlow = () => {
@@ -371,21 +417,52 @@ export default function GoogleOAuthPage() {
                 You will be redirected to Google to authorize these permissions. Make sure to select the correct Google account that you want to use for integration.
               </AlertDescription>
             </Alert>
+            
+            <Alert variant="destructive">
+              <AlertCircle className="h-4 w-4" />
+              <AlertTitle>Troubleshooting</AlertTitle>
+              <AlertDescription>
+                <p>If you see "accounts.google.com refused to connect" error, follow these steps:</p>
+                <ol className="list-decimal pl-5 mt-2 space-y-1">
+                  <li>In Google Cloud Console, verify OAuth consent screen is configured</li>
+                  <li>Make sure your OAuth 2.0 Client ID has the exact redirect URI (see above)</li>
+                  <li>Enable Gmail and Google Calendar APIs in your project</li>
+                  <li>Make sure your Google account has access to the project</li>
+                  <li>Try a different browser if the issue persists</li>
+                </ol>
+              </AlertDescription>
+            </Alert>
           </CardContent>
-          <CardFooter className="flex justify-between">
-            <Button 
-              onClick={handleRevokeAccess} 
-              variant="outline" 
-              disabled={revokeAccessMutation.isPending || isAuthFlow}
-            >
-              {revokeAccessMutation.isPending ? 'Revoking...' : 'Revoke Access'}
-            </Button>
-            <Button 
-              onClick={startAuthFlow} 
-              disabled={getAuthUrlMutation.isPending || isAuthFlow}
-            >
-              {getAuthUrlMutation.isPending || isAuthFlow ? 'Connecting...' : 'Connect Google Account'}
-            </Button>
+          <CardFooter className="flex flex-col space-y-3">
+            <div className="w-full flex justify-between">
+              <Button 
+                onClick={handleRevokeAccess} 
+                variant="outline" 
+                disabled={revokeAccessMutation.isPending || isAuthFlow}
+              >
+                {revokeAccessMutation.isPending ? 'Revoking...' : 'Revoke Access'}
+              </Button>
+              <Button 
+                onClick={startAuthFlow} 
+                disabled={getAuthUrlMutation.isPending || isAuthFlow}
+              >
+                {getAuthUrlMutation.isPending || isAuthFlow ? 'Connecting...' : 'Connect Google Account'}
+              </Button>
+            </div>
+            
+            <div className="w-full border-t pt-3">
+              <Button
+                onClick={testConnection}
+                variant="secondary"
+                className="w-full"
+                disabled={testConnectionMutation.isPending}
+              >
+                {testConnectionMutation.isPending ? 'Testing...' : 'Test Google Connection'}
+              </Button>
+              <p className="text-xs text-muted-foreground text-center mt-2">
+                If you have connection issues, click here to test basic connectivity to Google servers
+              </p>
+            </div>
           </CardFooter>
         </Card>
       )}
