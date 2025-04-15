@@ -1271,7 +1271,9 @@ function ChargebeeConfigTab() {
   const [chargebeeConfig, setChargebeeConfig] = useState({
     site: "",
     apiKey: "",
-    sync_frequency: 24
+    sync_frequency: 24,
+    status: 'inactive',
+    last_synced_at: null
   });
   
   const [isConnected, setIsConnected] = useState(false);
@@ -1279,8 +1281,46 @@ function ChargebeeConfigTab() {
   const [activeTab, setActiveTab] = useState<string>("connection");
   
   // Fetch existing Chargebee configuration
-  const { data: existingConfig, isLoading: isLoadingConfig } = useQuery({
+  const { data: existingConfig, isLoading: isLoadingConfig, refetch: refetchConfig } = useQuery({
     queryKey: ['/api/admin/chargebee-config'],
+  });
+  
+  // Manual sync mutation for Chargebee data
+  const manualSyncMutation = useMutation({
+    mutationFn: async () => {
+      const response = await fetch('/api/admin/chargebee-sync', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json'
+        }
+      });
+      
+      if (!response.ok) {
+        const errorData = await response.json();
+        throw new Error(errorData.message || 'Failed to sync Chargebee data');
+      }
+      
+      return response.json();
+    },
+    onSuccess: (data) => {
+      toast({
+        title: 'Data Sync Complete',
+        description: `Successfully synchronized ${data.records} records from Chargebee.`,
+      });
+      
+      // Refresh the configuration to update the last_synced_at timestamp
+      refetchConfig();
+      
+      // Invalidate customers data to reflect the changes
+      queryClient.invalidateQueries({ queryKey: ['/api/customers'] });
+    },
+    onError: (error) => {
+      toast({
+        title: 'Sync Failed',
+        description: error instanceof Error ? error.message : 'An error occurred during data synchronization.',
+        variant: 'destructive',
+      });
+    }
   });
   
   // Field mappings state
@@ -1307,7 +1347,9 @@ function ChargebeeConfigTab() {
         setChargebeeConfig({
           site: config.site || "",
           apiKey: config.apiKey || "",
-          sync_frequency: config.sync_frequency || 24
+          sync_frequency: config.sync_frequency || 24,
+          status: config.status || 'inactive',
+          last_synced_at: config.last_synced_at || null
         });
         
         // Only set as connected if we have actual values
@@ -1571,51 +1613,10 @@ function ChargebeeConfigTab() {
                         </p>
                       </div>
                       <Button
-                        onClick={() => {
-                          // Create a mutation to handle the manual sync
-                          const manualSyncMutation = useMutation({
-                            mutationFn: async () => {
-                              const response = await fetch('/api/admin/chargebee-sync', {
-                                method: 'POST',
-                                headers: {
-                                  'Content-Type': 'application/json'
-                                }
-                              });
-                              
-                              if (!response.ok) {
-                                const errorData = await response.json();
-                                throw new Error(errorData.message || 'Failed to sync Chargebee data');
-                              }
-                              
-                              return response.json();
-                            },
-                            onSuccess: (data) => {
-                              toast({
-                                title: 'Data Sync Complete',
-                                description: `Successfully synchronized ${data.records} records from Chargebee.`,
-                              });
-                              
-                              // Refresh the configuration to update the last_synced_at timestamp
-                              refetchConfig();
-                              
-                              // Invalidate customers data to reflect the changes
-                              queryClient.invalidateQueries({ queryKey: ['/api/customers'] });
-                            },
-                            onError: (error) => {
-                              toast({
-                                title: 'Sync Failed',
-                                description: error instanceof Error ? error.message : 'An error occurred during data synchronization.',
-                                variant: 'destructive',
-                              });
-                            }
-                          });
-                          
-                          // Trigger the mutation
-                          manualSyncMutation.mutate();
-                        }}
-                        disabled={manualSyncMutation?.isPending}
+                        onClick={() => manualSyncMutation.mutate()}
+                        disabled={manualSyncMutation.isPending}
                       >
-                        {manualSyncMutation?.isPending ? (
+                        {manualSyncMutation.isPending ? (
                           <>
                             <Loader2 className="mr-2 h-4 w-4 animate-spin" />
                             Syncing...
