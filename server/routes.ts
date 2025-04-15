@@ -19,7 +19,8 @@ import {
   tasks,
   customers,
   customerMetrics,
-  redZoneAlerts
+  redZoneAlerts,
+  taskComments
 } from "@shared/schema";
 import { eq } from "drizzle-orm";
 import {
@@ -186,7 +187,15 @@ export async function registerRoutes(app: Express): Promise<Server> {
   app.delete('/api/customers/:id', async (req, res) => {
     const id = parseInt(req.params.id);
     try {
-      // First delete related records in dependent tables
+      // Get all tasks for this customer to find task comments to delete
+      const customerTasks = await storage.getTasksByCustomer(id);
+      
+      // Delete task comments first (foreign key constraint)
+      for (const task of customerTasks) {
+        await db.delete(taskComments).where(eq(taskComments.task_id, task.id));
+      }
+      
+      // Then delete related records in other dependent tables
       await db.delete(customerMetrics).where(eq(customerMetrics.customer_id, id));
       await db.delete(redZoneAlerts).where(eq(redZoneAlerts.customer_id, id));
       await db.delete(tasks).where(eq(tasks.customer_id, id));
