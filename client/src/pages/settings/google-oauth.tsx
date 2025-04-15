@@ -167,7 +167,20 @@ export default function GoogleOAuthPage() {
       });
       return;
     }
-    getAuthUrlMutation.mutate(selectedScopes);
+    
+    // Log for debugging
+    console.log('Starting auth flow with scopes:', selectedScopes);
+    
+    try {
+      getAuthUrlMutation.mutate(selectedScopes);
+    } catch (error) {
+      console.error('Error in startAuthFlow:', error);
+      toast({
+        title: 'Error',
+        description: 'Failed to start authorization flow',
+        variant: 'destructive',
+      });
+    }
   };
 
   const handleRevokeAccess = () => {

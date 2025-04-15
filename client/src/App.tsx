@@ -36,6 +36,7 @@ function App() {
         <Route path="/profile" component={Profile} />
         <Route path="/settings" component={Settings} />
         <Route path="/settings/google-oauth" component={GoogleOAuth} />
+        <Route path="/settings/google-oauth/callback" component={GoogleOAuth} />
         <Route component={NotFound} />
       </Switch>
     </AppLayout>
