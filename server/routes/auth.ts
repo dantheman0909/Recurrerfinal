@@ -260,6 +260,11 @@ export const login = async (req: Request, res: Response) => {
     
     const user = userResult[0];
     
+    // Check if user is active
+    if (user.active === false) {
+      return res.status(403).json({ error: 'Account is inactive. Please contact administrator.' });
+    }
+    
     // Check if user has a password (might be OAuth-only user)
     if (!user.password) {
       return res.status(401).json({ 
