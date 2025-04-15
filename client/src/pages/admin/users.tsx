@@ -22,7 +22,7 @@ import {
   DropdownMenuTrigger 
 } from '@/components/ui/dropdown-menu';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
+import { Avatar, AvatarFallback } from '@/components/ui/avatar';
 import { Badge } from '@/components/ui/badge';
 import { Checkbox } from '@/components/ui/checkbox';
 import { useToast } from '@/hooks/use-toast';
@@ -39,17 +39,16 @@ interface User {
   email: string;
   role: UserRole;
   team_lead_id?: number | null;
-  avatar?: string | null;
 }
 
 export default function UsersManagement() {
-  const { toast } = useToast();
-  const queryClient = useQueryClient();
-  const [activeTab, setActiveTab] = useState<string>('all-users');
+  const [activeTab, setActiveTab] = useState('all-users');
   const [openAddUserDialog, setOpenAddUserDialog] = useState(false);
   const [openAssignDialog, setOpenAssignDialog] = useState(false);
   const [selectedUser, setSelectedUser] = useState<User | null>(null);
   const [assignedTeamLead, setAssignedTeamLead] = useState<number | null>(null);
+  const queryClient = useQueryClient();
+  const { toast } = useToast();
 
   // Fetch all users
   const { data: users = [], isLoading } = useQuery<User[]>({
@@ -220,7 +219,6 @@ export default function UsersManagement() {
                     <TableRow key={user.id}>
                       <TableCell className="flex items-center space-x-3">
                         <Avatar>
-                          <AvatarImage src={user.avatar || ''} />
                           <AvatarFallback>{getUserInitials(user.name)}</AvatarFallback>
                         </Avatar>
                         <span className="font-medium">{user.name}</span>
@@ -297,7 +295,6 @@ export default function UsersManagement() {
                     <TableRow key={user.id}>
                       <TableCell className="flex items-center space-x-3">
                         <Avatar>
-                          <AvatarImage src={user.avatar || ''} />
                           <AvatarFallback>{getUserInitials(user.name)}</AvatarFallback>
                         </Avatar>
                         <span className="font-medium">{user.name}</span>
@@ -350,7 +347,6 @@ export default function UsersManagement() {
                         <div className="flex justify-between items-center">
                           <div className="flex items-center space-x-3">
                             <Avatar>
-                              <AvatarImage src={teamLead.avatar || ''} />
                               <AvatarFallback>{getUserInitials(teamLead.name)}</AvatarFallback>
                             </Avatar>
                             <div>
@@ -386,7 +382,6 @@ export default function UsersManagement() {
                                   <TableRow key={member.id}>
                                     <TableCell className="flex items-center space-x-3">
                                       <Avatar className="h-7 w-7">
-                                        <AvatarImage src={member.avatar || ''} />
                                         <AvatarFallback>{getUserInitials(member.name)}</AvatarFallback>
                                       </Avatar>
                                       <span>{member.name}</span>
@@ -458,28 +453,15 @@ export default function UsersManagement() {
                     <TableRow key={user.id}>
                       <TableCell className="flex items-center space-x-3">
                         <Avatar>
-                          <AvatarImage src={user.avatar || ''} />
                           <AvatarFallback>{getUserInitials(user.name)}</AvatarFallback>
                         </Avatar>
                         <span className="font-medium">{user.name}</span>
                       </TableCell>
                       <TableCell>{user.email}</TableCell>
-                      <TableCell>
-                        {user.team_lead_id ? (
-                          <div className="flex items-center space-x-2">
-                            <Badge variant="outline" className="bg-blue-50 text-blue-700 border-blue-200">
-                              {getTeamLeadName(user.team_lead_id)}
-                            </Badge>
-                          </div>
-                        ) : (
-                          <Badge variant="outline" className="bg-gray-50 text-gray-600">
-                            Unassigned
-                          </Badge>
-                        )}
-                      </TableCell>
+                      <TableCell>{getTeamLeadName(user.team_lead_id)}</TableCell>
                       <TableCell className="text-right">
                         <Button 
-                          variant="outline" 
+                          variant="ghost" 
                           size="sm"
                           onClick={() => {
                             setSelectedUser(user);
@@ -487,7 +469,8 @@ export default function UsersManagement() {
                             setOpenAssignDialog(true);
                           }}
                         >
-                          Assign
+                          <Users className="h-4 w-4 mr-2" />
+                          {user.team_lead_id ? 'Change Team Lead' : 'Assign to Team Lead'}
                         </Button>
                       </TableCell>
                     </TableRow>
@@ -499,13 +482,13 @@ export default function UsersManagement() {
         </TabsContent>
       </Tabs>
 
-      {/* Add User Dialog */}
+      {/* Add New User Dialog */}
       <Dialog open={openAddUserDialog} onOpenChange={setOpenAddUserDialog}>
-        <DialogContent className="sm:max-w-[500px]">
+        <DialogContent className="sm:max-w-[425px]">
           <DialogHeader>
             <DialogTitle>Add New User</DialogTitle>
             <DialogDescription>
-              Create a new user account with the appropriate role.
+              Create a new user account with the appropriate role and permissions.
             </DialogDescription>
           </DialogHeader>
           <form onSubmit={handleAddUser}>
@@ -517,7 +500,7 @@ export default function UsersManagement() {
                 <Input
                   id="name"
                   name="name"
-                  placeholder="John Doe"
+                  placeholder="Full Name"
                   className="col-span-3"
                   required
                 />
@@ -530,7 +513,7 @@ export default function UsersManagement() {
                   id="email"
                   name="email"
                   type="email"
-                  placeholder="john.doe@example.com"
+                  placeholder="email@example.com"
                   className="col-span-3"
                   required
                 />
@@ -539,7 +522,7 @@ export default function UsersManagement() {
                 <Label htmlFor="role" className="text-right">
                   Role
                 </Label>
-                <Select name="role" defaultValue="csm">
+                <Select name="role" required defaultValue="csm">
                   <SelectTrigger className="col-span-3">
                     <SelectValue placeholder="Select a role" />
                   </SelectTrigger>
@@ -550,13 +533,14 @@ export default function UsersManagement() {
                   </SelectContent>
                 </Select>
               </div>
-              <div className="grid grid-cols-4 items-center gap-4">
+              {/* Team lead selection (only for CSM role) */}
+              <div className="grid grid-cols-4 items-center gap-4" id="team-lead-select">
                 <Label htmlFor="team_lead_id" className="text-right">
                   Team Lead
                 </Label>
                 <Select name="team_lead_id">
                   <SelectTrigger className="col-span-3">
-                    <SelectValue placeholder="Select a team lead" />
+                    <SelectValue placeholder="Assign to Team Lead" />
                   </SelectTrigger>
                   <SelectContent>
                     <SelectItem value="">None</SelectItem>
@@ -578,49 +562,50 @@ export default function UsersManagement() {
         </DialogContent>
       </Dialog>
 
-      {/* Assign to Team Lead Dialog */}
+      {/* Assign CSM to Team Lead Dialog */}
       <Dialog open={openAssignDialog} onOpenChange={setOpenAssignDialog}>
-        <DialogContent className="sm:max-w-[500px]">
+        <DialogContent className="sm:max-w-[425px]">
           <DialogHeader>
             <DialogTitle>Assign CSM to Team Lead</DialogTitle>
             <DialogDescription>
-              {selectedUser && `Assign ${selectedUser.name} to a team lead or remove their current assignment.`}
+              Update the team lead assignment for this CSM.
             </DialogDescription>
           </DialogHeader>
-          <div className="grid gap-4 py-4">
-            <p className="font-medium">Select Team Lead</p>
-            
-            <div className="space-y-3 max-h-[300px] overflow-y-auto border rounded-md p-4">
-              <div className="flex items-center space-x-2">
-                <Checkbox 
-                  id="unassigned" 
-                  checked={assignedTeamLead === null}
-                  onCheckedChange={() => setAssignedTeamLead(null)}
-                />
-                <Label htmlFor="unassigned" className="cursor-pointer">Unassigned (no team lead)</Label>
-              </div>
-              
-              <div className="my-2 border-t border-gray-200"></div>
-              
-              {teamLeadUsers.map((teamLead: User) => (
-                <div key={teamLead.id} className="flex items-center space-x-2">
-                  <Checkbox 
-                    id={`team-lead-${teamLead.id}`} 
-                    checked={assignedTeamLead === teamLead.id}
-                    onCheckedChange={() => setAssignedTeamLead(teamLead.id)}
-                  />
-                  <Label 
-                    htmlFor={`team-lead-${teamLead.id}`} 
-                    className="flex items-center space-x-2 cursor-pointer"
-                  >
-                    <Avatar className="h-6 w-6">
-                      <AvatarImage src={teamLead.avatar || ''} />
-                      <AvatarFallback>{getUserInitials(teamLead.name)}</AvatarFallback>
-                    </Avatar>
-                    <span>{teamLead.name}</span>
-                  </Label>
+          <div className="py-4">
+            <div className="mb-4">
+              <Label className="text-sm font-medium">CSM</Label>
+              <div className="flex items-center mt-2 p-2 bg-muted rounded-md">
+                <Avatar className="h-8 w-8 mr-2">
+                  <AvatarFallback>
+                    {selectedUser ? getUserInitials(selectedUser.name) : ''}
+                  </AvatarFallback>
+                </Avatar>
+                <div>
+                  <p className="font-medium">{selectedUser?.name}</p>
+                  <p className="text-sm text-muted-foreground">{selectedUser?.email}</p>
                 </div>
-              ))}
+              </div>
+            </div>
+            <div className="mb-4">
+              <Label htmlFor="team_lead_selection" className="text-sm font-medium">
+                Team Lead
+              </Label>
+              <Select 
+                value={assignedTeamLead?.toString() || ''}
+                onValueChange={(value) => setAssignedTeamLead(value ? Number(value) : null)}
+              >
+                <SelectTrigger className="w-full mt-2">
+                  <SelectValue placeholder="Select a Team Lead" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="">None (Unassign)</SelectItem>
+                  {teamLeadUsers.map((teamLead: User) => (
+                    <SelectItem key={teamLead.id} value={teamLead.id.toString()}>
+                      {teamLead.name}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
             </div>
           </div>
           <DialogFooter>
@@ -634,7 +619,7 @@ export default function UsersManagement() {
               onClick={handleAssignToTeamLead}
               disabled={updateUserMutation.isPending}
             >
-              {updateUserMutation.isPending ? 'Updating...' : 'Save Assignment'}
+              {updateUserMutation.isPending ? 'Updating...' : 'Update Assignment'}
             </Button>
           </DialogFooter>
         </DialogContent>

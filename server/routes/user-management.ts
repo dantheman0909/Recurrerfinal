@@ -19,8 +19,7 @@ router.get('/', async (req: Request, res: Response) => {
         u.name, 
         u.email, 
         u.role, 
-        u.team_lead_id,
-        u.avatar
+        u.team_lead_id
       FROM users u
       ORDER BY 
         CASE 
@@ -114,9 +113,7 @@ router.post('/', async (req: Request, res: Response) => {
       name,
       email,
       role,
-      team_lead_id: finalTeamLeadId,
-      // For simplicity, we'll generate a random avatar for now
-      avatar: `https://api.dicebear.com/7.x/avataaars/svg?seed=${encodeURIComponent(name)}`
+      team_lead_id: finalTeamLeadId
     }).returning();
     
     return res.status(201).json(result[0]);
@@ -134,8 +131,7 @@ const updateUserSchema = z.object({
   name: z.string().min(1, 'Name is required').optional(),
   email: z.string().email('Invalid email format').optional(),
   role: z.enum(['admin', 'team_lead', 'csm']).optional(),
-  team_lead_id: z.number().nullable().optional(),
-  avatar: z.string().url().optional()
+  team_lead_id: z.number().nullable().optional()
 });
 
 /**
