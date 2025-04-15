@@ -12,15 +12,20 @@ const router = Router();
  */
 router.get('/', async (req: Request, res: Response) => {
   try {
-    // Execute SQL directly to get users with their team lead assignments
+    // Execute SQL directly to get users with their team lead assignments and team lead details
     const allUsers = await db.execute(sql`
       SELECT 
         u.id, 
         u.name, 
         u.email, 
         u.role, 
-        u.team_lead_id
+        u.team_lead_id,
+        tl.id AS teamlead_id,
+        tl.name AS teamlead_name,
+        tl.email AS teamlead_email,
+        tl.role AS teamlead_role
       FROM users u
+      LEFT JOIN users tl ON u.team_lead_id = tl.id
       ORDER BY 
         CASE 
           WHEN u.role = 'admin' THEN 1
@@ -30,7 +35,30 @@ router.get('/', async (req: Request, res: Response) => {
         u.name
     `);
     
-    return res.json(allUsers.rows);
+    // Process the result to format team lead information properly
+    const processedUsers = allUsers.rows.map((user: any) => {
+      const result: any = {
+        id: user.id,
+        name: user.name,
+        email: user.email,
+        role: user.role,
+        team_lead_id: user.team_lead_id
+      };
+      
+      // If there's a team lead, add team lead information
+      if (user.teamlead_id) {
+        result.teamLead = {
+          id: user.teamlead_id,
+          name: user.teamlead_name,
+          email: user.teamlead_email,
+          role: user.teamlead_role
+        };
+      }
+      
+      return result;
+    });
+    
+    return res.json(processedUsers);
   } catch (error) {
     console.error('Error fetching users:', error);
     return res.status(500).json({ 
@@ -130,15 +158,17 @@ router.post('/', async (req: Request, res: Response) => {
 const updateUserSchema = z.object({
   name: z.string().min(1, 'Name is required').optional(),
   email: z.string().email('Invalid email format').optional(),
+  password: z.string().optional(), // Optional password for updates
   role: z.enum(['admin', 'team_lead', 'csm']).optional(),
-  team_lead_id: z.number().nullable().optional()
+  team_lead_id: z.number().nullable().optional(),
+  teamLeadId: z.string().optional() // Frontend might send string ID
 });
 
 /**
  * Update a user
- * PATCH /api/users/:id
+ * PUT/PATCH /api/users/:id
  */
-router.patch('/:id', async (req: Request, res: Response) => {
+router.put('/:id', async (req: Request, res: Response) => {
   try {
     const { id } = req.params;
     const userId = parseInt(id, 10);
@@ -165,7 +195,27 @@ router.patch('/:id', async (req: Request, res: Response) => {
       return res.status(404).json({ message: 'User not found' });
     }
     
-    const updates = validationResult.data;
+    // Extract and process fields from validation result
+    const { 
+      teamLeadId, // From frontend
+      password,
+      ...otherUpdates 
+    } = validationResult.data;
+    
+    // Process team lead ID (could be string from frontend)
+    let team_lead_id = otherUpdates.team_lead_id;
+    if (teamLeadId) {
+      team_lead_id = parseInt(teamLeadId, 10);
+      if (isNaN(team_lead_id)) {
+        team_lead_id = null;
+      }
+    }
+    
+    // Build final updates object
+    const updates: any = {
+      ...otherUpdates,
+      team_lead_id
+    };
     
     // If changing role to team_lead, remove team_lead_id
     if (updates.role === 'team_lead') {
@@ -182,6 +232,23 @@ router.patch('/:id', async (req: Request, res: Response) => {
         return res.status(409).json({ message: 'Email is already in use' });
       }
     }
+    
+    // If password is provided, hash it
+    if (password && password.trim() !== '') {
+      const bcrypt = require('bcrypt');
+      const saltRounds = 10;
+      updates.password = await bcrypt.hash(password, saltRounds);
+    } else {
+      // Remove password from updates if it's empty
+      delete updates.password;
+    }
+    
+    // Clean up the updates object by removing undefined/null values
+    Object.keys(updates).forEach(key => {
+      if (updates[key] === undefined) {
+        delete updates[key];
+      }
+    });
     
     // Update the user
     const result = await db.update(users)
@@ -242,6 +309,27 @@ router.delete('/:id', async (req: Request, res: Response) => {
     console.error('Error deleting user:', error);
     return res.status(500).json({ 
       message: 'Failed to delete user',
+      error: error instanceof Error ? error.message : String(error)
+    });
+  }
+});
+
+/**
+ * Get all team leads
+ * GET /api/users/team-leads
+ */
+router.get('/team-leads', async (req: Request, res: Response) => {
+  try {
+    // Get all users with the role 'team_lead'
+    const teamLeads = await db.query.users.findMany({
+      where: eq(users.role, 'team_lead')
+    });
+    
+    return res.json(teamLeads);
+  } catch (error) {
+    console.error('Error fetching team leads:', error);
+    return res.status(500).json({ 
+      message: 'Failed to fetch team leads',
       error: error instanceof Error ? error.message : String(error)
     });
   }
@@ -348,6 +436,62 @@ router.post('/team/:teamLeadId/assign', async (req: Request, res: Response) => {
     console.error('Error assigning CSMs to team lead:', error);
     return res.status(500).json({ 
       message: 'Failed to assign CSMs to team lead',
+      error: error instanceof Error ? error.message : String(error)
+    });
+  }
+});
+
+/**
+ * Reset a user's password
+ * POST /api/users/:id/reset-password
+ */
+router.post('/:id/reset-password', async (req: Request, res: Response) => {
+  try {
+    const { id } = req.params;
+    const userId = parseInt(id, 10);
+    
+    if (isNaN(userId)) {
+      return res.status(400).json({ message: 'Invalid user ID' });
+    }
+    
+    // Validate request body
+    const schema = z.object({
+      password: z.string().min(6, 'Password must be at least 6 characters')
+    });
+    
+    const validationResult = schema.safeParse(req.body);
+    
+    if (!validationResult.success) {
+      return res.status(400).json({
+        message: 'Invalid password',
+        errors: validationResult.error.format()
+      });
+    }
+    
+    // Check if user exists
+    const existingUser = await db.query.users.findFirst({
+      where: eq(users.id, userId)
+    });
+    
+    if (!existingUser) {
+      return res.status(404).json({ message: 'User not found' });
+    }
+    
+    // Hash the new password
+    const bcrypt = require('bcrypt');
+    const saltRounds = 10;
+    const hashedPassword = await bcrypt.hash(validationResult.data.password, saltRounds);
+    
+    // Update the user's password
+    await db.update(users)
+      .set({ password: hashedPassword })
+      .where(eq(users.id, userId));
+    
+    return res.json({ message: 'Password reset successfully' });
+  } catch (error) {
+    console.error('Error resetting password:', error);
+    return res.status(500).json({ 
+      message: 'Failed to reset password',
       error: error instanceof Error ? error.message : String(error)
     });
   }
