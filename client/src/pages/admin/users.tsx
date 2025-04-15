@@ -59,24 +59,32 @@ export default function AdminUsersPage() {
   const [isResetPasswordDialogOpen, setIsResetPasswordDialogOpen] = useState(false);
   const [currentUser, setCurrentUser] = useState<User | null>(null);
   const [resetPasswordForm, setResetPasswordForm] = useState({ password: '', confirmPassword: '' });
-  const [formData, setFormData] = useState({
+  interface FormData {
+    name: string;
+    email: string;
+    password: string;
+    role: 'admin' | 'team_lead' | 'csm';
+    teamLeadId: string;
+  }
+  
+  const [formData, setFormData] = useState<FormData>({
     name: '',
     email: '',
     password: '',
-    role: 'csm' as 'admin' | 'team_lead' | 'csm',
+    role: 'csm',
     teamLeadId: '',
   });
   const { toast } = useToast();
   const queryClient = useQueryClient();
 
   // Fetch users
-  const { data: users, isLoading, error } = useQuery({
+  const { data: users = [], isLoading, error } = useQuery<User[]>({
     queryKey: ['/api/users'],
     staleTime: 5 * 60 * 1000, // 5 minutes
   });
 
   // Fetch team leads for assigning CSMs
-  const { data: teamLeads } = useQuery({
+  const { data: teamLeads = [] } = useQuery<TeamLead[]>({
     queryKey: ['/api/users/team-leads'],
     staleTime: 5 * 60 * 1000, // 5 minutes
   });
