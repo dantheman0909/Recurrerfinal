@@ -62,7 +62,7 @@ app.use('/api/oauth/google', googleOAuthRoutes);
 
 // Load and configure User Management routes
 import userManagementRoutes from './routes/user-management';
-app.use('/api/user-management', userManagementRoutes);
+app.use('/api/users', userManagementRoutes);
 
 // Data synchronization endpoints (direct route to avoid Vite middleware interference)
 app.post('/api/admin/mysql-sync', async (req, res) => {

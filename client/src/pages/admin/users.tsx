@@ -53,17 +53,17 @@ export default function UsersManagement() {
 
   // Fetch all users
   const { data: users = [], isLoading } = useQuery<User[]>({
-    queryKey: ['/api/user-management'],
+    queryKey: ['/api/users'],
   });
 
   // Create user mutation
   const createUserMutation = useMutation({
     mutationFn: async (newUser: Omit<User, 'id'>) => {
-      const response = await apiRequest('POST', '/api/user-management', newUser);
+      const response = await apiRequest('POST', '/api/users', newUser);
       return response.json();
     },
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['/api/user-management'] });
+      queryClient.invalidateQueries({ queryKey: ['/api/users'] });
       setOpenAddUserDialog(false);
       toast({
         title: 'Success',
@@ -82,13 +82,13 @@ export default function UsersManagement() {
   // Update user (assign to team lead) mutation
   const updateUserMutation = useMutation({
     mutationFn: async (updates: { userId: number; teamLeadId: number | null }) => {
-      const response = await apiRequest('PATCH', `/api/user-management/${updates.userId}`, {
+      const response = await apiRequest('PATCH', `/api/users/${updates.userId}`, {
         team_lead_id: updates.teamLeadId
       });
       return response.json();
     },
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['/api/user-management'] });
+      queryClient.invalidateQueries({ queryKey: ['/api/users'] });
       setOpenAssignDialog(false);
       toast({
         title: 'Success',
