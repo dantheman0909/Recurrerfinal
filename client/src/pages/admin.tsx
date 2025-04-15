@@ -1291,7 +1291,7 @@ function ChargebeeConfigTab() {
     queryKey: ['/api/admin/chargebee-config'],
   });
   
-  // Manual sync mutation for Chargebee data
+  // Manual sync mutations for Chargebee data
   const manualSyncMutation = useMutation({
     mutationFn: async () => {
       const response = await fetch('/api/admin/chargebee-sync', {
@@ -1334,6 +1334,44 @@ function ChargebeeConfigTab() {
       toast({
         title: 'Sync Failed',
         description: error instanceof Error ? error.message : 'An error occurred during data synchronization.',
+        variant: 'destructive',
+      });
+    }
+  });
+
+  // Manual sync mutation for non-recurring invoices
+  const nonRecurringInvoicesSyncMutation = useMutation({
+    mutationFn: async () => {
+      const response = await fetch('/api/admin/chargebee-sync/non-recurring', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json'
+        }
+      });
+      
+      if (!response.ok) {
+        const errorData = await response.json();
+        throw new Error(errorData.message || 'Failed to sync non-recurring invoices');
+      }
+      
+      return response.json();
+    },
+    onSuccess: (data) => {
+      toast({
+        title: 'Non-Recurring Invoices Sync Complete',
+        description: `Successfully synchronized ${data.invoices_synced} non-recurring invoices out of ${data.invoices_found} found.`,
+      });
+      
+      // Refresh the configuration to update the last_synced_at timestamp
+      refetchConfig();
+      
+      // Invalidate customers data to reflect the changes
+      queryClient.invalidateQueries({ queryKey: ['/api/customers'] });
+    },
+    onError: (error) => {
+      toast({
+        title: 'Non-Recurring Invoices Sync Failed',
+        description: error instanceof Error ? error.message : 'An error occurred during non-recurring invoices synchronization.',
         variant: 'destructive',
       });
     }
@@ -1674,22 +1712,43 @@ function ChargebeeConfigTab() {
                           </div>
                         )}
                       </div>
-                      <Button
-                        onClick={() => manualSyncMutation.mutate()}
-                        disabled={manualSyncMutation.isPending}
-                      >
-                        {manualSyncMutation.isPending ? (
-                          <>
-                            <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                            Syncing...
-                          </>
-                        ) : (
-                          <>
-                            <RefreshCw className="mr-2 h-4 w-4" />
-                            Sync Now
-                          </>
-                        )}
-                      </Button>
+                      <div className="flex gap-2">
+                        <Button
+                          onClick={() => manualSyncMutation.mutate()}
+                          disabled={manualSyncMutation.isPending || nonRecurringInvoicesSyncMutation.isPending}
+                        >
+                          {manualSyncMutation.isPending ? (
+                            <>
+                              <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                              Syncing...
+                            </>
+                          ) : (
+                            <>
+                              <RefreshCw className="mr-2 h-4 w-4" />
+                              Sync Now
+                            </>
+                          )}
+                        </Button>
+                        
+                        <Button
+                          variant="outline"
+                          onClick={() => nonRecurringInvoicesSyncMutation.mutate()}
+                          disabled={nonRecurringInvoicesSyncMutation.isPending || manualSyncMutation.isPending}
+                          title="Sync one-time invoices and other non-recurring charges"
+                        >
+                          {nonRecurringInvoicesSyncMutation.isPending ? (
+                            <>
+                              <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                              Syncing One-time...
+                            </>
+                          ) : (
+                            <>
+                              <RefreshCw className="mr-2 h-4 w-4" />
+                              Sync One-time Invoices
+                            </>
+                          )}
+                        </Button>
+                      </div>
                     </div>
                   </div>
                 </div>
