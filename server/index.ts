@@ -21,8 +21,21 @@ const app = express();
 app.use(express.json());
 app.use(express.urlencoded({ extended: false }));
 
-// Configure session middleware
+// Configure session middleware with PostgreSQL session store for production
+// This is required for Replit deployments
+import connectPgSimple from 'connect-pg-simple';
+import { pool } from './db';
+
+const PgSessionStore = connectPgSimple(session);
+
 app.use(session({
+  store: process.env.NODE_ENV === 'production' 
+    ? new PgSessionStore({
+        pool: pool,
+        tableName: 'session', // Default table name
+        createTableIfMissing: true // Auto-create table if missing
+      })
+    : undefined, // Use memory store in development for simplicity
   secret: process.env.SESSION_SECRET || 'recurrer-session-secret',
   resave: false,
   saveUninitialized: false,
@@ -257,17 +270,22 @@ app.get('/ready', (req, res) => {
 });
 
 // Root health check endpoint for deployment
+// This is a critical route for Replit deployments
 app.get('/', (req, res, next) => {
-  // Explicitly handle health checks at the root URL
-  if (req.headers['user-agent']?.includes('health-check') || req.query.health === 'check') {
+  // Always respond with 200 status for health checks and deployment monitors
+  if (req.headers['user-agent']?.includes('health-check') || 
+      req.query.health === 'check' ||
+      req.headers['accept']?.includes('application/json')) {
+    // Return a 200 status with health information
     return res.status(200).json({ 
       status: 'ok', 
       message: 'Service is healthy', 
-      timestamp: new Date().toISOString() 
+      timestamp: new Date().toISOString(),
+      environment: process.env.NODE_ENV || 'development'
     });
   }
   
-  // For normal requests, continue to the next middleware
+  // For normal browser requests, continue to the next middleware (which will serve the frontend app)
   next();
 });
 

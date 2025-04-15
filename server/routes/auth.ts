@@ -184,8 +184,14 @@ export const googleAuthCallback = async (req: Request, res: Response) => {
         return res.redirect(`/auth/signup?email=${encodeURIComponent(email)}`);
       }
     } else {
-      // User exists, log them in
+      // User exists, check if active and log them in
       const user = existingUsers[0];
+      
+      // Check if user is active
+      if (user.active === false) {
+        return res.redirect('/auth/login?error=account_inactive&message=Your+account+is+inactive.+Please+contact+administrator.');
+      }
+      
       req.session.userId = user.id;
       return res.redirect('/');
     }
