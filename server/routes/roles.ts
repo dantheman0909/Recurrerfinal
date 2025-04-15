@@ -1,9 +1,9 @@
 import express from 'express';
 import { db } from '../db';
 import { permissions } from '@shared/schema';
-import { isAuthenticated, isAdmin } from '../middleware/auth';
+import { isAuthenticated, isAdmin, hasPermissionMiddleware } from '../middleware/auth';
 import { eq } from 'drizzle-orm';
-import { requirePermission, getUserPermissions } from '../utils/permission-check';
+import { getUserPermissions } from '../utils/permission-check';
 
 const router = express.Router();
 

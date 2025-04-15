@@ -1,94 +1,122 @@
 import { Request, Response, NextFunction } from 'express';
+import { hasPermission, hasAllPermissions, hasAnyPermission } from '../utils/permission-check';
 
-// Extend express session
-declare module 'express-session' {
-  interface SessionData {
-    user?: {
+declare global {
+  namespace Express {
+    interface User {
       id: number;
       name: string;
       email: string;
       role: 'admin' | 'team_lead' | 'csm';
-      [key: string]: any;
-    };
+    }
+    
+    interface Request {
+      user?: User;
+      isAuthenticated(): boolean;
+    }
   }
 }
 
-// Middleware to check if user is authenticated
+/**
+ * Middleware to check if a user is authenticated
+ */
 export const isAuthenticated = (req: Request, res: Response, next: NextFunction) => {
-  if (req.session && req.session.user) {
-    // Add user to request object
-    req.user = req.session.user;
+  if (req.isAuthenticated && req.isAuthenticated() && req.user) {
     return next();
   }
   
-  // User is not authenticated
-  return res.status(401).json({ error: 'Authentication required' });
+  res.status(401).json({ error: 'Unauthorized: Please log in to access this resource' });
 };
 
-// Middleware to check if user is an admin
+/**
+ * Middleware to check if a user is an admin
+ */
 export const isAdmin = (req: Request, res: Response, next: NextFunction) => {
-  if (req.user && req.user.role === 'admin') {
+  if (req.isAuthenticated && req.isAuthenticated() && req.user && req.user.role === 'admin') {
     return next();
   }
   
-  // User is not an admin
-  return res.status(403).json({ error: 'Admin access required' });
+  res.status(403).json({ error: 'Forbidden: Admin access required' });
 };
 
-// Middleware to check if user is a team lead
-export const isTeamLead = (req: Request, res: Response, next: NextFunction) => {
-  if (req.user && (req.user.role === 'admin' || req.user.role === 'team_lead')) {
+/**
+ * Middleware to check if a user is a team lead or admin
+ */
+export const isTeamLeadOrAdmin = (req: Request, res: Response, next: NextFunction) => {
+  if (
+    req.isAuthenticated && 
+    req.isAuthenticated() && 
+    req.user && 
+    ['admin', 'team_lead'].includes(req.user.role)
+  ) {
     return next();
   }
   
-  // User is not a team lead or admin
-  return res.status(403).json({ error: 'Team lead access required' });
+  res.status(403).json({ error: 'Forbidden: Team Lead or Admin access required' });
 };
 
-// Middleware to check if user has permission to access a specific customer
-export const canAccessCustomer = (req: Request, res: Response, next: NextFunction) => {
-  const { customerId } = req.params;
-  
-  if (!req.user) {
-    return res.status(401).json({ error: 'Authentication required' });
-  }
-
-  if (req.user.role === 'admin') {
-    // Admins can access all customers
-    return next();
-  }
-
-  if (req.user.role === 'team_lead') {
-    // Team leads can access customers assigned to their team
-    // This would need to be checked against the database
-    // For now, we'll let team leads through
-    return next();
-  }
-
-  if (req.user.role === 'csm') {
-    // CSMs can only access their assigned customers
-    // This would need to be checked against the database
-    if (req.user.assigned_customers && req.user.assigned_customers.includes(parseInt(customerId))) {
+/**
+ * Middleware factory to check if a user has a specific permission
+ * @param permissionId The permission ID to check
+ */
+export const hasPermissionMiddleware = (permissionId: string) => {
+  return async (req: Request, res: Response, next: NextFunction) => {
+    if (!req.isAuthenticated || !req.isAuthenticated() || !req.user) {
+      return res.status(401).json({ error: 'Unauthorized: Please log in to access this resource' });
+    }
+    
+    const userHasPermission = await hasPermission(req.user.id, permissionId);
+    
+    if (userHasPermission) {
       return next();
     }
-  }
-  
-  // User doesn't have access to this customer
-  return res.status(403).json({ error: 'Access to this customer denied' });
+    
+    res.status(403).json({ 
+      error: `Forbidden: You don't have the required permission: ${permissionId}` 
+    });
+  };
 };
 
-// Type definition for the Express Request with user
-declare global {
-  namespace Express {
-    interface Request {
-      user?: {
-        id: number;
-        name: string;
-        email: string;
-        role: 'admin' | 'team_lead' | 'csm';
-        assigned_customers?: number[];
-        [key: string]: any;
-      };
+/**
+ * Middleware factory to check if a user has all of the specified permissions
+ * @param permissionIds Array of permission IDs to check
+ */
+export const hasAllPermissionsMiddleware = (permissionIds: string[]) => {
+  return async (req: Request, res: Response, next: NextFunction) => {
+    if (!req.isAuthenticated || !req.isAuthenticated() || !req.user) {
+      return res.status(401).json({ error: 'Unauthorized: Please log in to access this resource' });
     }
-  }
-}
+    
+    const userHasAllPermissions = await hasAllPermissions(req.user.id, permissionIds);
+    
+    if (userHasAllPermissions) {
+      return next();
+    }
+    
+    res.status(403).json({ 
+      error: `Forbidden: You don't have all required permissions: ${permissionIds.join(', ')}` 
+    });
+  };
+};
+
+/**
+ * Middleware factory to check if a user has any of the specified permissions
+ * @param permissionIds Array of permission IDs to check
+ */
+export const hasAnyPermissionMiddleware = (permissionIds: string[]) => {
+  return async (req: Request, res: Response, next: NextFunction) => {
+    if (!req.isAuthenticated || !req.isAuthenticated() || !req.user) {
+      return res.status(401).json({ error: 'Unauthorized: Please log in to access this resource' });
+    }
+    
+    const userHasAnyPermission = await hasAnyPermission(req.user.id, permissionIds);
+    
+    if (userHasAnyPermission) {
+      return next();
+    }
+    
+    res.status(403).json({ 
+      error: `Forbidden: You need at least one of these permissions: ${permissionIds.join(', ')}` 
+    });
+  };
+};

@@ -1,16 +1,18 @@
 import { db } from '../db';
+import { permissions as permissionsTable, users as usersTable } from '../../shared/schema';
+import { eq } from 'drizzle-orm';
 
 /**
- * Checks if a user has a specific permission based on their role
- * @param userId The ID of the user to check
- * @param permissionId The ID of the permission to check
- * @returns Promise resolving to boolean indicating if the user has the permission
+ * Check if a user has a specific permission
+ * @param userId - The user ID to check
+ * @param permissionId - The permission ID to check
+ * @returns Boolean indicating if the user has the permission
  */
-export async function checkUserPermission(userId: number, permissionId: string): Promise<boolean> {
+export async function hasPermission(userId: number, permissionId: string): Promise<boolean> {
   try {
-    // Get the user to determine their role
+    // Get user
     const user = await db.query.users.findFirst({
-      where: (fields, { eq }) => eq(fields.id, userId)
+      where: eq(usersTable.id, userId)
     });
 
     if (!user) {
@@ -19,14 +21,14 @@ export async function checkUserPermission(userId: number, permissionId: string):
 
     // Get the permission
     const permission = await db.query.permissions.findFirst({
-      where: (fields, { eq }) => eq(fields.id, permissionId)
+      where: eq(permissionsTable.id, permissionId)
     });
 
     if (!permission) {
       return false;
     }
 
-    // Check if the user's role has access to this permission
+    // Check if the user has the permission based on their role
     switch (user.role) {
       case 'admin':
         return permission.admin_access;
@@ -38,45 +40,63 @@ export async function checkUserPermission(userId: number, permissionId: string):
         return false;
     }
   } catch (error) {
-    console.error(`Error checking permission ${permissionId} for user ${userId}:`, error);
+    console.error('Error checking permission:', error);
     return false;
   }
 }
 
 /**
- * Creates a middleware to check if a user has a specific permission
- * @param permissionId The ID of the permission to check
- * @returns Express middleware that checks the permission
+ * Check if a user has all of the specified permissions
+ * @param userId - The user ID to check
+ * @param permissionIds - Array of permission IDs to check
+ * @returns Boolean indicating if the user has all the permissions
  */
-export function requirePermission(permissionId: string) {
-  return async (req: any, res: any, next: any) => {
-    if (!req.user) {
-      return res.status(401).json({ error: 'Authentication required' });
+export async function hasAllPermissions(userId: number, permissionIds: string[]): Promise<boolean> {
+  try {
+    for (const permissionId of permissionIds) {
+      const hasThisPermission = await hasPermission(userId, permissionId);
+      if (!hasThisPermission) {
+        return false;
+      }
     }
-
-    const hasPermission = await checkUserPermission(req.user.id, permissionId);
-    
-    if (hasPermission) {
-      return next();
-    } else {
-      return res.status(403).json({ 
-        error: 'Permission denied', 
-        details: `You do not have the required permission: ${permissionId}` 
-      });
-    }
-  };
+    return true;
+  } catch (error) {
+    console.error('Error checking all permissions:', error);
+    return false;
+  }
 }
 
 /**
- * Utility to get all permissions for a specific user
- * @param userId The ID of the user
- * @returns Promise resolving to an array of permission IDs the user has
+ * Check if a user has any of the specified permissions
+ * @param userId - The user ID to check
+ * @param permissionIds - Array of permission IDs to check
+ * @returns Boolean indicating if the user has any of the permissions
+ */
+export async function hasAnyPermission(userId: number, permissionIds: string[]): Promise<boolean> {
+  try {
+    for (const permissionId of permissionIds) {
+      const hasThisPermission = await hasPermission(userId, permissionId);
+      if (hasThisPermission) {
+        return true;
+      }
+    }
+    return false;
+  } catch (error) {
+    console.error('Error checking any permissions:', error);
+    return false;
+  }
+}
+
+/**
+ * Get all permissions a user has based on their role
+ * @param userId - The user ID to check
+ * @returns Array of permission IDs the user has
  */
 export async function getUserPermissions(userId: number): Promise<string[]> {
   try {
-    // Get the user to determine their role
+    // Get user
     const user = await db.query.users.findFirst({
-      where: (fields, { eq }) => eq(fields.id, userId)
+      where: eq(usersTable.id, userId)
     });
 
     if (!user) {
@@ -85,8 +105,8 @@ export async function getUserPermissions(userId: number): Promise<string[]> {
 
     // Get all permissions
     const allPermissions = await db.query.permissions.findMany();
-    
-    // Filter the permissions based on the user's role
+
+    // Filter permissions based on user role
     const userPermissions = allPermissions
       .filter(permission => {
         switch (user.role) {
@@ -101,10 +121,10 @@ export async function getUserPermissions(userId: number): Promise<string[]> {
         }
       })
       .map(p => p.id);
-    
+
     return userPermissions;
   } catch (error) {
-    console.error(`Error getting permissions for user ${userId}:`, error);
+    console.error('Error getting user permissions:', error);
     return [];
   }
 }

@@ -16,11 +16,14 @@ type AuthContextType = {
   user: User | null;
   loading: boolean;
   authenticated: boolean;
+  isAuthenticated: boolean; // Alias for authenticated, for consistency with other hooks
+  isLoading: boolean; // Alias for loading, for consistency with other hooks
   login: (email: string, password: string) => Promise<{ success: boolean; error?: string }>;
   logout: () => Promise<void>;
   register: (name: string, email: string, password: string) => Promise<{ success: boolean; error?: string }>;
   googleLogin: () => void;
   googleSignup: () => void;
+  refreshUser: () => Promise<void>; // Function to refresh user data
 };
 
 // Create the context with a default value
@@ -142,16 +145,37 @@ export const AuthProvider = ({ children }: AuthProviderProps) => {
     window.location.href = '/api/auth/google/signup';
   };
 
+  // Function to refresh user data
+  const refreshUser = async () => {
+    try {
+      const response = await fetch('/api/me');
+      const data = await response.json();
+
+      if (data.authenticated && data.user) {
+        setUser(data.user);
+        setAuthenticated(true);
+      } else {
+        setUser(null);
+        setAuthenticated(false);
+      }
+    } catch (error) {
+      console.error('Error refreshing user data:', error);
+    }
+  };
+
   // Context value
   const value = {
     user,
     loading,
     authenticated,
+    isAuthenticated: authenticated, // Alias for authenticated
+    isLoading: loading, // Alias for loading
     login,
     logout,
     register,
     googleLogin,
     googleSignup,
+    refreshUser,
   };
 
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;
