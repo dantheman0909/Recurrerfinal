@@ -1862,7 +1862,7 @@ function ChargebeeConfigTab() {
                         <Button
                           variant="outline"
                           onClick={() => nonRecurringInvoicesSyncMutation.mutate()}
-                          disabled={nonRecurringInvoicesSyncMutation.isPending || manualSyncMutation.isPending}
+                          disabled={nonRecurringInvoicesSyncMutation.isPending || manualSyncMutation.isPending || fullInvoicesSyncMutation.isPending}
                           title="Sync one-time invoices and other non-recurring charges"
                         >
                           {nonRecurringInvoicesSyncMutation.isPending ? (
@@ -1874,6 +1874,26 @@ function ChargebeeConfigTab() {
                             <>
                               <RefreshCw className="mr-2 h-4 w-4" />
                               Sync One-time Invoices
+                            </>
+                          )}
+                        </Button>
+                        
+                        <Button
+                          variant="outline"
+                          onClick={() => fullInvoicesSyncMutation.mutate()}
+                          disabled={fullInvoicesSyncMutation.isPending || nonRecurringInvoicesSyncMutation.isPending || manualSyncMutation.isPending}
+                          title="Sync all invoices (recurring and non-recurring)"
+                          className="bg-purple-50 text-purple-800 hover:bg-purple-100"
+                        >
+                          {fullInvoicesSyncMutation.isPending ? (
+                            <>
+                              <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                              Syncing All Invoices...
+                            </>
+                          ) : (
+                            <>
+                              <RefreshCw className="mr-2 h-4 w-4" />
+                              Sync All Invoices
                             </>
                           )}
                         </Button>
