@@ -1131,9 +1131,10 @@ export async function registerRoutes(app: Express): Promise<Server> {
       // Process all invoices
       let savedCount = 0;
       let errorCount = 0;
+      const startTime = Date.now();
       
       // Process invoices in batches to avoid memory issues
-      const BATCH_SIZE = 20;
+      const BATCH_SIZE = 50; // Increased batch size from 20 to 50
       
       for (let i = 0; i < invoices.length; i += BATCH_SIZE) {
         const batch = invoices.slice(i, i + BATCH_SIZE);
@@ -1145,76 +1146,16 @@ export async function registerRoutes(app: Express): Promise<Server> {
             // Set recurring flag based on subscription_id presence
             invoice.recurring = !!invoice.subscription_id;
             
-            // Execute SQL directly in the endpoint for the first few invoices to debug
-            if (savedCount < 5) {
-              // Format the invoice data for direct insertion
-              console.log(`Directly inserting invoice ${invoice.id} for debugging`);
-              const dbPool = (await import('./db')).pool;
-              
-              // Check if invoice exists first
-              const checkResult = await dbPool.query(
-                'SELECT id FROM chargebee_invoices WHERE id = $1',
-                [invoice.id]
-              );
-              
-              if (checkResult.rows.length > 0) {
-                console.log(`Invoice ${invoice.id} already exists, updating...`);
-                await dbPool.query(
-                  `UPDATE chargebee_invoices 
-                   SET subscription_id = $1, customer_id = $2, amount = $3, amount_paid = $4,
-                       amount_due = $5, status = $6, date = $7, due_date = $8, paid_at = $9,
-                       total = $10, recurring = $11, updated_at = NOW()
-                   WHERE id = $12`,
-                  [
-                    invoice.subscription_id || null,
-                    invoice.customer_id || null,
-                    typeof invoice.amount === 'number' ? invoice.amount : 0,
-                    typeof invoice.amount_paid === 'number' ? invoice.amount_paid : 0,
-                    typeof invoice.amount_due === 'number' ? invoice.amount_due : 0,
-                    invoice.status || 'unknown',
-                    invoice.date || null,
-                    invoice.due_date || null,
-                    invoice.paid_at || null,
-                    typeof invoice.total === 'number' ? invoice.total : 0,
-                    invoice.recurring === true,
-                    invoice.id
-                  ]
-                );
-                console.log(`Successfully updated invoice ${invoice.id} via direct SQL`);
-              } else {
-                console.log(`Invoice ${invoice.id} is new, inserting...`);
-                await dbPool.query(
-                  `INSERT INTO chargebee_invoices (
-                    id, subscription_id, customer_id, amount, amount_paid, amount_due,
-                    status, date, due_date, paid_at, total, recurring, updated_at
-                  ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, NOW())`,
-                  [
-                    invoice.id,
-                    invoice.subscription_id || null,
-                    invoice.customer_id || null,
-                    typeof invoice.amount === 'number' ? invoice.amount : 0,
-                    typeof invoice.amount_paid === 'number' ? invoice.amount_paid : 0,
-                    typeof invoice.amount_due === 'number' ? invoice.amount_due : 0,
-                    invoice.status || 'unknown',
-                    invoice.date || null,
-                    invoice.due_date || null,
-                    invoice.paid_at || null,
-                    typeof invoice.total === 'number' ? invoice.total : 0,
-                    invoice.recurring === true
-                  ]
-                );
-                console.log(`Successfully inserted invoice ${invoice.id} via direct SQL`);
-              }
-            } else {
-              // Use the storeInvoice function for remaining invoices
-              await storeInvoice(invoice);
-            }
+            // Use the improved storeInvoice function for all invoices
+            await storeInvoice(invoice);
             
             savedCount++;
             
-            // Log progress every 20 invoices
-            if (savedCount % 20 === 0) {
-              console.log(`Saved ${savedCount}/${invoices.length} invoices`);
+            // Log progress every 50 invoices
+            if (savedCount % 50 === 0) {
+              const elapsedSeconds = Math.round((Date.now() - startTime) / 1000);
+              const rate = Math.round((savedCount / elapsedSeconds) * 60);
+              console.log(`Saved ${savedCount}/${invoices.length} invoices (${rate} per minute)`);
               
               // Check current count in database
               const dbPool = (await import('./db')).pool;
@@ -1233,13 +1174,44 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const finalCountResult = await dbPool.query('SELECT COUNT(*) FROM chargebee_invoices');
       const dbCount = parseInt(finalCountResult.rows[0].count);
       
+      // Calculate statistics
+      const endTime = Date.now();
+      const totalSeconds = Math.round((endTime - startTime) / 1000);
+      const invoicesPerMinute = totalSeconds > 0 ? Math.round((savedCount / totalSeconds) * 60) : 0;
+      
+      // Update chargebee_config with last sync stats
+      try {
+        const syncStats = {
+          invoices_found: invoices.length,
+          invoices_synced: savedCount,
+          errors: errorCount,
+          time_taken_seconds: totalSeconds,
+          invoices_per_minute: invoicesPerMinute,
+          completed_at: new Date().toISOString()
+        };
+        
+        await dbPool.query(
+          `UPDATE chargebee_config 
+           SET last_sync_stats = $1, 
+               last_synced_at = NOW() 
+           WHERE id = 1`,
+          [JSON.stringify(syncStats)]
+        );
+        
+        console.log('Updated chargebee_config with sync stats');
+      } catch (statsError) {
+        console.error('Failed to update sync stats:', statsError);
+      }
+      
       return res.json({
         success: true,
-        message: `Completed invoice sync`,
+        message: `Completed invoice sync in ${totalSeconds} seconds`,
         invoices_found: invoices.length,
         invoices_synced: savedCount,
         errors: errorCount,
-        db_count: dbCount
+        db_count: dbCount,
+        processing_time_seconds: totalSeconds,
+        invoices_per_minute: invoicesPerMinute
       });
     } catch (error) {
       console.error('Error during complete invoice sync:', error);
