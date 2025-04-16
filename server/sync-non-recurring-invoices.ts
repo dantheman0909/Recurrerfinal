@@ -187,6 +187,9 @@ export async function ensureInvoicesTableExists(): Promise<void> {
  */
 export async function storeInvoice(invoice: any): Promise<void> {
   try {
+    // Log at start for debugging
+    console.log(`Processing invoice: ${invoice.id} (${invoice.recurring ? 'recurring' : 'non-recurring'})`);
+    
     // Format the invoice data, safely handling undefined values
     const invoiceData = {
       id: invoice.id,
@@ -206,6 +209,9 @@ export async function storeInvoice(invoice: any): Promise<void> {
       updated_at: new Date()
     };
     
+    // Debug log the data we're trying to store
+    console.log(`Invoice data prepared for ${invoice.id}:`, JSON.stringify(invoiceData));
+    
     // Check if invoice already exists
     const existingInvoice = await db.execute(sql`
       SELECT id FROM chargebee_invoices WHERE id = ${invoice.id}
@@ -213,6 +219,8 @@ export async function storeInvoice(invoice: any): Promise<void> {
     
     if (existingInvoice.rows.length > 0) {
       // Update existing invoice
+      console.log(`Invoice ${invoice.id} exists, updating...`);
+      
       const updateColumns = Object.entries(invoiceData)
         .filter(([key]) => key !== 'id') // Skip the id field in the SET clause
         .map(([key, value]) => {
@@ -228,13 +236,21 @@ export async function storeInvoice(invoice: any): Promise<void> {
         })
         .join(', ');
       
-      await db.execute(sql.raw(`
+      const updateQuery = `
         UPDATE chargebee_invoices 
         SET ${updateColumns}
         WHERE id = '${invoice.id}'
-      `));
+      `;
+      
+      // Log the SQL query for debugging
+      console.log(`Update SQL for ${invoice.id}:`, updateQuery);
+      
+      await db.execute(sql.raw(updateQuery));
+      console.log(`Successfully updated invoice ${invoice.id}`);
     } else {
       // Insert new invoice
+      console.log(`Invoice ${invoice.id} is new, inserting...`);
+      
       const columns = Object.keys(invoiceData).join(', ');
       const values = Object.values(invoiceData).map(value => {
         if (value === null) {
@@ -248,13 +264,24 @@ export async function storeInvoice(invoice: any): Promise<void> {
         }
       }).join(', ');
       
-      await db.execute(sql.raw(`
+      const insertQuery = `
         INSERT INTO chargebee_invoices (${columns})
         VALUES (${values})
-      `));
+      `;
+      
+      // Log the SQL query for debugging
+      console.log(`Insert SQL for ${invoice.id}:`, insertQuery);
+      
+      await db.execute(sql.raw(insertQuery));
+      console.log(`Successfully inserted invoice ${invoice.id}`);
     }
   } catch (error) {
+    // Enhanced error logging for debugging
     console.error(`Error storing invoice ${invoice.id}:`, error);
+    console.error(`Error details: ${error instanceof Error ? error.message : String(error)}`);
+    console.error(`Error stack: ${error instanceof Error ? error.stack : 'No stack trace'}`);
+    
+    // Rethrow to let caller handle the error
     throw error;
   }
 }
