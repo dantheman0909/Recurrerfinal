@@ -165,6 +165,120 @@ app.post('/api/admin/chargebee-sync/non-recurring', async (req, res) => {
   }
 });
 
+// Dedicated endpoint for full invoices sync
+app.post('/api/admin/invoices-sync', async (req, res) => {
+  try {
+    // First ensure the invoices table exists with proper structure
+    const { ensureInvoicesTableExists, storeInvoice } = await import('./sync-non-recurring-invoices');
+    
+    console.log('Ensuring chargebee_invoices table exists...');
+    await ensureInvoicesTableExists();
+    console.log('Table verification complete');
+    
+    // Get all invoices from Chargebee
+    const { chargebeeService } = await import('./chargebee');
+    if (!chargebeeService) {
+      return res.status(500).json({ error: 'Chargebee service not initialized' });
+    }
+    
+    console.log('Starting complete invoice sync...');
+    const invoices = await chargebeeService.getAllInvoices();
+    console.log(`Found ${invoices.length} total invoices to sync`);
+    
+    // Process all invoices
+    let savedCount = 0;
+    let errorCount = 0;
+    const startTime = Date.now();
+    
+    // Process invoices in batches to avoid memory issues
+    const BATCH_SIZE = 50; // Batch size of 50 which has been tested to work well
+    
+    for (let i = 0; i < invoices.length; i += BATCH_SIZE) {
+      const batch = invoices.slice(i, i + BATCH_SIZE);
+      console.log(`Processing batch ${Math.floor(i/BATCH_SIZE) + 1} of ${Math.ceil(invoices.length/BATCH_SIZE)}`);
+      
+      // Process each invoice in the batch
+      for (const invoice of batch) {
+        try {
+          // Set recurring flag based on subscription_id presence
+          invoice.recurring = !!invoice.subscription_id;
+          
+          // Use the improved storeInvoice function for all invoices
+          await storeInvoice(invoice);
+          
+          savedCount++;
+          
+          // Log progress every 50 invoices
+          if (savedCount % 50 === 0) {
+            const elapsedSeconds = Math.round((Date.now() - startTime) / 1000);
+            const rate = Math.round((savedCount / elapsedSeconds) * 60);
+            console.log(`Saved ${savedCount}/${invoices.length} invoices (${rate} per minute)`);
+            
+            // Check current count in database
+            const dbPool = (await import('./db')).pool;
+            const countResult = await dbPool.query('SELECT COUNT(*) FROM chargebee_invoices');
+            console.log(`Current invoice count in database: ${countResult.rows[0].count}`);
+          }
+        } catch (error) {
+          console.error(`Error storing invoice ${invoice.id}:`, error);
+          errorCount++;
+        }
+      }
+    }
+    
+    // Get final count from database
+    const dbPool = (await import('./db')).pool;
+    const finalCountResult = await dbPool.query('SELECT COUNT(*) FROM chargebee_invoices');
+    const dbCount = parseInt(finalCountResult.rows[0].count);
+    
+    // Calculate statistics
+    const endTime = Date.now();
+    const totalSeconds = Math.round((endTime - startTime) / 1000);
+    const invoicesPerMinute = totalSeconds > 0 ? Math.round((savedCount / totalSeconds) * 60) : 0;
+    
+    // Update chargebee_config with last sync stats
+    try {
+      const syncStats = {
+        invoices_found: invoices.length,
+        invoices_synced: savedCount,
+        errors: errorCount,
+        time_taken_seconds: totalSeconds,
+        invoices_per_minute: invoicesPerMinute,
+        completed_at: new Date().toISOString()
+      };
+      
+      await dbPool.query(
+        `UPDATE chargebee_config 
+         SET last_sync_stats = $1, 
+             last_synced_at = NOW() 
+         WHERE id = 1`,
+        [JSON.stringify(syncStats)]
+      );
+      
+      console.log('Updated chargebee_config with sync stats');
+    } catch (statsError) {
+      console.error('Failed to update sync stats:', statsError);
+    }
+    
+    return res.json({
+      success: true,
+      message: `Completed invoice sync in ${totalSeconds} seconds`,
+      invoices_found: invoices.length,
+      invoices_synced: savedCount,
+      errors: errorCount,
+      db_count: dbCount,
+      processing_time_seconds: totalSeconds,
+      invoices_per_minute: invoicesPerMinute
+    });
+  } catch (error) {
+    console.error('Error during complete invoice sync:', error);
+    return res.status(500).json({ 
+      error: "Failed to sync invoices", 
+      details: error instanceof Error ? error.message : String(error) 
+    });
+  }
+});
+
 // Customer external data integration routes
 app.post('/api/customers/import-mysql-data', importMySQLDataToCustomer);
 

@@ -1456,6 +1456,44 @@ function ChargebeeConfigTab() {
     }
   });
   
+  // Full invoices sync mutation
+  const fullInvoicesSyncMutation = useMutation({
+    mutationFn: async () => {
+      const response = await fetch('/api/admin/invoices-sync', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json'
+        }
+      });
+      
+      if (!response.ok) {
+        const errorData = await response.json();
+        throw new Error(errorData.message || 'Failed to sync all invoices');
+      }
+      
+      return response.json();
+    },
+    onSuccess: (data) => {
+      toast({
+        title: 'Full Invoices Sync Complete',
+        description: `Successfully synchronized ${data.invoices_synced} invoices out of ${data.invoices_found} found in ${data.processing_time_seconds} seconds (${data.invoices_per_minute} per minute).`,
+      });
+      
+      // Refresh the configuration to update the last_synced_at timestamp
+      refetchConfig();
+      
+      // Invalidate entity counts to reflect changes
+      queryClient.invalidateQueries({ queryKey: ['/api/admin/entity-count/invoices'] });
+    },
+    onError: (error) => {
+      toast({
+        title: 'Full Invoices Sync Failed',
+        description: error instanceof Error ? error.message : 'An error occurred during the full invoices synchronization.',
+        variant: 'destructive',
+      });
+    }
+  });
+  
   // Field mappings state
   const [selectedEntityType, setSelectedEntityType] = useState<string>("customer");
   
