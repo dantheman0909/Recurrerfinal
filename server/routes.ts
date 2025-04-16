@@ -1222,6 +1222,83 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
   
+  // Test endpoint to fetch and insert a batch of invoices
+  app.get('/api/admin/test-batch-insert', async (req, res) => {
+    try {
+      // Ensure table exists
+      const { ensureInvoicesTableExists, storeInvoice } = await import('./sync-non-recurring-invoices');
+      await ensureInvoicesTableExists();
+      
+      // Get a batch of invoices from Chargebee
+      const { chargebeeService } = await import('./chargebee');
+      if (!chargebeeService) {
+        return res.status(500).json({ error: 'Chargebee service not initialized' });
+      }
+      
+      // Get batch size from query params, default to 10
+      const batchSize = req.query.size ? parseInt(req.query.size as string) : 10;
+      const maxBatchSize = 50; // Safety limit
+      const actualBatchSize = Math.min(batchSize, maxBatchSize);
+      
+      console.log(`Fetching batch of ${actualBatchSize} invoices from Chargebee...`);
+      const invoices = await chargebeeService.getInvoices(actualBatchSize, '');
+      
+      if (invoices.length === 0) {
+        return res.status(404).json({ error: 'No invoices found in Chargebee' });
+      }
+      
+      console.log(`Found ${invoices.length} invoices, starting batch insert...`);
+      
+      // Process each invoice
+      let savedCount = 0;
+      let errorCount = 0;
+      const startTime = Date.now();
+      const results = [];
+      
+      for (const invoice of invoices) {
+        try {
+          // Set recurring flag based on subscription_id presence
+          invoice.recurring = !!invoice.subscription_id;
+          
+          // Store the invoice
+          await storeInvoice(invoice);
+          savedCount++;
+          results.push({ id: invoice.id, success: true });
+        } catch (error) {
+          console.error(`Error storing invoice ${invoice.id}:`, error);
+          errorCount++;
+          results.push({ id: invoice.id, success: false, error: error instanceof Error ? error.message : String(error) });
+        }
+      }
+      
+      // Get current invoice count
+      const dbPool = (await import('./db')).pool;
+      const countResult = await dbPool.query('SELECT COUNT(*) FROM chargebee_invoices');
+      const dbCount = parseInt(countResult.rows[0].count);
+      
+      // Calculate stats
+      const endTime = Date.now();
+      const processingTime = (endTime - startTime) / 1000;
+      
+      return res.json({
+        success: true,
+        message: `Batch processing complete`,
+        total_processed: invoices.length,
+        saved: savedCount,
+        errors: errorCount,
+        processing_time_seconds: processingTime,
+        current_db_count: dbCount,
+        results: results
+      });
+    } catch (error) {
+      console.error('Error processing invoice batch:', error);
+      return res.status(500).json({ 
+        error: "Failed to process invoice batch", 
+        details: error instanceof Error ? error.message : String(error) 
+      });
+    }
+  });
+  
   // Test endpoint to fetch and insert a single invoice
   app.get('/api/admin/test-invoice-insert', async (req, res) => {
     try {
