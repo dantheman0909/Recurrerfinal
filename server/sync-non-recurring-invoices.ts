@@ -187,19 +187,20 @@ export async function ensureInvoicesTableExists(): Promise<void> {
  */
 export async function storeInvoice(invoice: any): Promise<void> {
   try {
-    // Format the invoice data
+    // Format the invoice data, safely handling undefined values
     const invoiceData = {
       id: invoice.id,
-      subscription_id: invoice.subscription_id,
-      customer_id: invoice.customer_id,
-      amount: invoice.amount,
-      amount_paid: invoice.amount_paid,
-      amount_due: invoice.amount_due,
-      status: invoice.status,
-      date: invoice.date,
-      due_date: invoice.due_date,
+      subscription_id: invoice.subscription_id || null,
+      customer_id: invoice.customer_id || null,
+      // Convert undefined numeric values to 0 to avoid database errors
+      amount: typeof invoice.amount === 'number' ? invoice.amount : 0,
+      amount_paid: typeof invoice.amount_paid === 'number' ? invoice.amount_paid : 0,
+      amount_due: typeof invoice.amount_due === 'number' ? invoice.amount_due : 0,
+      status: invoice.status || 'unknown',
+      date: invoice.date || null,
+      due_date: invoice.due_date || null,
       paid_at: invoice.paid_at || null,
-      total: invoice.total,
+      total: typeof invoice.total === 'number' ? invoice.total : 0,
       recurring: invoice.recurring === true,
       line_items: invoice.line_items ? JSON.stringify(invoice.line_items) : null,
       updated_at: new Date()

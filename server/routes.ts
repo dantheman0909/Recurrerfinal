@@ -1108,6 +1108,61 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
   
+  // Manual invoices-only sync
+  app.post('/api/admin/invoices-sync', async (req, res) => {
+    try {
+      // First ensure the invoices table exists with proper structure
+      const { ensureInvoicesTableExists, storeInvoice } = await import('./sync-non-recurring-invoices');
+      await ensureInvoicesTableExists();
+      
+      // Get all invoices from Chargebee
+      const { chargebeeService } = await import('./chargebee');
+      if (!chargebeeService) {
+        return res.status(500).json({ error: 'Chargebee service not initialized' });
+      }
+      
+      console.log('Starting complete invoice sync...');
+      const invoices = await chargebeeService.getAllInvoices();
+      console.log(`Found ${invoices.length} total invoices to sync`);
+      
+      // Process all invoices
+      let savedCount = 0;
+      let errorCount = 0;
+      
+      for (const invoice of invoices) {
+        try {
+          // Set recurring flag based on subscription_id presence
+          invoice.recurring = !!invoice.subscription_id;
+          
+          await storeInvoice(invoice);
+          savedCount++;
+          
+          // Log progress every 100 invoices
+          if (savedCount % 100 === 0) {
+            console.log(`Saved ${savedCount}/${invoices.length} invoices`);
+          }
+        } catch (error) {
+          console.error(`Error storing invoice ${invoice.id}:`, error);
+          errorCount++;
+        }
+      }
+      
+      return res.json({
+        success: true,
+        message: `Completed invoice sync`,
+        invoices_found: invoices.length,
+        invoices_synced: savedCount,
+        errors: errorCount
+      });
+    } catch (error) {
+      console.error('Error during complete invoice sync:', error);
+      return res.status(500).json({ 
+        error: "Failed to sync invoices", 
+        details: error instanceof Error ? error.message : String(error) 
+      });
+    }
+  });
+  
   app.post('/api/admin/mysql-field-mappings', async (req, res) => {
     try {
       const mappingSchema = z.object({
