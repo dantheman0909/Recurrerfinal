@@ -1841,62 +1841,66 @@ function ChargebeeConfigTab() {
                           </div>
                         )}
                       </div>
-                      <div className="flex gap-2">
-                        <Button
-                          onClick={() => manualSyncMutation.mutate()}
-                          disabled={manualSyncMutation.isPending || nonRecurringInvoicesSyncMutation.isPending}
-                        >
-                          {manualSyncMutation.isPending ? (
-                            <>
-                              <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                              Syncing...
-                            </>
-                          ) : (
-                            <>
-                              <RefreshCw className="mr-2 h-4 w-4" />
-                              Sync Now
-                            </>
-                          )}
-                        </Button>
+                      <div className="flex flex-col gap-3">
+                        <div className="flex">
+                          <Button
+                            onClick={() => manualSyncMutation.mutate()}
+                            disabled={manualSyncMutation.isPending || nonRecurringInvoicesSyncMutation.isPending || fullInvoicesSyncMutation.isPending}
+                          >
+                            {manualSyncMutation.isPending ? (
+                              <>
+                                <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                                Syncing...
+                              </>
+                            ) : (
+                              <>
+                                <RefreshCw className="mr-2 h-4 w-4" />
+                                Sync Now
+                              </>
+                            )}
+                          </Button>
+                        </div>
                         
-                        <Button
-                          variant="outline"
-                          onClick={() => nonRecurringInvoicesSyncMutation.mutate()}
-                          disabled={nonRecurringInvoicesSyncMutation.isPending || manualSyncMutation.isPending || fullInvoicesSyncMutation.isPending}
-                          title="Sync one-time invoices and other non-recurring charges"
-                        >
-                          {nonRecurringInvoicesSyncMutation.isPending ? (
-                            <>
-                              <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                              Syncing One-time...
-                            </>
-                          ) : (
-                            <>
-                              <RefreshCw className="mr-2 h-4 w-4" />
-                              Sync One-time Invoices
-                            </>
-                          )}
-                        </Button>
-                        
-                        <Button
-                          variant="outline"
-                          onClick={() => fullInvoicesSyncMutation.mutate()}
-                          disabled={fullInvoicesSyncMutation.isPending || nonRecurringInvoicesSyncMutation.isPending || manualSyncMutation.isPending}
-                          title="Sync all invoices (recurring and non-recurring)"
-                          className="bg-purple-50 text-purple-800 hover:bg-purple-100"
-                        >
-                          {fullInvoicesSyncMutation.isPending ? (
-                            <>
-                              <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                              Syncing All Invoices...
-                            </>
-                          ) : (
-                            <>
-                              <RefreshCw className="mr-2 h-4 w-4" />
-                              Sync All Invoices
-                            </>
-                          )}
-                        </Button>
+                        <div className="flex gap-2">
+                          <Button
+                            variant="outline"
+                            onClick={() => nonRecurringInvoicesSyncMutation.mutate()}
+                            disabled={nonRecurringInvoicesSyncMutation.isPending || manualSyncMutation.isPending || fullInvoicesSyncMutation.isPending}
+                            title="Sync one-time invoices and other non-recurring charges"
+                          >
+                            {nonRecurringInvoicesSyncMutation.isPending ? (
+                              <>
+                                <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                                Syncing One-time...
+                              </>
+                            ) : (
+                              <>
+                                <RefreshCw className="mr-2 h-4 w-4" />
+                                Sync One-time Invoices
+                              </>
+                            )}
+                          </Button>
+                          
+                          <Button
+                            variant="outline"
+                            onClick={() => fullInvoicesSyncMutation.mutate()}
+                            disabled={fullInvoicesSyncMutation.isPending || nonRecurringInvoicesSyncMutation.isPending || manualSyncMutation.isPending}
+                            title="Sync all invoices (recurring and non-recurring)"
+                            className="bg-purple-50 text-purple-800 hover:bg-purple-100"
+                          >
+                            {fullInvoicesSyncMutation.isPending ? (
+                              <>
+                                <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                                Syncing All Invoices...
+                              </>
+                            ) : (
+                              <>
+                                <RefreshCw className="mr-2 h-4 w-4" />
+                                Sync All Invoices
+                              </>
+                            )}
+                          </Button>
+                        </div>
                       </div>
                     </div>
                   </div>
