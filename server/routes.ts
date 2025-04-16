@@ -1250,6 +1250,109 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
   
+  // Test endpoint to fetch and insert a single invoice
+  app.get('/api/admin/test-invoice-insert', async (req, res) => {
+    try {
+      // Ensure table exists
+      const { ensureInvoicesTableExists } = await import('./sync-non-recurring-invoices');
+      await ensureInvoicesTableExists();
+      
+      // Get a single invoice from Chargebee
+      const { chargebeeService } = await import('./chargebee');
+      if (!chargebeeService) {
+        return res.status(500).json({ error: 'Chargebee service not initialized' });
+      }
+      
+      console.log('Fetching test invoice from Chargebee...');
+      const invoices = await chargebeeService.getInvoices(1, ''); // just get one
+      
+      if (invoices.length === 0) {
+        return res.status(404).json({ error: 'No invoices found in Chargebee' });
+      }
+      
+      const testInvoice = invoices[0];
+      console.log('Test invoice fetched:', JSON.stringify(testInvoice));
+      
+      // Set recurring flag based on subscription_id presence
+      testInvoice.recurring = !!testInvoice.subscription_id;
+      
+      // Format the invoice data for direct insertion
+      const dbPool = (await import('./db')).pool;
+      
+      // Try inserting directly with parameterized query
+      try {
+        console.log('Inserting test invoice directly via SQL...');
+        await dbPool.query(
+          `INSERT INTO chargebee_invoices (
+            id, subscription_id, customer_id, amount, amount_paid, amount_due,
+            status, date, due_date, paid_at, total, recurring, updated_at
+          ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, NOW())
+          ON CONFLICT (id) DO UPDATE SET
+            subscription_id = $2,
+            customer_id = $3,
+            amount = $4,
+            amount_paid = $5,
+            amount_due = $6,
+            status = $7,
+            date = $8,
+            due_date = $9,
+            paid_at = $10,
+            total = $11,
+            recurring = $12,
+            updated_at = NOW()`,
+          [
+            testInvoice.id,
+            testInvoice.subscription_id || null,
+            testInvoice.customer_id || null,
+            typeof testInvoice.amount === 'number' ? testInvoice.amount : 0,
+            typeof testInvoice.amount_paid === 'number' ? testInvoice.amount_paid : 0,
+            typeof testInvoice.amount_due === 'number' ? testInvoice.amount_due : 0,
+            testInvoice.status || 'unknown',
+            testInvoice.date || null,
+            testInvoice.due_date || null,
+            testInvoice.paid_at || null,
+            typeof testInvoice.total === 'number' ? testInvoice.total : 0,
+            testInvoice.recurring === true
+          ]
+        );
+        console.log('Successfully inserted test invoice');
+      } catch (error) {
+        console.error('Error inserting test invoice:', error);
+        return res.status(500).json({ 
+          error: 'Failed to insert test invoice', 
+          details: error instanceof Error ? error.message : String(error),
+          invoice: testInvoice
+        });
+      }
+      
+      // Check if invoice was inserted
+      const checkResult = await dbPool.query(
+        'SELECT * FROM chargebee_invoices WHERE id = $1',
+        [testInvoice.id]
+      );
+      
+      if (checkResult.rows.length > 0) {
+        return res.json({ 
+          success: true, 
+          message: 'Test invoice successfully inserted', 
+          invoice_id: testInvoice.id,
+          invoice_data: checkResult.rows[0]
+        });
+      } else {
+        return res.status(500).json({
+          error: 'Test invoice was not found after insert attempt',
+          invoice: testInvoice
+        });
+      }
+    } catch (error) {
+      console.error('Error in test invoice insert:', error);
+      return res.status(500).json({ 
+        error: "Failed to insert test invoice", 
+        details: error instanceof Error ? error.message : String(error) 
+      });
+    }
+  });
+  
   app.post('/api/admin/mysql-field-mappings', async (req, res) => {
     try {
       const mappingSchema = z.object({

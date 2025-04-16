@@ -190,6 +190,9 @@ export async function storeInvoice(invoice: any): Promise<void> {
     // Log at start for debugging
     console.log(`Processing invoice: ${invoice.id} (${invoice.recurring ? 'recurring' : 'non-recurring'})`);
     
+    // Get a direct connection from the pool for parameterized queries
+    const { pool } = await import('./db');
+    
     // Format the invoice data, safely handling undefined values
     const invoiceData = {
       id: invoice.id,
@@ -205,75 +208,81 @@ export async function storeInvoice(invoice: any): Promise<void> {
       paid_at: invoice.paid_at || null,
       total: typeof invoice.total === 'number' ? invoice.total : 0,
       recurring: invoice.recurring === true,
-      line_items: invoice.line_items ? JSON.stringify(invoice.line_items) : null,
-      updated_at: new Date()
+      line_items: invoice.line_items ? JSON.stringify(invoice.line_items) : null
     };
     
     // Debug log the data we're trying to store
-    console.log(`Invoice data prepared for ${invoice.id}:`, JSON.stringify(invoiceData));
+    console.log(`Invoice data prepared for ${invoice.id}`);
     
     // Check if invoice already exists
-    const existingInvoice = await db.execute(sql`
-      SELECT id FROM chargebee_invoices WHERE id = ${invoice.id}
-    `);
+    const checkResult = await pool.query(
+      'SELECT id FROM chargebee_invoices WHERE id = $1',
+      [invoice.id]
+    );
     
-    if (existingInvoice.rows.length > 0) {
-      // Update existing invoice
-      console.log(`Invoice ${invoice.id} exists, updating...`);
-      
-      const updateColumns = Object.entries(invoiceData)
-        .filter(([key]) => key !== 'id') // Skip the id field in the SET clause
-        .map(([key, value]) => {
-          if (value === null) {
-            return `${key} = NULL`;
-          } else if (typeof value === 'boolean') {
-            return `${key} = ${value}`;
-          } else if (typeof value === 'number') {
-            return `${key} = ${value}`;
-          } else {
-            return `${key} = '${String(value).replace(/'/g, "''")}'`; // Escape single quotes
-          }
-        })
-        .join(', ');
-      
-      const updateQuery = `
-        UPDATE chargebee_invoices 
-        SET ${updateColumns}
-        WHERE id = '${invoice.id}'
-      `;
-      
-      // Log the SQL query for debugging
-      console.log(`Update SQL for ${invoice.id}:`, updateQuery);
-      
-      await db.execute(sql.raw(updateQuery));
+    if (checkResult.rows.length > 0) {
+      // Update existing invoice with parameterized query
+      console.log(`Invoice ${invoice.id} exists, updating with parameterized query...`);
+      await pool.query(
+        `UPDATE chargebee_invoices 
+         SET subscription_id = $1, customer_id = $2, amount = $3, amount_paid = $4,
+             amount_due = $5, status = $6, date = $7, due_date = $8, paid_at = $9,
+             total = $10, recurring = $11, line_items = $12, updated_at = NOW()
+         WHERE id = $13`,
+        [
+          invoiceData.subscription_id,
+          invoiceData.customer_id,
+          invoiceData.amount,
+          invoiceData.amount_paid,
+          invoiceData.amount_due,
+          invoiceData.status,
+          invoiceData.date,
+          invoiceData.due_date,
+          invoiceData.paid_at,
+          invoiceData.total,
+          invoiceData.recurring,
+          invoiceData.line_items,
+          invoiceData.id
+        ]
+      );
       console.log(`Successfully updated invoice ${invoice.id}`);
     } else {
-      // Insert new invoice
-      console.log(`Invoice ${invoice.id} is new, inserting...`);
-      
-      const columns = Object.keys(invoiceData).join(', ');
-      const values = Object.values(invoiceData).map(value => {
-        if (value === null) {
-          return 'NULL';
-        } else if (typeof value === 'boolean') {
-          return value;
-        } else if (typeof value === 'number') {
-          return value;
-        } else {
-          return `'${String(value).replace(/'/g, "''")}'`; // Escape single quotes
-        }
-      }).join(', ');
-      
-      const insertQuery = `
-        INSERT INTO chargebee_invoices (${columns})
-        VALUES (${values})
-      `;
-      
-      // Log the SQL query for debugging
-      console.log(`Insert SQL for ${invoice.id}:`, insertQuery);
-      
-      await db.execute(sql.raw(insertQuery));
+      // Insert new invoice with parameterized query
+      console.log(`Invoice ${invoice.id} is new, inserting with parameterized query...`);
+      await pool.query(
+        `INSERT INTO chargebee_invoices (
+          id, subscription_id, customer_id, amount, amount_paid, amount_due,
+          status, date, due_date, paid_at, total, recurring, line_items, updated_at
+        ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, NOW())`,
+        [
+          invoiceData.id,
+          invoiceData.subscription_id,
+          invoiceData.customer_id,
+          invoiceData.amount,
+          invoiceData.amount_paid,
+          invoiceData.amount_due,
+          invoiceData.status,
+          invoiceData.date,
+          invoiceData.due_date,
+          invoiceData.paid_at,
+          invoiceData.total, 
+          invoiceData.recurring,
+          invoiceData.line_items
+        ]
+      );
       console.log(`Successfully inserted invoice ${invoice.id}`);
+    }
+    
+    // Verify the invoice was stored
+    const verifyResult = await pool.query(
+      'SELECT id FROM chargebee_invoices WHERE id = $1',
+      [invoice.id]
+    );
+    
+    if (verifyResult.rows.length > 0) {
+      console.log(`Verified invoice ${invoice.id} exists in database`);
+    } else {
+      console.error(`WARNING: Invoice ${invoice.id} was not found after insert/update!`);
     }
   } catch (error) {
     // Enhanced error logging for debugging
